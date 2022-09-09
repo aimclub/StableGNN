@@ -8,11 +8,11 @@ It consists of three modules:
 * Explain: explanation of models results
 
 Graph consists of 
-y - labels
-x - attributes
-edge_index 
-num_nodes - number of nodes in your graph
-d - dimension of attributes
+* y - labels
+* x - attributes
+* edge_index 
+* num_nodes - number of nodes in your graph
+* d - dimension of attributes
 
 ### Quick Tour for New Users
 ### Architecture Overview
