@@ -16,4 +16,8 @@ Graph consists of
 
 ### Quick Tour for New Users
 ### Architecture Overview
+**Adjusting** 
+**Predicting**
+**Explaining**
 ### Installation
+
