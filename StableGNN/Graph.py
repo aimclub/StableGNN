@@ -1,8 +1,8 @@
 import torch
-from torch_geometric.data import Data
 import os
 import random
 from torch_geometric.utils import subgraph
+from torch_geometric.utils import dense_to_sparse
 
 class Graph(): #TODO: а нужно ли тут наследование от Data? как будто нет
     '''
@@ -14,11 +14,13 @@ class Graph(): #TODO: а нужно ли тут наследование от Da
     sigma_u -- variance of randomly generated representations of nodes
     sigma_e -- variance of randomly generated noise
     '''
-    def __init__(self, dataset_name: str, d: int = 128, sigma_u: int = 0.8, sigma_e: int = 0.2):
+    #TODO перепроверить можно ли на куду все перенести, в первый раз не получилось - ноль ускорения
+    def __init__(self, dataset_name: str, device:str='cpu', d: int = 128, sigma_u: int = 0.8, sigma_e: int = 0.2):
         # reading input files consisting of edges.txt, attrs.txt, y.txt
         self.name = dataset_name
         self.sigma_u = sigma_u
         self.sigma_e = sigma_e
+        self.device = device
 
         path_initial = './DataValidation/' + dataset_name #TODO: как сделать более универсальное чтение? передавать весь путь, а не только dataset_name?
         # edges reading
@@ -37,6 +39,11 @@ class Graph(): #TODO: а нужно ли тут наследование от Da
         #attributes reading
         self.x , self.d = self.read_attrs(path_initial,d)
         super().__init__()
+
+    def to(self,device):
+        self.x = self.x.to(device)
+        self.edge_index = self.edge_index.to(device)
+        self.y = self.y.to(device)
 
     def read_edges(self, path_initial):
             edge_index = []
@@ -84,22 +91,26 @@ class Graph(): #TODO: а нужно ли тут наследование от Da
     def adjust(self): #Learn Structure
         #generation of genuine graph structure
         m = 64 #TODO найти какой именной тут размер, или гиперпараметр?
-        u = torch.normal(mean=torch.zeros((self.num_nodes, m)), std=torch.ones((self.num_nodes,m))*self.sigma_u)
-        u.requires_grad=True
-
+        u = torch.normal(mean=torch.zeros((self.num_nodes, m)), std=torch.ones((self.num_nodes, m))*self.sigma_u)
+        u.requires_grad = True
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
         a_genuine = torch.nn.Sigmoid()(-(u_diff*u_diff).sum(axis=2)) #high assortativity assumption
         # a_approx = torch.bernoulli(torch.clamp(a_approx_prob, min=0, max=1)) #TODO в статье есть эта строчка однако я не понимаю зачем, если в ф.п. только log(prob)
         #generation of noise
-        e = torch.normal(mean=torch.zeros((self.num_nodes, self.num_nodes)), std=torch.ones((self.num_nodes, self.num_nodes))*self.sigma_e)
+        e = torch.normal(mean=torch.zeros((self.num_nodes, self.num_nodes)), std=torch.ones((self.num_nodes, self.num_nodes ))*self.sigma_e)
         e.requires_grad = True
-
         #approximating input graph structure
         a_approx_prob = a_genuine + e
+        #a_approx_prob = a_approx_prob.to(self.device)
 
-        optimizer = torch.optim.Adam([u,e], lr=0.01,weight_decay = 1e-5)
+        e = e.to(self.device)
+        u = u.to(self.device)
+        u_diff = u_diff.to(self.device)
+
+        optimizer = torch.optim.Adam([u, e], lr=0.01, weight_decay=1e-5)
         optimizer.zero_grad()
-        for i in range(60):
+        for i in range(100):
+            print(i)
             loss = self.loss(u, e, torch.clamp(a_approx_prob, min=1e-5, max=1))
             loss.backward(retain_graph=True)
             optimizer.step()
@@ -107,12 +118,11 @@ class Graph(): #TODO: а нужно ли тут наследование от Da
         #approximating genuine graph
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
         a_genuine = torch.nn.Sigmoid()(-(u_diff*u_diff).sum(axis=2))
-        #TODO: в этом я тоже не уверена
-
+        #TODO: в этом я тоже не уверена (то что ниже)
         a_genuine = torch.bernoulli(torch.clamp(a_genuine, min=0, max=1))
 
-        #self.edge_index =
-        return a_genuine
+        self.edge_index, _ = dense_to_sparse(a_genuine)
+
 
     def loss(self, u, e, a_approx):
         alpha_u = 1
@@ -121,49 +131,9 @@ class Graph(): #TODO: а нужно ли тут наследование от Da
         loss_proximity = -torch.sum(torch.log(torch.take(a_approx,positive_indices_flattened))) #TODO:  a_approx_prob судя по статье, мы обрезаем до [0,1], но тогда log() даст inf  loss танет inf, поэтому я обрезала не от нуля а от 10^-5 хз насколько правильно
         loss_u = torch.sum(u*u)
         loss_e = torch.sum(e*e)
-
-
         #self.negative_sampling(torch.tensor(list(range(self.num_nodes))), 5)
 
         # loss_neg_part =
 
-        return loss_proximity  + alpha_u*loss_u + alpha_e*loss_e
+        return loss_proximity + alpha_u*loss_u + alpha_e*loss_e
 
-    #ниже нагативное семплирование TODO: мб стоит переделать
-    def not_less_than(self,num_negative_samples, all_negative_samples):
-        if len(all_negative_samples) == 0:
-            return all_negative_samples
-        if len(all_negative_samples) >= num_negative_samples:
-            return random.choices(all_negative_samples,k=num_negative_samples)#l[:k]
-        return self.not_less_than(num_negative_samples, all_negative_samples*2)
-    def adj_list(self,edge_index): #считаем список рёбер из edge_index
-        Adj_list = dict()
-        for x in list(zip(edge_index[0].tolist(), edge_index[1].tolist())):
-            if (x[0] in Adj_list):
-                Adj_list[x[0]].append(x[1])
-            else:
-                Adj_list[x[0]] = [x[1]]
-        return Adj_list
-    def torch_list(self,adj_list):
-        line = list()
-        other_line = list()
-        for node, neghbors in adj_list.items():
-            line += [node] * len(neghbors)
-            other_line += neghbors
-        return torch.transpose((torch.tensor([line, other_line])),0,1)
-
-    def negative_sampling(self, batch, num_negative_samples):
-       # mask = torch.tensor([False]*len(self.data.x))
-        #mask[batch] = True
-        #_,a = self.edge_index_to_train(mask)
-        a,_ = subgraph(batch,self.data.edge_index)
-        Adj = self.adj_list(a)
-        g = dict()
-        batch = batch.tolist()
-        for node in batch:
-            g[node] = batch
-        for node, neghbors in Adj.items():
-            g[node] = list(set(batch) - set(neghbors)) #тут все элементы которые не являются соседянями, но при этом входят в батч
-        for node, neg_elem in g.items():
-            g[node] = self.not_less_than(num_negative_samples, g[node]) #если просят конкретное число негативных примеров, надо либо обрезать либо дублировать
-        return self.torch_list(g)
