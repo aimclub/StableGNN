@@ -8,12 +8,17 @@ import matplotlib.pyplot as plt
 import optuna
 import numpy as np
 import torch
+import torch_geometric.transforms as T
 import random
 
 class TrainModel():
-    def __init__(self, name='Cora2', conv='GAT', device='cuda'):
-        data = Graph(name)
-        data.adjust()
+    def __init__(self, name='Cora2', conv='GAT', device='cuda', num_negative_adjust=5,d = 64, sigma_e = 0.6, sigma_u = 0.8, adjust_flag=True):
+
+        #arguments = {'d': d, 'sigma_u': sigma_u, 'sigma_e': sigma_e, 'device': device, 'name' : name, '_store': 'C:'}
+        data = Graph(name, root='/tmp/'+str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust_flag)[0]
+        print(data)
+
+
         self.Conv = conv
         self.device = device
         self.x = data.x
@@ -25,6 +30,7 @@ class TrainModel():
 
         self.train_mask, self.val_mask, self.test_mask = self.train_test_split(self.x)
         super(TrainModel, self).__init__()
+
 
     def train_test_split(self, x):
         indices = list(range(len(x)))
@@ -85,6 +91,7 @@ class TrainModel():
         dropout = params['dropout']
         size = params['size of network, number of convs']
         learning_rate = params['lr']
+        num_negative_adjust = params["number of negative samples for graph.adjust"]
         train_loader = NeighborSampler(self.data.edge_index, node_idx=self.train_mask, batch_size=int(sum(self.train_mask)), sizes=[-1] * size)
 
         model = ModelName(dataset=self.data, conv=self.Conv, device=self.device, hidden_layer=hidden_layer, num_layers=size, dropout=dropout)
@@ -101,7 +108,6 @@ class TrainModel():
         log = 'Loss: {:.4f}, Epoch: {:03d}, Train acc micro: {:.4f}, Test acc micro: {:.4f},Train acc macro: {:.4f}, Test acc macro: {:.4f}'
 
         for epoch in range(100):
-            print(epoch)
             loss = self.train(model, self.data, optimizer, train_loader, dropout)
             losses.append(loss.detach().cpu())
             [train_acc_mi, test_acc_mi, val_acc_mi], [train_acc_ma, test_acc_ma, val_acc_ma] = self.test(model, self.data)
@@ -136,13 +142,13 @@ class TrainModelOptuna(TrainModel):
     def objective(self, trial):
         # Integer parameter
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
-        out_layer = trial.suggest_categorical("out_layer", [32, 64, 128])
+        num_negative_adjust = trial.suggest_categorical("number of negative samples for graph.adjust", [5, 10, 20])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         Conv = self.Conv
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
 
-        model = ModelName(dataset=self.data, conv=Conv,  device=self.device,hidden_layer=hidden_layer, num_layers=size, dropout=dropout)
+        model = ModelName(dataset=self.data, conv=Conv,  device=self.device, hidden_layer=hidden_layer, num_layers=size, dropout=dropout)
         train_loader = NeighborSampler(self.data.edge_index, batch_size=int(sum(self.train_mask)),
                                        node_idx=self.train_mask, sizes=[-1] * size)
 
