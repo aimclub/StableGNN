@@ -1,5 +1,4 @@
-from StableGNN.Graph import Graph
-import torch
+
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborSampler
 from StableGNN.Model import ModelName
@@ -8,14 +7,12 @@ import matplotlib.pyplot as plt
 import optuna
 import numpy as np
 import torch
-import torch_geometric.transforms as T
 import random
 
 class TrainModel():
-    def __init__(self, name='Cora2', conv='GAT', device='cuda', num_negative_adjust=5,d = 64, sigma_e = 0.6, sigma_u = 0.8, adjust_flag=True):
+    def __init__(self, data, conv='GAT', device='cuda', num_negative_adjust=5,d = 64, sigma_e = 0.6, sigma_u = 0.8, adjust_flag=True):
 
         #arguments = {'d': d, 'sigma_u': sigma_u, 'sigma_e': sigma_e, 'device': device, 'name' : name, '_store': 'C:'}
-        data = Graph(name, root='/tmp/'+str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust_flag)[0]
         print(data)
 
 
@@ -135,12 +132,13 @@ class TrainModel():
         plt.xlabel('epoch')
         plt.ylabel('loss')
         plt.show()
-        return train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
+        return model, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
 
 
 class TrainModelOptuna(TrainModel):
     def objective(self, trial):
-        # Integer parameter
+
+
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         num_negative_adjust = trial.suggest_categorical("number of negative samples for graph.adjust", [5, 10, 20])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
@@ -157,14 +155,12 @@ class TrainModelOptuna(TrainModel):
 
         for epoch in range(50):
             loss = self.train(model, self.data, optimizer, train_loader, dropout)
-        [train_acc_mi, test_acc_mi, val_acc_mi], [train_acc_ma, test_acc_ma, val_acc_ma] = self.test(model, self.data)
-        trial.report(np.sqrt(val_acc_mi * val_acc_ma))
+        [_, _, val_acc_mi], [_, _, val_acc_ma] = self.test(model, self.data)
         return np.sqrt(val_acc_mi * val_acc_ma)
 
     def run(self, number_of_trials):
 
-        study = optuna.create_study(direction="maximize",
-                                    study_name=self.loss["Name"] + " loss," + str(self.Conv) + " conv")
+        study = optuna.create_study(direction="maximize")
         study.optimize(self.objective, n_trials=number_of_trials)
         trial = study.best_trial
         return trial.params

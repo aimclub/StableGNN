@@ -3,10 +3,12 @@ import os
 import random
 from torch_geometric.utils import dense_to_sparse,negative_sampling
 from torch_geometric.data import InMemoryDataset, Data
+import numpy as np
 #root '/tmp/Cora'
 
 #TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 #TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
+#TODO именно поэтому в TrainModel number of negative samples for graph.adjust не влияет на результат - постоянно считывается один и тот же граф из папки
 
 class Graph(InMemoryDataset):
     '''
@@ -45,7 +47,9 @@ class Graph(InMemoryDataset):
     def process(self):
  #       if self.pre_transform is not None:
   #          data_list = [self.pre_transform(data) for data in data_list]
+        print(self.raw_dir)
         edge_index = self.read_edges(self.raw_dir)
+
 
         #labels reading
         y = self.read_labels(self.raw_dir)
@@ -79,6 +83,7 @@ class Graph(InMemoryDataset):
                 edge_index.append([int(split_line[0]), int(split_line[1])])
             edge_index = torch.tensor(edge_index)
             edge_index = edge_index.T
+
             return edge_index
 
     def read_labels(self, path_initial):
@@ -101,9 +106,11 @@ class Graph(InMemoryDataset):
                  x.append(x_attr)
             x = torch.tensor(x)
             d = x.shape[1]
+            np.save(self.root+'/X.npy', x.numpy())
             return x, d
         except:
             x = torch.rand(self.num_nodes, d)
+            np.save(self.root+'/X.npy', x.numpy())
             return x, d
 
     def read_files(self, name, path_initial, txt_file_postfix):
@@ -112,7 +119,7 @@ class Graph(InMemoryDataset):
             with open(path_file, 'r') as f:
                 lines = f.readlines()
         else:
-            raise Exception('there is no '+str(path_file) +' file') # TODO: exceptions это правильно?
+            raise Exception('there is no '+str(path_file) +' file')
         return lines
 
 
@@ -154,7 +161,9 @@ class Graph(InMemoryDataset):
 
         #TODO: в этом я тоже не уверена (то что ниже)
         a_genuine = torch.bernoulli(torch.clamp(a_genuine, min=0, max=1))
-
+        print(self.root)
+        print(self.name)
+        np.save(self.root + '/A.npy', a_genuine.detach().numpy())
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
