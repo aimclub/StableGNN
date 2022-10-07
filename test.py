@@ -20,14 +20,14 @@ device = 'cuda'
 adjust = True
 root = 'DataValidation/'
 ####
-data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust)[0]
+data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), ADJUST_FLAG=adjust)[0]
 #TODO number of negative samples for graph.adjust было неоптимизировано поскольку каждый раз данные считывались из одной и той же папки processed
 
 #######
-#MO = TrainModelOptuna(data=data, conv=conv, device=device, adjust_flag=adjust)
+#MO = TrainModelOptuna(data=data, conv=conv, device=device, ADJUST_FLAG=adjust)
 #best_values = MO.run(number_of_trials=500)
 
-#M = TrainModel(data=data, conv=conv, device=device, adjust_flag = adjust)
+#M = TrainModel(data=data, conv=conv, device=device, ADJUST_FLAG = adjust)
 #best_values = {'hidden_layer': 32, 'dropout': 0.0, 'size of network, number of convs': 3, 'lr': 0.001,"number of negative samples for graph.adjust":5}
 #model, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma = M.run(best_values)
 #torch.save(model, 'model.pt')

@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+
 class Explain:
     '''
     explanations of GCN model predictions in bayesian net form
@@ -14,7 +15,8 @@ class Explain:
     mode --
     print_result -- 1 if needed to be print, 0 otherwise
     '''
-    def __init__(self, model, A, X, ori_pred, num_layers, mode = 0, print_result = 1):
+
+    def __init__(self, model, A, X, ori_pred, num_layers, mode=0, print_result=1):
         self.model = model
         self.model.eval()
         self.A = A
@@ -81,5 +83,5 @@ class Explain:
         pass
 
     #    return (f'{self.__class__.__name__}({self.in_channels}, '
-     #           f'{self.out_channels}, heads={self.heads}, '
-      #          f'type={self.attention_type})')
+    #           f'{self.out_channels}, heads={self.heads}, '
+    #          f'type={self.attention_type})')

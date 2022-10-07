@@ -1,4 +1,3 @@
-
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborSampler
 from StableGNN.Model import ModelName
@@ -9,12 +8,13 @@ import numpy as np
 import torch
 import random
 
+
 class TrainModel():
-    def __init__(self, data, conv='GAT', device='cuda', num_negative_adjust=5,d = 64, sigma_e = 0.6, sigma_u = 0.8, adjust_flag=True):
+    def __init__(self, data, conv='GAT', device='cuda', num_negative_adjust=5, d=64, sigma_e=0.6, sigma_u=0.8,
+                 ADJUST_FLAG=True):
 
-        #arguments = {'d': d, 'sigma_u': sigma_u, 'sigma_e': sigma_e, 'device': device, 'name' : name, '_store': 'C:'}
+        # arguments = {'d': d, 'sigma_u': sigma_u, 'sigma_e': sigma_e, 'device': device, 'name' : name, '_store': 'C:'}
         print(data)
-
 
         self.Conv = conv
         self.device = device
@@ -28,15 +28,14 @@ class TrainModel():
         self.train_mask, self.val_mask, self.test_mask = self.train_test_split(self.x)
         super(TrainModel, self).__init__()
 
-
     def train_test_split(self, x):
         indices = list(range(len(x)))
         random.seed(0)
-        train_indices = random.sample(indices, int(len(indices)*0.7))
+        train_indices = random.sample(indices, int(len(indices) * 0.7))
         left_indices = list(set(indices) - set(train_indices))
         random.seed(1)
-        val_indices = random.sample(left_indices, int(len(indices)*0.1))
-        test_indices = list(set(left_indices)-set(val_indices))
+        val_indices = random.sample(left_indices, int(len(indices) * 0.1))
+        test_indices = list(set(left_indices) - set(val_indices))
 
         train_indices = torch.tensor(train_indices)
         val_indices = torch.tensor(val_indices)
@@ -68,7 +67,6 @@ class TrainModel():
         optimizer.step()
         return total_loss / len(train_loader)
 
-
     @torch.no_grad()
     def test(self, model, data):  # ,n_estimators,learning_rate_catboost, max_depth):
         model.eval()
@@ -89,9 +87,11 @@ class TrainModel():
         size = params['size of network, number of convs']
         learning_rate = params['lr']
         num_negative_adjust = params["number of negative samples for graph.adjust"]
-        train_loader = NeighborSampler(self.data.edge_index, node_idx=self.train_mask, batch_size=int(sum(self.train_mask)), sizes=[-1] * size)
+        train_loader = NeighborSampler(self.data.edge_index, node_idx=self.train_mask,
+                                       batch_size=int(sum(self.train_mask)), sizes=[-1] * size)
 
-        model = ModelName(dataset=self.data, conv=self.Conv, device=self.device, hidden_layer=hidden_layer, num_layers=size, dropout=dropout)
+        model = ModelName(dataset=self.data, conv=self.Conv, device=self.device, hidden_layer=hidden_layer,
+                          num_layers=size, dropout=dropout)
         model.to(self.device)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
@@ -107,7 +107,8 @@ class TrainModel():
         for epoch in range(100):
             loss = self.train(model, self.data, optimizer, train_loader, dropout)
             losses.append(loss.detach().cpu())
-            [train_acc_mi, test_acc_mi, val_acc_mi], [train_acc_ma, test_acc_ma, val_acc_ma] = self.test(model, self.data)
+            [train_acc_mi, test_acc_mi, val_acc_mi], [train_acc_ma, test_acc_ma, val_acc_ma] = self.test(model,
+                                                                                                         self.data)
             train_accs_mi.append(train_acc_mi)
             test_accs_mi.append(test_acc_mi)
             train_accs_ma.append(train_acc_ma)
@@ -128,7 +129,7 @@ class TrainModel():
         plt.show()
 
         plt.plot(test_accs_ma)
-        plt.title( ' test f1 macro')
+        plt.title(' test f1 macro')
         plt.xlabel('epoch')
         plt.ylabel('loss')
         plt.show()
@@ -137,8 +138,6 @@ class TrainModel():
 
 class TrainModelOptuna(TrainModel):
     def objective(self, trial):
-
-
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         num_negative_adjust = trial.suggest_categorical("number of negative samples for graph.adjust", [5, 10, 20])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
@@ -146,7 +145,8 @@ class TrainModelOptuna(TrainModel):
         Conv = self.Conv
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
 
-        model = ModelName(dataset=self.data, conv=Conv,  device=self.device, hidden_layer=hidden_layer, num_layers=size, dropout=dropout)
+        model = ModelName(dataset=self.data, conv=Conv, device=self.device, hidden_layer=hidden_layer, num_layers=size,
+                          dropout=dropout)
         train_loader = NeighborSampler(self.data.edge_index, batch_size=int(sum(self.train_mask)),
                                        node_idx=self.train_mask, sizes=[-1] * size)
 
@@ -159,7 +159,6 @@ class TrainModelOptuna(TrainModel):
         return np.sqrt(val_acc_mi * val_acc_ma)
 
     def run(self, number_of_trials):
-
         study = optuna.create_study(direction="maximize")
         study.optimize(self.objective, n_trials=number_of_trials)
         trial = study.best_trial

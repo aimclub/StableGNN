@@ -48,9 +48,7 @@ class ModelName(torch.nn.Module):
     def inference(self, data, dp=0):
 
         x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr
-
         for i, conv in enumerate(self.convs):
-
             x = conv(x, edge_index)
             if i != self.num_layers - 1:
                 x = x.relu()
