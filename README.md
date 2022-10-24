@@ -1,7 +1,11 @@
 # StableGNN
 This is a component for autonomous learning of explainable graph neural networks.
 
-### Library Highlights
+[Documentation](https://gitlab.actcognitive.org/anpolol/stablegnn/-/wikis/HOME)
+
+## Installation
+
+## Library Highlights
 It consists of three modules:
 * Graph: reading input data and learning graph structure
 * Model: predicting over nodes for disassortative graphs with high extrapolating ability 
@@ -16,7 +20,7 @@ Graph consists of
 
 
 
-### Quick Tour for New Users
+## Quick Tour for New Users
 First of all you need to save your raw data into folder 
 ```
 DataValidation/dataset_name/raw
@@ -45,11 +49,13 @@ _To build explanations of trained model, run:_
 TODO
 
 
-### Architecture Overview
+## Architecture Overview
 **Adjusting** 
 
 **Predicting**
 
 **Explaining**
-### Installation
+
+
+## Citing
 
