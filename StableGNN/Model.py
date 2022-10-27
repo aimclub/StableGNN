@@ -9,9 +9,11 @@ import collections
 import numpy as np
 from torch.nn import Linear
 
+
 class ModelName(torch.nn.Module):
-    def __init__(self, dataset, device, conv='GAT', hidden_layer=64, dropout=0,
-                 num_layers=2):
+    def __init__(
+        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2
+    ):
         super(ModelName, self).__init__()
         self.conv = conv
         self.num_layers = num_layers
@@ -23,7 +25,7 @@ class ModelName(torch.nn.Module):
         self.dropout = dropout
         self.device = device
         num_classes = len(collections.Counter(self.data.y.tolist()))
-        if self.conv == 'GAT':
+        if self.conv == "GAT":
             if self.num_layers == 1:
                 self.convs.append(GATConv(self.num_features, hidden_layer))
             else:
@@ -36,7 +38,7 @@ class ModelName(torch.nn.Module):
     def forward(self, x, adjs):
         for i, (edge_index, _, size) in enumerate(adjs):
 
-            x_target = x[:size[1]]  # Target nodes are always placed first.
+            x_target = x[: size[1]]  # Target nodes are always placed first.
             x = self.convs[i]((x, x_target), edge_index)
             if i != self.num_layers - 1:
                 x = F.relu(x)

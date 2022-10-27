@@ -9,9 +9,18 @@ import torch
 import random
 
 
-class TrainModel():
-    def __init__(self, data, conv='GAT', device='cuda', num_negative_adjust=5, d=64, sigma_e=0.6, sigma_u=0.8,
-                 ADJUST_FLAG=True):
+class TrainModel:
+    def __init__(
+        self,
+        data,
+        conv="GAT",
+        device="cuda",
+        num_negative_adjust=5,
+        d=64,
+        sigma_e=0.6,
+        sigma_u=0.8,
+        ADJUST_FLAG=True,
+    ):
 
         # arguments = {'d': d, 'sigma_u': sigma_u, 'sigma_e': sigma_e, 'device': device, 'name' : name, '_store': 'C:'}
         print(data)
@@ -75,26 +84,46 @@ class TrainModel():
         accs_micro = []
         accs_macro = []
         for mask in [self.train_mask, self.test_mask, self.val_mask]:
-            accs_micro += [f1_score(self.y.detach()[mask].cpu().numpy(), y_pred[mask], average='micro')]
-            accs_macro += [f1_score(self.y.detach()[mask].cpu().numpy(), y_pred[mask], average='macro')]
+            accs_micro += [
+                f1_score(
+                    self.y.detach()[mask].cpu().numpy(), y_pred[mask], average="micro"
+                )
+            ]
+            accs_macro += [
+                f1_score(
+                    self.y.detach()[mask].cpu().numpy(), y_pred[mask], average="macro"
+                )
+            ]
 
         return accs_micro, accs_macro
 
     def run(self, params):
 
-        hidden_layer = params['hidden_layer']
-        dropout = params['dropout']
-        size = params['size of network, number of convs']
-        learning_rate = params['lr']
+        hidden_layer = params["hidden_layer"]
+        dropout = params["dropout"]
+        size = params["size of network, number of convs"]
+        learning_rate = params["lr"]
         num_negative_adjust = params["number of negative samples for graph.adjust"]
-        train_loader = NeighborSampler(self.data.edge_index, node_idx=self.train_mask,
-                                       batch_size=int(sum(self.train_mask)), sizes=[-1] * size)
+        train_loader = NeighborSampler(
+            self.data.edge_index,
+            node_idx=self.train_mask,
+            batch_size=int(sum(self.train_mask)),
+            sizes=[-1] * size,
+        )
 
-        model = ModelName(dataset=self.data, conv=self.Conv, device=self.device, hidden_layer=hidden_layer,
-                          num_layers=size, dropout=dropout)
+        model = ModelName(
+            dataset=self.data,
+            conv=self.Conv,
+            device=self.device,
+            hidden_layer=hidden_layer,
+            num_layers=size,
+            dropout=dropout,
+        )
         model.to(self.device)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=learning_rate, weight_decay=1e-5
+        )
 
         losses = []
         train_accs_mi = []
@@ -102,36 +131,47 @@ class TrainModel():
         val_accs = []
         train_accs_ma = []
         test_accs_ma = []
-        log = 'Loss: {:.4f}, Epoch: {:03d}, Train acc micro: {:.4f}, Test acc micro: {:.4f},Train acc macro: {:.4f}, Test acc macro: {:.4f}'
+        log = "Loss: {:.4f}, Epoch: {:03d}, Train acc micro: {:.4f}, Test acc micro: {:.4f},Train acc macro: {:.4f}, Test acc macro: {:.4f}"
 
         for epoch in range(100):
             loss = self.train(model, self.data, optimizer, train_loader, dropout)
             losses.append(loss.detach().cpu())
-            [train_acc_mi, test_acc_mi, val_acc_mi], [train_acc_ma, test_acc_ma, val_acc_ma] = self.test(model,
-                                                                                                         self.data)
+            [train_acc_mi, test_acc_mi, val_acc_mi], [
+                train_acc_ma,
+                test_acc_ma,
+                val_acc_ma,
+            ] = self.test(model, self.data)
             train_accs_mi.append(train_acc_mi)
             test_accs_mi.append(test_acc_mi)
             train_accs_ma.append(train_acc_ma)
             test_accs_ma.append(test_acc_ma)
-            print(log.format(loss, epoch, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma))
+            print(
+                log.format(
+                    loss, epoch, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
+                )
+            )
 
             # scheduler.step()
-        print(log.format(loss, epoch, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma))
+        print(
+            log.format(
+                loss, epoch, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
+            )
+        )
         plt.plot(losses)
-        plt.title(' loss')
-        plt.xlabel('epoch')
-        plt.ylabel('loss')
+        plt.title(" loss")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
         plt.show()
         plt.plot(test_accs_mi)
-        plt.title(' test f1 micro')
-        plt.xlabel('epoch')
-        plt.ylabel('loss')
+        plt.title(" test f1 micro")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
         plt.show()
 
         plt.plot(test_accs_ma)
-        plt.title(' test f1 macro')
-        plt.xlabel('epoch')
-        plt.ylabel('loss')
+        plt.title(" test f1 macro")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
         plt.show()
         return model, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
 
@@ -139,19 +179,33 @@ class TrainModel():
 class TrainModelOptuna(TrainModel):
     def objective(self, trial):
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
-        num_negative_adjust = trial.suggest_categorical("number of negative samples for graph.adjust", [5, 10, 20])
+        num_negative_adjust = trial.suggest_categorical(
+            "number of negative samples for graph.adjust", [5, 10, 20]
+        )
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         Conv = self.Conv
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
 
-        model = ModelName(dataset=self.data, conv=Conv, device=self.device, hidden_layer=hidden_layer, num_layers=size,
-                          dropout=dropout)
-        train_loader = NeighborSampler(self.data.edge_index, batch_size=int(sum(self.train_mask)),
-                                       node_idx=self.train_mask, sizes=[-1] * size)
+        model = ModelName(
+            dataset=self.data,
+            conv=Conv,
+            device=self.device,
+            hidden_layer=hidden_layer,
+            num_layers=size,
+            dropout=dropout,
+        )
+        train_loader = NeighborSampler(
+            self.data.edge_index,
+            batch_size=int(sum(self.train_mask)),
+            node_idx=self.train_mask,
+            sizes=[-1] * size,
+        )
 
         model.to(self.device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=learning_rate, weight_decay=1e-5
+        )
 
         for epoch in range(50):
             loss = self.train(model, self.data, optimizer, train_loader, dropout)

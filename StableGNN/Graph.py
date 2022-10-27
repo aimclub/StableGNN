@@ -1,32 +1,62 @@
 import torch
 import os
-import random
 from torch_geometric.utils import dense_to_sparse, negative_sampling
 from torch_geometric.data import InMemoryDataset, Data
 import numpy as np
+from typing import Callable, Optional
 
-
-# root '/tmp/Cora'
 
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 # TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
 # TODO именно поэтому в TrainModel number of negative samples for graph.adjust не влияет на результат - постоянно считывается один и тот же граф из папки
 
 
-class Graph(InMemoryDataset):
-    '''
-    reading Graph data from txt files and learning structure (denoising) with adjust
 
-    Args
-    d -- dimension of attributes. You can set it if your data has no attributes for generating random attributes
-    dataset_name -- name of your dataset
-    sigma_u -- variance of randomly generated representations of nodes
-    sigma_e -- variance of randomly generated noise
-    '''
+
+class Graph(InMemoryDataset):
+    """"""
+
+    r"""reading Graph data from txt files and learning structure (denoising) with adjust
+
+    Args:
+        root (string, optional): Root directory where the dataset should be
+               saved. (optional: :obj:`None`)
+        transform (callable, optional): A function/transform that takes in an
+               :obj:`torch_geometric.data.Data` object and returns a transformed
+               version. The data object will be transformed before every access.
+               (default: :obj:`None`)
+        d (): dimension of attributes. You can set it if your data has no attributes for generating random attributes
+        dataset_name(): name of your dataset
+        sigma_u(): variance of randomly generated representations of nodes
+        sigma_e(): variance of randomly generated noise (default: :obj:`None`)
+    """
 
     # TODO перепроверить можно ли на куду все перенести, в первый раз не получилось - ноль ускорения
-    def __init__(self, name, root, transform=None, pre_transform=None, pre_filter=None, ADJUST_FLAG=True, sigma_u=0.7,
-                 sigma_e=0.4, num_negative_samples=5):
+    def __init__(
+        self,
+        name: str,
+        root: str,
+        transform: Optional[Callable] =None,
+        pre_transform=None,
+        pre_filter=None,
+        ADJUST_FLAG=True,
+        sigma_u=0.7,
+        sigma_e=0.4,
+        num_negative_samples=5,
+    ):
+        """
+
+        :param name:
+        :param root:
+        :param transform:
+        :param pre_transform:
+        :param pre_filter:
+        :param ADJUST_FLAG:
+        :param sigma_u:
+        :param sigma_e:
+        :param num_negative_samples:
+        """
+
         # reading input files consisting of edges.txt, attrs.txt, y.txt
         self.root = root
         self.transform = transform
@@ -41,11 +71,15 @@ class Graph(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return [self.name + '_attrs.txt', self.name + '_edges.txt', self.name + '_labels.txt']
+        return [
+            self.name + "_attrs.txt",
+            self.name + "_edges.txt",
+            self.name + "_labels.txt",
+        ]
 
     @property
     def processed_file_names(self):
-        return [self.name + '_data.pt']
+        return [self.name + "_data.pt"]
 
     def process(self):
         #       if self.pre_transform is not None:
@@ -59,17 +93,22 @@ class Graph(InMemoryDataset):
         self.num_nodes = len(y)
 
         try:  # TODO: это лучше через assert? + мы же не рассматриваем несвязаные графы?
-            max(int(torch.max(edge_index[0])), int(torch.max(
-                edge_index[1]))) == self.num_nodes - 1  # numbering starts with 0 so self.num_nodes = max_index+1
+            max(
+                int(torch.max(edge_index[0])), int(torch.max(edge_index[1]))
+            ) == self.num_nodes - 1  # numbering starts with 0 so self.num_nodes = max_index+1
         except:
             raise Exception(
-                "number of nodes in your graph differ from max index of nodes. Possible reasons (but not the only one): your graph has connected components of size = 1, or numbering starts with 1 (should with 0)")
+                "number of nodes in your graph differ from max index of nodes. Possible reasons (but not the only one): your graph has connected components of size = 1, or numbering starts with 1 (should with 0)"
+            )
 
         # attributes reading
         x, d = self.read_attrs(self.raw_dir)
 
         if self.ADJUST_FLAG:
-            edge_index = self.adjust(edge_index=edge_index, num_negative_samples=self.num_negative_samples * len(x))
+            edge_index = self.adjust(
+                edge_index=edge_index,
+                num_negative_samples=self.num_negative_samples * len(x),
+            )
 
         data = Data(x=x, edge_index=edge_index, y=y)
         data_list = [data]
@@ -79,8 +118,8 @@ class Graph(InMemoryDataset):
 
     def read_edges(self, path_initial):
         edge_index = []
-        for line in self.read_files(self.name, path_initial, '_edges.txt'):
-            split_line = line.split(',')
+        for line in self.read_files(self.name, path_initial, "_edges.txt"):
+            split_line = line.split(",")
             edge_index.append([int(split_line[0]), int(split_line[1])])
         edge_index = torch.tensor(edge_index)
         edge_index = edge_index.T
@@ -89,7 +128,7 @@ class Graph(InMemoryDataset):
 
     def read_labels(self, path_initial):
         y = []
-        for line in self.read_files(self.name, path_initial, '_labels.txt'):
+        for line in self.read_files(self.name, path_initial, "_labels.txt"):
             y.append(int(line))
         y = torch.tensor(y)
         return y
@@ -98,41 +137,48 @@ class Graph(InMemoryDataset):
         d = 128  # TODO как задать?!
         try:
             x = []
-            for line in self.read_files(self.name, path_initial, '_attrs.txt'):
-                split_line = line.split(',')
+            for line in self.read_files(self.name, path_initial, "_attrs.txt"):
+                split_line = line.split(",")
                 x_attr = []
                 for attr in split_line:
                     x_attr.append(float(attr))
                 x.append(x_attr)
             x = torch.tensor(x)
             d = x.shape[1]
-            np.save(self.root + '/X.npy', x.numpy())
+            np.save(self.root + "/X.npy", x.numpy())
             return x, d
         except:
             x = torch.rand(self.num_nodes, d)
-            np.save(self.root + '/X.npy', x.numpy())
+            np.save(self.root + "/X.npy", x.numpy())
             return x, d
 
     def read_files(self, name, path_initial, txt_file_postfix):
-        path_file = path_initial + '/' + name + txt_file_postfix
+        path_file = path_initial + "/" + name + txt_file_postfix
         if os.path.exists(path_file):
-            with open(path_file, 'r') as f:
+            with open(path_file, "r") as f:
                 lines = f.readlines()
         else:
-            raise Exception('there is no ' + str(path_file) + ' file')
+            raise Exception("there is no " + str(path_file) + " file")
         return lines
 
     def adjust(self, edge_index, num_negative_samples):  # Learn Structure
         # generation of genuine graph structure
         m = 64  # TODO найти какой именной тут размер, или гиперпараметр?
-        u = torch.normal(mean=torch.zeros((self.num_nodes, m)), std=torch.ones((self.num_nodes, m)) * self.sigma_u)
+        u = torch.normal(
+            mean=torch.zeros((self.num_nodes, m)),
+            std=torch.ones((self.num_nodes, m)) * self.sigma_u,
+        )
         u.requires_grad = True
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
-        a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
+        a_genuine = torch.nn.Sigmoid()(
+            -(u_diff * u_diff).sum(axis=2)
+        )  # high assortativity assumption
         # a_approx = torch.bernoulli(torch.clamp(a_approx_prob, min=0, max=1)) #TODO в статье есть эта строчка однако я не понимаю зачем, если в ф.п. только log(prob)
         # generation of noise
-        e = torch.normal(mean=torch.zeros((self.num_nodes, self.num_nodes)),
-                         std=torch.ones((self.num_nodes, self.num_nodes)) * self.sigma_e)
+        e = torch.normal(
+            mean=torch.zeros((self.num_nodes, self.num_nodes)),
+            std=torch.ones((self.num_nodes, self.num_nodes)) * self.sigma_e,
+        )
         e.requires_grad = True
         # approximating input graph structure
         a_approx_prob = a_genuine + e
@@ -147,11 +193,17 @@ class Graph(InMemoryDataset):
         # TODO ниже негатив семлинг для каждого позитивного ищет негативный пример. Если отдать num_negative_sample то он вернет num_negative_sample ребер ВСЕГо на весь граф. В стаье для каждой вершины строятся негативные примеры. Стоит ли этот момент тут исправить?
         # сли пережать в функцию negative_sampling num_negative_samples , то у нас будет всего num_negative_samples негативных примеров, хотя хотелось бы для каждой вершины сколько-то негативных примеров
 
-        negative_samples = negative_sampling(edge_index, self.num_nodes, method='dense')
+        negative_samples = negative_sampling(edge_index, self.num_nodes, method="dense")
 
         for i in range(100):
             print(i)
-            loss = self.loss(u, e, torch.clamp(a_approx_prob, min=1e-5, max=1), edge_index, negative_samples)
+            loss = self.loss(
+                u,
+                e,
+                torch.clamp(a_approx_prob, min=1e-5, max=1),
+                edge_index,
+                negative_samples,
+            )
             loss.backward(retain_graph=True)
             optimizer.step()
 
@@ -163,7 +215,7 @@ class Graph(InMemoryDataset):
         a_genuine = torch.bernoulli(torch.clamp(a_genuine, min=0, max=1))
         print(self.root)
         print(self.name)
-        np.save(self.root + '/A.npy', a_genuine.detach().numpy())
+        np.save(self.root + "/A.npy", a_genuine.detach().numpy())
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
@@ -171,15 +223,33 @@ class Graph(InMemoryDataset):
         alpha_u = 1
         alpha_e = 1
         positive_indices_flattened = torch.concat(
-            [edge_index[0] * self.num_nodes + edge_index[1], edge_index[1] * self.num_nodes + edge_index[0]])
-        loss_proximity = -torch.sum(torch.log(torch.take(a_approx,
-                                                         positive_indices_flattened)))  # TODO:  a_approx_prob судя по статье, мы обрезаем до [0,1], но тогда log() даст inf  loss танет inf, поэтому я обрезала не от нуля а от 10^-5 хз насколько правильно
+            [
+                edge_index[0] * self.num_nodes + edge_index[1],
+                edge_index[1] * self.num_nodes + edge_index[0],
+            ]
+        )
+        loss_proximity = -torch.sum(
+            torch.log(torch.take(a_approx, positive_indices_flattened))
+        )  # TODO:  a_approx_prob судя по статье, мы обрезаем до [0,1], но тогда log() даст inf  loss танет inf, поэтому я обрезала не от нуля а от 10^-5 хз насколько правильно
         loss_u = torch.sum(u * u)
         loss_e = torch.sum(e * e)
 
-        negative_indices_flattened = torch.concat([negative_samples[0] * self.num_nodes + negative_samples[1],
-                                                   negative_samples[1] * self.num_nodes + negative_samples[0]])
-        loss_proximity_negative = -torch.sum(torch.log(1 - torch.take(a_approx,
-                                                                      negative_indices_flattened)))
+        negative_indices_flattened = torch.concat(
+            [
+                negative_samples[0] * self.num_nodes + negative_samples[1],
+                negative_samples[1] * self.num_nodes + negative_samples[0],
+            ]
+        )
+        loss_proximity_negative = -torch.sum(
+            torch.log(1 - torch.take(a_approx, negative_indices_flattened))
+        )
 
-        return loss_proximity + alpha_u * loss_u + alpha_e * loss_e + loss_proximity_negative
+        return (
+            loss_proximity
+            + alpha_u * loss_u
+            + alpha_e * loss_e
+            + loss_proximity_negative
+        )
+
+
+
