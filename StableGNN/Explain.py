@@ -5,6 +5,9 @@ import pandas as pd
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborSampler
 from pgmpy.estimators.CITests import chi_square
+from pgmpy.estimators import HillClimbSearch, BicScore
+from pgmpy.models import BayesianModel
+from pgmpy.inference import VariableElimination
 
 class Explain:
     """
@@ -20,12 +23,11 @@ class Explain:
         print_result -- 1 if needed to be print, 0 otherwise
     """
 
-    def __init__(self, model, A, X, ori_pred, num_layers, mode=0, print_result=1):
+    def __init__(self, model, A, X, num_layers, mode=0, print_result=1):
         self.model = model
         self.model.eval()
         self.A = A
         self.X = X
-        self.ori_pred = ori_pred
         self.num_layers = num_layers
         self.mode = mode
         self.print_result = print_result
@@ -99,8 +101,7 @@ class Explain:
 
 
       # pred_torch, _ = self.model.forward(data, )
-        print(pred_torch.cpu())
-        soft_pred = np.asarray([softmax(np.asarray(pred_torch.cpu()[node_].data)) for node_ in range(self.X.shape[0])])
+        soft_pred = np.asarray([softmax(np.asarray(pred_torch.cpu()[node_].data)) for node_ in range(self.X.shape[0])]) #TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
 
     #    pred_node = np.asarray(pred_torch[0][node_idx].data)
      #   label_node = np.argmax(pred_node)
@@ -110,7 +111,6 @@ class Explain:
         Pred_Samples = []
 
         for iteration in range(num_samples):
-
             X_perturb = self.X.copy()
             sample = []
             for node in neighbors:
@@ -123,8 +123,6 @@ class Explain:
                 sample.append(latent)
 
             X_perturb_torch = torch.tensor([X_perturb], dtype=torch.float).squeeze()
-            print('X torch perturb', iteration, X_perturb_torch.shape)
-
             A_torch = torch.tensor([self.A], dtype=torch.float).squeeze()
             data_perturb = Data(x=X_perturb_torch, edge_index=A_torch.nonzero().t().contiguous())
             loader_perturb = NeighborSampler(
@@ -156,26 +154,26 @@ class Explain:
         Samples = np.asarray(Samples)
         Pred_Samples = np.asarray(Pred_Samples)
         Combine_Samples = Samples - Samples
+        print('combine samples',Combine_Samples.shape)
         for s in range(Samples.shape[0]):
             Combine_Samples[s] = np.asarray(
                 [Samples[s, i] * 10 + Pred_Samples[s, i] + 1 for i in range(Samples.shape[1])])
 
         data = pd.DataFrame(Combine_Samples)
-        ind_sub_to_ori = dict(zip(list(data.columns), neighbors))
-        data = data.rename(columns={0: "A", 1: "B"})  # Trick to use chi_square test on first two data columns
         return data, neighbors
 
-    def VariableSelection(self,data,neighbors,node_idx,top_node=None, p_threshold=0.05):
-        ind_sub_to_ori = dict(zip(list(data.columns), neighbors))
+    def VariableSelection(self, data, neighbors, node_idx, top_node=None, p_threshold=0.05):
+
+        ind_sub_to_ori = dict(zip(list(data.columns), neighbors)) #mapping из перечисления 1,...n_neighhbours в индексы самих соседей
         data = data.rename(columns={0: "A", 1: "B"})  # Trick to use chi_square test on first two data columns
-        ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))
+        ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))#mapping индексов соседей в простое перечисление
 
         p_values = []
         dependent_neighbors = []
         dependent_neighbors_p_values = []
-        for node in neighbors:
 
-            chi2, p = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[node_idx], [], data)
+        for node in neighbors:
+            chi2, p, _ = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[node_idx], [], data, boolean=False)
             p_values.append(p)
             if p < p_threshold:
                 dependent_neighbors.append(node)
@@ -183,7 +181,6 @@ class Explain:
 
         pgm_stats = dict(zip(neighbors, p_values))
 
-        pgm_nodes = []
         if top_node == None:
             pgm_nodes = dependent_neighbors
         else:
@@ -194,11 +191,95 @@ class Explain:
         data = data.rename(columns={"A": 0, "B": 1})
         data = data.rename(columns=ind_sub_to_ori)
 
-        return pgm_nodes, pgm_stats
+        return pgm_nodes, data, pgm_stats
 
-    def StructureLearning(self):
-        pass
+    def StructureLearning(self, target, data, subnodes, child=None):
+
+        subnodes = [str(int(node)) for node in subnodes]
+        target = str(int(target))
+        subnodes_no_target = [node for node in subnodes if node != target]
+        data.columns = data.columns.astype(str)
+
+        MK_blanket = self.search_MK(data, target, subnodes_no_target.copy())
+
+        if child == None:
+            est = HillClimbSearch(data[subnodes_no_target], scoring_method=BicScore(data))
+            pgm_no_target = est.estimate()
+            for node in MK_blanket:
+                if node != target:
+                    pgm_no_target.add_edge(node, target)
+
+            #   Create the pgm
+            pgm_explanation = BayesianModel()
+            for node in pgm_no_target.nodes():
+                pgm_explanation.add_node(node)
+            for edge in pgm_no_target.edges():
+                pgm_explanation.add_edge(edge[0], edge[1])
+
+            #   Fit the pgm
+            data_ex = data[subnodes].copy()
+            data_ex[target] = data[target].apply(self.generalize_target)
+            for node in subnodes_no_target:
+                data_ex[node] = data[node].apply(self.generalize_others)
+            pgm_explanation.fit(data_ex)
+        else:
+            data_ex = data[subnodes].copy()
+            data_ex[target] = data[target].apply(self.generalize_target)
+            for node in subnodes_no_target:
+                data_ex[node] = data[node].apply(self.generalize_others)
+
+            est = HillClimbSearch(data_ex, scoring_method=BicScore(data_ex))
+            pgm_w_target_explanation = est.estimate()
+
+            #   Create the pgm
+            pgm_explanation = BayesianModel()
+            for node in pgm_w_target_explanation.nodes():
+                pgm_explanation.add_node(node)
+            for edge in pgm_w_target_explanation.edges():
+                pgm_explanation.add_edge(edge[0], edge[1])
+
+            #   Fit the pgm
+            data_ex = data[subnodes].copy()
+            data_ex[target] = data[target].apply(self.generalize_target)
+            for node in subnodes_no_target:
+                data_ex[node] = data[node].apply(self.generalize_others)
+            pgm_explanation.fit(data_ex)
+
+        return pgm_explanation
 
     #    return (f'{self.__class__.__name__}({self.in_channels}, '
     #           f'{self.out_channels}, heads={self.heads}, '
     #          f'type={self.attention_type})')
+
+    def pgm_conditional_prob(self, target, pgm_explanation, evidence_list):
+        pgm_infer = VariableElimination(pgm_explanation)
+        for node in evidence_list:
+            if node not in list(pgm_infer.variables):
+                print("Not valid evidence list.")
+                return None
+        evidences = self.generate_evidence(evidence_list)
+        elimination_order = [node for node in list(pgm_infer.variables) if node not in evidence_list]
+        elimination_order = [node for node in elimination_order if node != target]
+        q = pgm_infer.query([target], evidence=evidences,
+                            elimination_order=elimination_order, show_progress=False)
+        return q.values[0]
+
+    def search_MK(self, data, target, nodes):
+        target = str(int(target))
+        data.columns = data.columns.astype(str)
+        nodes = [str(int(node)) for node in nodes]
+
+        MB = nodes
+        while True:
+            count = 0
+            for node in nodes:
+                evidences = MB.copy()
+                evidences.remove(node)
+                _, p, _ = chi_square(target, node, evidences, data[nodes + [target]])
+                if p > 0.05:
+                    MB.remove(node)
+                    count = 0
+                else:
+                    count = count + 1
+                    if count == len(MB):
+                        return MB

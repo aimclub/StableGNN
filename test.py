@@ -41,9 +41,8 @@ model = torch.load("model.pt")
 print(model)
 
 
-MODEL_FLAG = False
-if MODEL_FLAG:
-    ori_pred = 3
+EXPLAIN_FLAG = True
+if EXPLAIN_FLAG:
     num_layers = len(model.convs)
     X = np.load(root + name + "/X.npy")
     try:
@@ -55,11 +54,12 @@ if MODEL_FLAG:
         model=model,
         A=A,
         X=X,
-        ori_pred=ori_pred,
         num_layers=num_layers,
         mode=0,
         print_result=1,
     )
 
-    data, neighbors = explainer.DataGeneration(708)
-    pgm_nodes, pgm_stats = explainer.VariableSelection(data,neighbors,708)
+    data, neighbors = explainer.DataGeneration(node_idx=708, num_samples=20)
+    subnodes, data, pgm_stats = explainer.VariableSelection(data,neighbors,708)
+    pgm_explanation = explainer.StructureLearning(708, data, subnodes)
+    print(pgm_explanation)
