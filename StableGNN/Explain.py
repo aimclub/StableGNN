@@ -6,8 +6,13 @@ from torch_geometric.data import Data
 from torch_geometric.loader import NeighborSampler
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.estimators import HillClimbSearch, BicScore
-from pgmpy.models import BayesianModel
+from pgmpy.models import BayesianNetwork
 from pgmpy.inference import VariableElimination
+
+import bamt.Networks as Nets
+from bamt.Preprocessors import Preprocessor
+from sklearn import preprocessing
+from pgmpy.estimators import K2Score
 
 class Explain:
     """
@@ -81,8 +86,8 @@ class Explain:
         node_idx_new, sub_A, sub_X, neighbors = self.extract_n_hops_neighbors(nA, node_idx)
         if (node_idx not in neighbors):
             neighbors = np.append(neighbors, node_idx)
-
-        X_torch = torch.tensor([np.array(self.X)], dtype=torch.float).squeeze()
+        print(self.X)
+        X_torch = torch.tensor([self.X], dtype=torch.float).squeeze()
         A_torch = torch.tensor([self.A], dtype=torch.float).squeeze()
 
         data = Data(x=X_torch, edge_index = A_torch.nonzero().t().contiguous())
@@ -194,6 +199,61 @@ class Explain:
         return pgm_nodes, data, pgm_stats
 
     def StructureLearning(self, target, data, subnodes, child=None):
+        print('after var selection', subnodes)
+        subnodes = [str(int(node)) for node in subnodes]
+        target = str(int(target))
+        subnodes_no_target = [node for node in subnodes if node != target]
+        data.columns = data.columns.astype(str)
+
+        MK_blanket = self.search_MK(data, target, subnodes_no_target.copy())
+
+        if child == None:
+            print(subnodes_no_target)
+            est = HillClimbSearch(data[subnodes_no_target])
+            pgm_no_target = est.estimate(scoring_method=BicScore(data))
+            print('estimation',pgm_no_target.nodes(),pgm_no_target.edges())
+            for node in MK_blanket:
+                if node != target:
+                    pgm_no_target.add_edge(node, target)
+
+            #   Create the pgm
+
+            pgm_explanation = BayesianNetwork()
+            for node in pgm_no_target.nodes():
+                pgm_explanation.add_node(node)
+            for edge in pgm_no_target.edges():
+                pgm_explanation.add_edge(edge[0], edge[1])
+
+            #   Fit the pgm
+
+            data_ex = data[subnodes].copy()
+            data_ex[target] = data[target].apply(self.generalize_target)
+            for node in subnodes_no_target:
+                data_ex[node] = data[node].apply(self.generalize_others)
+            pgm_explanation.fit(data_ex)
+
+        else:
+            data_ex = data[subnodes].copy()
+            data_ex[target] = data[target].apply(self.generalize_target)
+            for node in subnodes_no_target:
+                data_ex[node] = data[node].apply(self.generalize_others)
+
+            est = HillClimbSearch(data_ex)
+            pgm_w_target_explanation = est.estimate(scoring_method=BicScore(data_ex))
+            print('estimation', pgm_w_target_explanation.nodes(), pgm_w_target_explanation.edges())
+            #   Create the pgm
+            pgm_explanation = BayesianNetwork()
+            for node in pgm_w_target_explanation.nodes():
+                pgm_explanation.add_node(node)
+            for edge in pgm_w_target_explanation.edges():
+                pgm_explanation.add_edge(edge[0], edge[1])
+
+            #   Fit the pgm
+
+            pgm_explanation.fit(data_ex)
+            print('we added edges')
+        return pgm_explanation
+    def StructureLearning_bamt(self, target, data, subnodes, child=None):
 
         subnodes = [str(int(node)) for node in subnodes]
         target = str(int(target))
@@ -203,36 +263,59 @@ class Explain:
         MK_blanket = self.search_MK(data, target, subnodes_no_target.copy())
 
         if child == None:
-            est = HillClimbSearch(data[subnodes_no_target], scoring_method=BicScore(data))
-            pgm_no_target = est.estimate()
-            for node in MK_blanket:
-                if node != target:
-                    pgm_no_target.add_edge(node, target)
+            print(subnodes_no_target)
+           # est = HillClimbSearch(data[subnodes_no_target])
+           # pgm_no_target = est.estimate(scoring_method=BicScore(data))
+
+            #for node in MK_blanket:
+             #   if node != target:
+              #      pgm_no_target.add_edge(node, target)
 
             #   Create the pgm
-            pgm_explanation = BayesianModel()
-            for node in pgm_no_target.nodes():
-                pgm_explanation.add_node(node)
-            for edge in pgm_no_target.edges():
-                pgm_explanation.add_edge(edge[0], edge[1])
+
+            #pgm_explanation = BayesianNetwork()
+            #for node in pgm_no_target.nodes():
+             #   pgm_explanation.add_node(node)
+            #for edge in pgm_no_target.edges():
+             #   pgm_explanation.add_edge(edge[0], edge[1])
 
             #   Fit the pgm
+
             data_ex = data[subnodes].copy()
             data_ex[target] = data[target].apply(self.generalize_target)
             for node in subnodes_no_target:
                 data_ex[node] = data[node].apply(self.generalize_others)
-            pgm_explanation.fit(data_ex)
+
+            for col in data_ex.columns[: len(data_ex.columns)]:
+                data_ex[col] = data_ex[col].astype(int)
+            data_ex[target] = data_ex[target].astype(int)
+
+            pgm_explanation = Nets.DiscreteBN()
+            p_info=dict()
+            p_info['types']=dict(list(zip(list(data_ex.columns), ['disc_num']*len(data_ex.columns))))
+            print(p_info)
+            pgm_explanation.add_nodes(p_info)
+
+            pgm_explanation.add_edges(
+                data_ex,
+                scoring_function=('BIC',),
+                #params=params,
+            )
+
+            #pgm_explanation.calculate_weights(discretized_data)
+            pgm_explanation.plot("BN1.html")
+
         else:
             data_ex = data[subnodes].copy()
             data_ex[target] = data[target].apply(self.generalize_target)
             for node in subnodes_no_target:
                 data_ex[node] = data[node].apply(self.generalize_others)
 
-            est = HillClimbSearch(data_ex, scoring_method=BicScore(data_ex))
-            pgm_w_target_explanation = est.estimate()
+            est = HillClimbSearch(data_ex)
+            pgm_w_target_explanation = est.estimate(scoring_method=BicScore(data_ex))
 
             #   Create the pgm
-            pgm_explanation = BayesianModel()
+            pgm_explanation = BayesianNetwork()
             for node in pgm_w_target_explanation.nodes():
                 pgm_explanation.add_node(node)
             for edge in pgm_w_target_explanation.edges():
@@ -244,7 +327,7 @@ class Explain:
             for node in subnodes_no_target:
                 data_ex[node] = data[node].apply(self.generalize_others)
             pgm_explanation.fit(data_ex)
-
+            print('we added edges')
         return pgm_explanation
 
     #    return (f'{self.__class__.__name__}({self.in_channels}, '
@@ -275,7 +358,7 @@ class Explain:
             for node in nodes:
                 evidences = MB.copy()
                 evidences.remove(node)
-                _, p, _ = chi_square(target, node, evidences, data[nodes + [target]])
+                _, p, _ = chi_square(target, node, evidences, data[nodes + [target]], boolean=False)
                 if p > 0.05:
                     MB.remove(node)
                     count = 0
@@ -283,3 +366,16 @@ class Explain:
                     count = count + 1
                     if count == len(MB):
                         return MB
+    def generalize_target(self, x):
+        if x > 10:
+            return x - 10
+        else:
+            return x
+
+    def generalize_others(self, x):
+        if x == 2:
+            return 1
+        elif x == 12:
+            return 11
+        else:
+            return x

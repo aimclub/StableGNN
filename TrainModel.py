@@ -7,6 +7,7 @@ import optuna
 import numpy as np
 import torch
 import random
+from torch_geometric.loader import DataLoader
 
 
 class TrainModel:
@@ -15,15 +16,12 @@ class TrainModel:
         data,
         conv="GAT",
         device="cuda",
-        num_negative_adjust=5,
-        d=64,
-        sigma_e=0.6,
-        sigma_u=0.8,
-        ADJUST_FLAG=True,
+        SSL = False,
+            EXTRAPOLATE=True
     ):
 
         # arguments = {'d': d, 'sigma_u': sigma_u, 'sigma_e': sigma_e, 'device': device, 'name' : name, '_store': 'C:'}
-        print(data)
+       # print(data)
 
         self.Conv = conv
         self.device = device
@@ -31,9 +29,10 @@ class TrainModel:
         self.y = data.y.squeeze()
         self.edge_index = data.edge_index
 
-        self.data = Data(x=self.x, edge_index=self.edge_index, y=self.y)
-        self.data = self.data.to(device)
-
+        self.data = data
+        self.data = self.data#.to(device)
+        self.SSL = SSL
+        self.EXTRAPOLATE = EXTRAPOLATE
         self.train_mask, self.val_mask, self.test_mask = self.train_test_split(self.x)
         super(TrainModel, self).__init__()
 
@@ -56,46 +55,46 @@ class TrainModel:
         train_mask[train_indices] = True
         test_mask[test_indices] = True
         val_mask[val_indices] = True
-        return train_mask, val_mask, test_mask
+        return train_indices, val_indices, test_indices
 
-    def train(self, model, data, optimizer, train_loader, dropout):
+
+
+    def train(self, model, optimizer, train_loader):
         model.train()
         optimizer.zero_grad()
         total_loss = 0
-        y = self.y.to(self.device)
-        for batch_size, n_id, adjs in train_loader:
-
-            if len(train_loader.sizes) == 1:
-                adjs = [adjs]
-            adjs = [adj.to(self.device) for adj in adjs]
-            out = model.forward(data.x[n_id.to(self.device)].to(self.device), adjs)
-            loss = model.loss_sup(out, y[self.train_mask])
+        len(train_loader)
+        for dat in train_loader:
+            dat = dat.to(self.device)
+            out, deg_pred = model.forward(dat.x, dat.edge_index, dat.edge_weight, dat.batch)
+            loss = model.loss_sup(out, dat.y)
+            if self.SSL:
+                loss_SSL = model.SelfSupervisedLoss(deg_pred,cluster_pred,self.train_mask)
+                total_loss += 10*loss_SSL
+                print('SSL loss', loss_SSL)
             total_loss += loss
-
-        total_loss.backward()
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
         return total_loss / len(train_loader)
 
     @torch.no_grad()
-    def test(self, model, data):  # ,n_estimators,learning_rate_catboost, max_depth):
+    def test(self, model, loader):  # ,n_estimators,learning_rate_catboost, max_depth):
         model.eval()
-        out = model.inference(data.to(self.device))
-        y_pred = out.cpu().argmax(dim=-1, keepdim=True)
-        accs_micro = []
-        accs_macro = []
-        for mask in [self.train_mask, self.test_mask, self.val_mask]:
-            accs_micro += [
-                f1_score(
-                    self.y.detach()[mask].cpu().numpy(), y_pred[mask], average="micro"
-                )
-            ]
-            accs_macro += [
-                f1_score(
-                    self.y.detach()[mask].cpu().numpy(), y_pred[mask], average="macro"
-                )
-            ]
-
-        return accs_micro, accs_macro
+        accs_micro=[]
+        accs_macro=[]
+        for dat in loader:
+            dat = dat.to(self.device)
+            out, _ = model.forward(dat.x, dat.edge_index, dat.edge_weight, dat.batch)
+            y_pred = out.cpu().argmax(dim=1, keepdim=True)
+            y_true = dat.y
+            accs_micro.append(f1_score(
+                y_true.cpu().tolist(),  y_pred.squeeze().tolist(), average="micro"
+                    ))
+            accs_macro.append(f1_score(
+                y_true.cpu().tolist(),  y_pred.squeeze().tolist(), average="macro"
+                    ))
+        return np.mean(accs_micro), np.mean(accs_macro)
 
     def run(self, params):
 
@@ -103,13 +102,7 @@ class TrainModel:
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
-        num_negative_adjust = params["number of negative samples for graph.adjust"]
-        train_loader = NeighborSampler(
-            self.data.edge_index,
-            node_idx=self.train_mask,
-            batch_size=int(sum(self.train_mask)),
-            sizes=[-1] * size,
-        )
+
 
         model = ModelName(
             dataset=self.data,
@@ -117,10 +110,26 @@ class TrainModel:
             device=self.device,
             hidden_layer=hidden_layer,
             num_layers=size,
-            dropout=dropout,
+            dropout=dropout,SSL=self.SSL
         )
         model.to(self.device)
 
+        if self.EXTRAPOLATE:
+            init_edges = False
+            remove_init_edges = False
+            white_list = False
+            score_func = 'MI' #TODO придумать как их задавать пользователю
+            self.train_dataset, self.test_dataset = model.Extrapolate(self.train_mask, self.val_mask, init_edges, remove_init_edges,white_list, score_func)
+
+       # train_loader = NeighborSampler(
+        #    self.data.edge_index,
+         #   node_idx=self.train_mask,
+          #  batch_size=int(sum(self.train_mask)),
+           # sizes=[-1] * size,
+        #)
+        self.data = self.train_dataset+self.test_dataset
+        train_loader = DataLoader(self.train_dataset, batch_size=32, shuffle=True)
+        test_loader = DataLoader(self.test_dataset, batch_size=32, shuffle=True)
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate, weight_decay=1e-5
         )
@@ -128,33 +137,28 @@ class TrainModel:
         losses = []
         train_accs_mi = []
         test_accs_mi = []
-        val_accs = []
         train_accs_ma = []
         test_accs_ma = []
-        log = "Loss: {:.4f}, Epoch: {:03d}, Train acc micro: {:.4f}, Test acc micro: {:.4f},Train acc macro: {:.4f}, Test acc macro: {:.4f}"
+        log = "Loss: {:.4f}, Epoch: {:03d}, Test acc micro: {:.4f}, Test acc macro: {:.4f}"
 
         for epoch in range(100):
-            loss = self.train(model, self.data, optimizer, train_loader, dropout)
+            loss = self.train(model, optimizer, train_loader)
             losses.append(loss.detach().cpu())
-            [train_acc_mi, test_acc_mi, val_acc_mi], [
-                train_acc_ma,
-                test_acc_ma,
-                val_acc_ma,
-            ] = self.test(model, self.data)
-            train_accs_mi.append(train_acc_mi)
+            test_acc_mi, test_acc_ma = self.test(model, test_loader)
+           # train_accs_mi.append(train_acc_mi)
             test_accs_mi.append(test_acc_mi)
-            train_accs_ma.append(train_acc_ma)
+          #  train_accs_ma.append(train_acc_ma)
             test_accs_ma.append(test_acc_ma)
             print(
                 log.format(
-                    loss, epoch, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
+                    loss, epoch, test_acc_mi, test_acc_ma
                 )
             )
 
             # scheduler.step()
         print(
             log.format(
-                loss, epoch, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
+                loss, epoch, test_acc_mi, test_acc_ma
             )
         )
         plt.plot(losses)
@@ -173,15 +177,12 @@ class TrainModel:
         plt.xlabel("epoch")
         plt.ylabel("loss")
         plt.show()
-        return model, train_acc_mi, test_acc_mi, train_acc_ma, test_acc_ma
+        return model, test_acc_mi, test_acc_ma
 
 
 class TrainModelOptuna(TrainModel):
     def objective(self, trial):
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
-        num_negative_adjust = trial.suggest_categorical(
-            "number of negative samples for graph.adjust", [5, 10, 20]
-        )
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         Conv = self.Conv
@@ -193,14 +194,26 @@ class TrainModelOptuna(TrainModel):
             device=self.device,
             hidden_layer=hidden_layer,
             num_layers=size,
-            dropout=dropout,
+            dropout=dropout,SSL=self.SSL
         )
-        train_loader = NeighborSampler(
-            self.data.edge_index,
-            batch_size=int(sum(self.train_mask)),
-            node_idx=self.train_mask,
-            sizes=[-1] * size,
-        )
+
+        if self.EXTRAPOLATE:
+            init_edges = False
+            remove_init_edges = False
+            white_list = False
+            score_func = 'MI'  # TODO придумать как их задавать пользователю
+            self.train_dataset, self.test_dataset = model.Extrapolate(self.train_mask,self.val_mask, init_edges, remove_init_edges,
+                                                                      white_list, score_func)
+
+        # train_loader = NeighborSampler(
+        #    self.data.edge_index,
+        #   node_idx=self.train_mask,
+        #  batch_size=int(sum(self.train_mask)),
+        # sizes=[-1] * size,
+        # )
+        self.data = self.train_dataset + self.test_dataset
+        train_loader = DataLoader(self.train_dataset, batch_size=64, shuffle=True)
+        test_loader = DataLoader(self.test_dataset, batch_size=64, shuffle=True)
 
         model.to(self.device)
         optimizer = torch.optim.Adam(
@@ -208,9 +221,9 @@ class TrainModelOptuna(TrainModel):
         )
 
         for epoch in range(50):
-            loss = self.train(model, self.data, optimizer, train_loader, dropout)
-        [_, _, val_acc_mi], [_, _, val_acc_ma] = self.test(model, self.data)
-        return np.sqrt(val_acc_mi * val_acc_ma)
+            _ = self.train(model, optimizer, train_loader)
+        test_acc_mi, test_acc_ma = self.test(model, test_loader)
+        return np.sqrt(test_acc_mi * test_acc_ma)
 
     def run(self, number_of_trials):
         study = optuna.create_study(direction="maximize")
