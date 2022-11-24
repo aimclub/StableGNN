@@ -102,11 +102,13 @@ class Explain:
             if len(loader.sizes) == 1:
                 adjs = [adjs]
             adjs = [adj.to(self.device) for adj in adjs]
-            pred_torch = self.model.forward(data.x[n_id.to(self.device)].to(self.device), adjs)
-
+            edge_index = adjs[0].edge_index
+            edge_weight = None
+            batch = None
+            pred_torch = self.model.forward(data.x[n_id.to(self.device)].to(self.device), edge_index,edge_weight,batch,graph_level=False)
 
       # pred_torch, _ = self.model.forward(data, )
-        soft_pred = np.asarray([softmax(np.asarray(pred_torch.cpu()[node_].data)) for node_ in range(self.X.shape[0])]) #TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
+        soft_pred = np.asarray([softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])]) #TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
 
     #    pred_node = np.asarray(pred_torch[0][node_idx].data)
      #   label_node = np.argmax(pred_node)
@@ -141,10 +143,13 @@ class Explain:
                 if len(loader_perturb.sizes) == 1:
                     adjs = [adjs]
                 adjs = [adj.to(self.device) for adj in adjs]
-                pred_perturb_torch = self.model.forward(data_perturb.x[n_id.to(self.device)].to(self.device), adjs)
+                edge_index = adjs[0].edge_index
+                edge_weight = None
+                batch = None
+                pred_perturb_torch = self.model.forward(data_perturb.x[n_id.to(self.device)].to(self.device), edge_index, edge_weight, batch, graph_level=False)
 
             soft_pred_perturb = np.asarray(
-                [softmax(np.asarray(pred_perturb_torch.cpu()[node_].data)) for node_ in range(self.X.shape[0])])
+                [softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])])
 
             sample_bool = []
             for node in neighbors:
@@ -166,6 +171,7 @@ class Explain:
 
         data = pd.DataFrame(Combine_Samples)
         return data, neighbors
+
 
     def VariableSelection(self, data, neighbors, node_idx, top_node=None, p_threshold=0.05):
 

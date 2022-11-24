@@ -52,21 +52,22 @@ class ModelName(torch.nn.Module):
 
         self.linear_classifier = Linear(int(self.hidden_layer/2), num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer/2), 1)
-        self.linear_cluster_distance_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def forward(self, x, edge_index, edge_weight, batch): #TODO: add batchnorm after self.linear_layer
+
+    def forward(self, x, edge_index, edge_weight, batch,graph_level=True): #TODO: add batchnorm after self.linear_layer
         # 1. Obtain node embeddings
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index, edge_weight)
             if i < self.num_layers - 1:
                 x = x.relu()
         # 2. Readout layer
-        x = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
+        if graph_level:
+            x = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
         # 3. Apply a final classifier
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.linear(x)
         x = F.relu(x)
-        
+
         deg_pred=0
         #cluster_pred=0 #TODO если убираем - то удалить
         if self.SSL:
@@ -117,7 +118,7 @@ class ModelName(torch.nn.Module):
                 "there is no ", self.score_func, "score function. Choose one of: MI, K2"
             )
 
-        train_dataset, test_dataset, n_min = self.convert_dataset(self.data, train_mask,val_mask)
+        train_dataset, test_dataset, val_dataset, n_min = self.convert_dataset(self.data, train_mask,val_mask)
         self.n_min = n_min
 
         data_bamt = self.data_eigen_exctractor(train_dataset)
@@ -139,10 +140,14 @@ class ModelName(torch.nn.Module):
         train_dataset = self.convolve(
             train_dataset, weights_preprocessed, left_vertices
         )
+        val_dataset = self.convolve(
+            val_dataset, weights_preprocessed, left_vertices
+        )
         test_dataset = self.convolve(
             test_dataset, weights_preprocessed, left_vertices
         )
-        return train_dataset, test_dataset
+
+        return train_dataset, test_dataset, val_dataset
 
     def func(self,x):
             if x[1] == "y" and len(x[0]) > 1:
@@ -153,12 +158,7 @@ class ModelName(torch.nn.Module):
                 number = np.nan
             return number
 
-    def SelfSupervisedLoss(self, deg_pred,cluster_pred,mask):
-        num_parts = min(3, int(len(self.data.x)/300))
-       # cluster = ClusterData(self.data, num_parts)
 
-#TODO пока нет расстояния до центра кластера - много дополнительный вычислений
-        return F.mse_loss(deg_pred,self.deg)#+MSELoss(cluster_pred,cluster)
 
 #this function takes one graph, extract ego-networks for each node and construct new dataset--list of this ego-networks
     def convert_dataset(self, data, train_mask, val_mask):
@@ -171,6 +171,7 @@ class ModelName(torch.nn.Module):
 
         train_dataset = []
         test_dataset = []
+        val_dataset = []
 
         for i,(batch_size, n_id, adjs) in enumerate(loader):
 
@@ -180,12 +181,14 @@ class ModelName(torch.nn.Module):
             y = data.y[n_id]
             if i in train_mask:
                 train_dataset.append(Data(x=x,y=y[0],edge_index=edge_index))
+            elif i in val_mask:
+                val_dataset.append(Data(x=x, y=y[0], edge_index=edge_index))
             else:
                 test_dataset.append(Data(x=x, y=y[0], edge_index=edge_index))
 
             if n_min > len(n_id):
                 n_min = len(n_id)
-        return train_dataset, test_dataset, n_min
+        return train_dataset, test_dataset, val_dataset, n_min
 
 
     def data_eigen_exctractor(self, dataset):
@@ -279,3 +282,11 @@ class ModelName(torch.nn.Module):
             # print((graph.edge_weight).dtype)
             new_Data.append(graph)
         return new_Data
+
+    def SelfSupervisedLoss(self, deg_pred,batch):
+            deg_pred = deg_pred.reshape(deg_pred.shape[0])
+            batch_ptr = (batch.ptr.type(torch.LongTensor)).cpu()
+            indices = batch_ptr[:len(batch_ptr)-1]
+            ratio = np.mean(batch_ptr.numpy()[1:] - batch_ptr.numpy()[:len(batch_ptr)-1]) #после экстраполяции мы получили очень плотный граф, хотим степень снизить в N раз для более хороших предсказаний
+            true = degree(batch.edge_index[0], batch.x.shape[0])[indices]/ratio
+            return F.mse_loss(deg_pred, true)

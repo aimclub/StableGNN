@@ -69,10 +69,10 @@ class TrainModel:
             out, deg_pred = model.forward(dat.x, dat.edge_index, dat.edge_weight, dat.batch)
             loss = model.loss_sup(out, dat.y)
             if self.SSL:
-                loss_SSL = model.SelfSupervisedLoss(deg_pred,cluster_pred,self.train_mask)
-                total_loss += 10*loss_SSL
-                print('SSL loss', loss_SSL)
+                loss_SSL = model.SelfSupervisedLoss(deg_pred,dat)
+                total_loss += loss_SSL
             total_loss += loss
+            loss_SSL.backward(retain_graph=True)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -119,7 +119,7 @@ class TrainModel:
             remove_init_edges = False
             white_list = False
             score_func = 'MI' #TODO придумать как их задавать пользователю
-            self.train_dataset, self.test_dataset = model.Extrapolate(self.train_mask, self.val_mask, init_edges, remove_init_edges,white_list, score_func)
+            self.train_dataset, self.test_dataset, self.val_dataset = model.Extrapolate(self.train_mask, self.val_mask, init_edges, remove_init_edges,white_list, score_func)
 
        # train_loader = NeighborSampler(
         #    self.data.edge_index,
@@ -127,9 +127,10 @@ class TrainModel:
           #  batch_size=int(sum(self.train_mask)),
            # sizes=[-1] * size,
         #)
-        self.data = self.train_dataset+self.test_dataset
-        train_loader = DataLoader(self.train_dataset, batch_size=32, shuffle=True)
-        test_loader = DataLoader(self.test_dataset, batch_size=32, shuffle=True)
+        #self.data = self.train_dataset+self.test_dataset
+        train_loader = DataLoader(self.train_dataset, batch_size=20, shuffle=True)
+        test_loader = DataLoader(self.test_dataset, batch_size=20, shuffle=True)
+
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate, weight_decay=1e-5
         )
@@ -202,7 +203,7 @@ class TrainModelOptuna(TrainModel):
             remove_init_edges = False
             white_list = False
             score_func = 'MI'  # TODO придумать как их задавать пользователю
-            self.train_dataset, self.test_dataset = model.Extrapolate(self.train_mask,self.val_mask, init_edges, remove_init_edges,
+            self.train_dataset, self.test_dataset, self.val_dataset = model.Extrapolate(self.train_mask,self.val_mask, init_edges, remove_init_edges,
                                                                       white_list, score_func)
 
         # train_loader = NeighborSampler(
@@ -211,9 +212,9 @@ class TrainModelOptuna(TrainModel):
         #  batch_size=int(sum(self.train_mask)),
         # sizes=[-1] * size,
         # )
-        self.data = self.train_dataset + self.test_dataset
-        train_loader = DataLoader(self.train_dataset, batch_size=64, shuffle=True)
-        test_loader = DataLoader(self.test_dataset, batch_size=64, shuffle=True)
+       # self.data = self.train_dataset + self.test_dataset
+        train_loader = DataLoader(self.train_dataset, batch_size=20, shuffle=True)
+        val_loader = DataLoader(self.val_dataset, batch_size=20, shuffle=True)
 
         model.to(self.device)
         optimizer = torch.optim.Adam(
@@ -222,8 +223,8 @@ class TrainModelOptuna(TrainModel):
 
         for epoch in range(50):
             _ = self.train(model, optimizer, train_loader)
-        test_acc_mi, test_acc_ma = self.test(model, test_loader)
-        return np.sqrt(test_acc_mi * test_acc_ma)
+        val_acc_mi, val_acc_ma = self.test(model, val_loader)
+        return np.sqrt(val_acc_mi * val_acc_ma)
 
     def run(self, number_of_trials):
         study = optuna.create_study(direction="maximize")
