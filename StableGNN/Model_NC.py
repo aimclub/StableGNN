@@ -8,11 +8,11 @@ from datetime import datetime
 import collections
 import numpy as np
 from torch.nn import Linear
-
+from torch_geometric.utils import degree, to_dense_adj,dense_to_sparse
 
 class ModelName(torch.nn.Module):
     def __init__(
-        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2
+        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2,SSL=False
     ):
         super(ModelName, self).__init__()
         self.conv = conv
@@ -25,6 +25,10 @@ class ModelName(torch.nn.Module):
         self.dropout = dropout
         self.device = device
         num_classes = len(collections.Counter(self.data.y.tolist()))
+        self.SSL = SSL
+        if self.SSL:  # TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
+            self.deg = degree(self.data.edge_index[0], self.data.num_nodes)
+
         if self.conv == "GAT":
             if self.num_layers == 1:
                 self.convs.append(GATConv(self.num_features, hidden_layer))
@@ -44,11 +48,13 @@ class ModelName(torch.nn.Module):
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.linear(x)
+        deg_pred=0
+        if self.SSL:
+            deg_pred = F.relu(self.linear_degree_predictor(x))
 
-        return x.log_softmax(dim=1)
+        return x.log_softmax(dim=1), deg_pred
 
     def inference(self, data, dp=0):
-
         x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
@@ -67,8 +73,7 @@ class ModelName(torch.nn.Module):
     def VirtualVertex(self):
         pass
 
-    def Extrapolate(self):
-        pass
-
-    def SelfSupervised(self):
-        pass
+    def SelfSupervisedLoss(self, deg_pred):
+            deg_pred = deg_pred.reshape(deg_pred.shape[0])
+            true = degree()
+            return F.mse_loss(deg_pred, true)

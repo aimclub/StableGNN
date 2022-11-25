@@ -7,8 +7,8 @@ import torch
 import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
 
-from TrainModel import TrainModel, TrainModelOptuna
-from TrainModel import TrainModel, TrainModelOptuna
+from TrainModel_GC import TrainModel, TrainModelOptuna
+from TrainModel_GC import TrainModel, TrainModelOptuna
 from StableGNN.Explain import Explain
 from StableGNN.Graph import Graph
 
