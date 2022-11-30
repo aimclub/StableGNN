@@ -22,33 +22,36 @@ from torch_geometric.nn import global_mean_pool
 
 class ModelName(torch.nn.Module):
     def __init__(
-        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2,SSL=False
+        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2, SSL=False, heads = 1
     ):
         super(ModelName, self).__init__()
         self.conv = conv
         self.num_layers = num_layers
         self.data = dataset
-        self.num_features = dataset.x.shape[1]
+        self.num_features = dataset[0].x.shape[1]
         # print(dataset.num_features)
         self.convs = torch.nn.ModuleList()
         self.hidden_layer = hidden_layer
         self.dropout = dropout
         self.device = device
-        self.SSL=SSL
-        if self.SSL: #TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
-            self.deg = degree(self.data.edge_index[0], self.data.num_nodes)
-        
+        self.SSL = SSL
+        self.heads = heads
 
-        num_classes = len(collections.Counter(self.data.y.tolist()))
+        labels = []
+        for dat in self.data:
+            if dat.y.tolist()[0] not in labels:
+                labels.append(dat.y.tolist()[0])
+        num_classes = len(labels)
+
         if self.conv == "GAT":
             if self.num_layers == 1:
                 self.convs.append(GATConv(self.num_features, hidden_layer))
             else:
                 self.convs.append(GATConv(self.num_features, self.hidden_layer))
                 for i in range(1, self.num_layers):
-                    self.convs.append(GATConv(self.hidden_layer, self.hidden_layer))
+                    self.convs.append(GATConv(self.heads*self.hidden_layer, self.hidden_layer))
 
-        self.linear = Linear(self.hidden_layer, int(self.hidden_layer/2))
+        self.linear = Linear(self.heads*self.hidden_layer, int(self.hidden_layer/2))
 
         self.linear_classifier = Linear(int(self.hidden_layer/2), num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer/2), 1)
@@ -98,13 +101,7 @@ class ModelName(torch.nn.Module):
     def loss_sup(self, pred, label):
         return F.nll_loss(pred, label)
 
-    def message(self):
-        pass
-
-    def VirtualVertex(self):
-        pass
-
-    def Extrapolate(self, train_mask, val_mask, init_edges, remove_init_edges,white_list, score_func):
+    def Extrapolate(self, train_indices, val_indices, init_edges, remove_init_edges,white_list, score_func):
         self.init_edges = init_edges
         self.remove_init_edges = remove_init_edges
         self.white_list = white_list
@@ -118,7 +115,7 @@ class ModelName(torch.nn.Module):
                 "there is no ", self.score_func, "score function. Choose one of: MI, K2"
             )
 
-        train_dataset, test_dataset, val_dataset, n_min = self.convert_dataset(self.data, train_mask,val_mask)
+        train_dataset, test_dataset, val_dataset, n_min = self.convert_dataset(self.data, train_indices,val_indices)
         self.n_min = n_min
 
         data_bamt = self.data_eigen_exctractor(train_dataset)
@@ -148,6 +145,23 @@ class ModelName(torch.nn.Module):
         )
 
         return train_dataset, test_dataset, val_dataset
+    def convert_dataset(self, data, train_indices, val_indices):
+        train_dataset = []
+        test_dataset = []
+        val_dataset = []
+        n_min = np.inf
+        for i,dat in enumerate(data):
+            if len(dat.x)<n_min:
+                n_min = len(dat.x)
+
+            if i in train_indices:
+                train_dataset.append(dat)
+            elif i in val_indices:
+                val_dataset.append(dat)
+            else:
+                test_dataset.append(dat)
+
+        return train_dataset, test_dataset, val_dataset, n_min
 
     def func(self,x):
             if x[1] == "y" and len(x[0]) > 1:
@@ -158,39 +172,6 @@ class ModelName(torch.nn.Module):
                 number = np.nan
             return number
 
-
-
-#this function takes one graph, extract ego-networks for each node and construct new dataset--list of this ego-networks
-    def convert_dataset(self, data, train_mask, val_mask):
-        n_min = data.num_nodes
-        loader = NeighborSampler(
-            data.edge_index,
-            batch_size=1,
-            sizes=[-1] * 4, #вот тут можно сделать автоподбор такого числа слоев, чтоб число соседей было около 10?
-        )
-
-        train_dataset = []
-        test_dataset = []
-        val_dataset = []
-
-        for i,(batch_size, n_id, adjs) in enumerate(loader):
-
-            edge_index = torch.concat([adjs[0].edge_index, adjs[1].edge_index, adjs[2].edge_index, adjs[3].edge_index],
-                                      dim=1)
-            x = data.x[n_id]
-            y = data.y[n_id]
-            if i in train_mask:
-                train_dataset.append(Data(x=x,y=y[0],edge_index=edge_index))
-            elif i in val_mask:
-                val_dataset.append(Data(x=x, y=y[0], edge_index=edge_index))
-            else:
-                test_dataset.append(Data(x=x, y=y[0], edge_index=edge_index))
-
-            if n_min > len(n_id):
-                n_min = len(n_id)
-        return train_dataset, test_dataset, val_dataset, n_min
-
-
     def data_eigen_exctractor(self, dataset):
 
         columns_list = list(map(lambda x: "eigen" + str(x), range(self.n_min)))
@@ -200,7 +181,7 @@ class ModelName(torch.nn.Module):
             eig = torch.eig(A.reshape(A.shape[1], A.shape[2]))[0].T[0].T
             ordered, indices = torch.sort(eig[: gr.num_nodes], descending=True)
             to_append = pd.Series(
-                ordered[: self.n_min].tolist() + [gr.y.tolist()], index=data_bamt.columns
+                ordered[: self.n_min].tolist() + gr.y.tolist(), index=data_bamt.columns
             )
             data_bamt = data_bamt.append(to_append, ignore_index=True)
 
@@ -208,8 +189,8 @@ class ModelName(torch.nn.Module):
 
     def bn_build(self, data_bamt):
         # поиск весов для bamt
-
         for col in data_bamt.columns[: len(data_bamt.columns)]:
+
             data_bamt[col] = data_bamt[col].astype(float)
         data_bamt["y"] = data_bamt["y"].astype(int)
 
