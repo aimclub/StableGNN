@@ -1,0 +1,42 @@
+name: Testing
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Linters
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@v2
+      -
+        name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      -
+        name: Check cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: requirements-${{ hashFiles('requirements.txt') }}-${{ hashFiles('requirements-dev.txt') }}
+      -
+        name: Install dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+      -
+        name: flake8
+        run: pflake8 .
+
+      -
+        name: isort
+        run: isort --profile black --check-only .
+
+      -
+        name: black
+        run: black --diff --check .
+      -
+        name: mypy
+        run: mypy StableGNN
