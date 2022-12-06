@@ -1,18 +1,17 @@
-import torch
+import bamt.Networks as Nets
 import numpy as np
-from scipy.special import softmax
 import pandas as pd
+import torch
+from bamt.Preprocessors import Preprocessor
+from pgmpy.estimators import BicScore, HillClimbSearch, K2Score
+from pgmpy.estimators.CITests import chi_square
+from pgmpy.inference import VariableElimination
+from pgmpy.models import BayesianNetwork
+from scipy.special import softmax
+from sklearn import preprocessing
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborSampler
-from pgmpy.estimators.CITests import chi_square
-from pgmpy.estimators import HillClimbSearch, BicScore
-from pgmpy.models import BayesianNetwork
-from pgmpy.inference import VariableElimination
 
-import bamt.Networks as Nets
-from bamt.Preprocessors import Preprocessor
-from sklearn import preprocessing
-from pgmpy.estimators import K2Score
 
 class Explain:
     """
@@ -36,7 +35,7 @@ class Explain:
         self.num_layers = num_layers
         self.mode = mode
         self.print_result = print_result
-        self.device='cuda'
+        self.device = "cuda"
         print("Explainer settings")
         print("\\ A dim: ", self.A.shape)
         print("\\ X dim: ", self.X.shape)
@@ -57,7 +56,7 @@ class Explain:
     def extract_n_hops_neighbors(self, nA, node_idx):
         # Return the n-hops neighbors of a node
         node_nA_row = nA[node_idx]
-        print('node_nA_row', sum(node_nA_row))
+        print("node_nA_row", sum(node_nA_row))
         neighbors = np.nonzero(node_nA_row)[0]
         node_idx_new = sum(node_nA_row[:node_idx])
         sub_A = self.A[neighbors][:, neighbors]
@@ -76,7 +75,9 @@ class Explain:
             if mode == 0:
                 perturb_array = np.random.randint(2, size=X_perturb[node_idx].shape[0])
             elif mode == 1:
-                perturb_array = np.multiply(X_perturb[node_idx],np.random.uniform(low=0.0, high=2.0, size=X_perturb[node_idx].shape[0]),)
+                perturb_array = np.multiply(
+                    X_perturb[node_idx], np.random.uniform(low=0.0, high=2.0, size=X_perturb[node_idx].shape[0]),
+                )
         X_perturb[node_idx] = perturb_array
         return X_perturb
 
@@ -84,19 +85,16 @@ class Explain:
         print("Explaining node: " + str(node_idx))
         nA = self.n_hops_A(self.num_layers)
         node_idx_new, sub_A, sub_X, neighbors = self.extract_n_hops_neighbors(nA, node_idx)
-        if (node_idx not in neighbors):
+        if node_idx not in neighbors:
             neighbors = np.append(neighbors, node_idx)
         print(self.X)
         X_torch = torch.tensor([self.X], dtype=torch.float).squeeze()
         A_torch = torch.tensor([self.A], dtype=torch.float).squeeze()
 
-        data = Data(x=X_torch, edge_index = A_torch.nonzero().t().contiguous())
+        data = Data(x=X_torch, edge_index=A_torch.nonzero().t().contiguous())
 
         loader = NeighborSampler(
-            data.edge_index,
-            node_idx=torch.tensor([True]*len(X_torch)),
-            batch_size=int(len(X_torch)),
-            sizes=[-1] * 1,
+            data.edge_index, node_idx=torch.tensor([True] * len(X_torch)), batch_size=int(len(X_torch)), sizes=[-1] * 1,
         )
         for batch_size, n_id, adjs in loader:
             if len(loader.sizes) == 1:
@@ -105,14 +103,18 @@ class Explain:
             edge_index = adjs[0].edge_index
             edge_weight = None
             batch = None
-            pred_torch = self.model.forward(data.x[n_id.to(self.device)].to(self.device), edge_index,edge_weight,batch,graph_level=False)
+            pred_torch = self.model.forward(
+                data.x[n_id.to(self.device)].to(self.device), edge_index, edge_weight, batch, graph_level=False
+            )
 
-      # pred_torch, _ = self.model.forward(data, )
-        soft_pred = np.asarray([softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])]) #TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
+        # pred_torch, _ = self.model.forward(data, )
+        soft_pred = np.asarray(
+            [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])]
+        )  # TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
 
-    #    pred_node = np.asarray(pred_torch[0][node_idx].data)
-     #   label_node = np.argmax(pred_node)
-      #  soft_pred_node = softmax(pred_node)
+        #    pred_node = np.asarray(pred_torch[0][node_idx].data)
+        #   label_node = np.argmax(pred_node)
+        #  soft_pred_node = softmax(pred_node)
 
         Samples = []
         Pred_Samples = []
@@ -146,10 +148,17 @@ class Explain:
                 edge_index = adjs[0].edge_index
                 edge_weight = None
                 batch = None
-                pred_perturb_torch = self.model.forward(data_perturb.x[n_id.to(self.device)].to(self.device), edge_index, edge_weight, batch, graph_level=False)
+                pred_perturb_torch = self.model.forward(
+                    data_perturb.x[n_id.to(self.device)].to(self.device),
+                    edge_index,
+                    edge_weight,
+                    batch,
+                    graph_level=False,
+                )
 
             soft_pred_perturb = np.asarray(
-                [softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])])
+                [softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])]
+            )
 
             sample_bool = []
             for node in neighbors:
@@ -164,20 +173,22 @@ class Explain:
         Samples = np.asarray(Samples)
         Pred_Samples = np.asarray(Pred_Samples)
         Combine_Samples = Samples - Samples
-        print('combine samples',Combine_Samples.shape)
+        print("combine samples", Combine_Samples.shape)
         for s in range(Samples.shape[0]):
             Combine_Samples[s] = np.asarray(
-                [Samples[s, i] * 10 + Pred_Samples[s, i] + 1 for i in range(Samples.shape[1])])
+                [Samples[s, i] * 10 + Pred_Samples[s, i] + 1 for i in range(Samples.shape[1])]
+            )
 
         data = pd.DataFrame(Combine_Samples)
         return data, neighbors
 
-
     def VariableSelection(self, data, neighbors, node_idx, top_node=None, p_threshold=0.05):
 
-        ind_sub_to_ori = dict(zip(list(data.columns), neighbors)) #mapping из перечисления 1,...n_neighhbours в индексы самих соседей
+        ind_sub_to_ori = dict(
+            zip(list(data.columns), neighbors)
+        )  # mapping из перечисления 1,...n_neighhbours в индексы самих соседей
         data = data.rename(columns={0: "A", 1: "B"})  # Trick to use chi_square test on first two data columns
-        ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))#mapping индексов соседей в простое перечисление
+        ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))  # mapping индексов соседей в простое перечисление
 
         p_values = []
         dependent_neighbors = []
@@ -205,7 +216,7 @@ class Explain:
         return pgm_nodes, data, pgm_stats
 
     def StructureLearning(self, target, data, subnodes, child=None):
-        print('after var selection', subnodes)
+        print("after var selection", subnodes)
         subnodes = [str(int(node)) for node in subnodes]
         target = str(int(target))
         subnodes_no_target = [node for node in subnodes if node != target]
@@ -217,7 +228,7 @@ class Explain:
             print(subnodes_no_target)
             est = HillClimbSearch(data[subnodes_no_target])
             pgm_no_target = est.estimate(scoring_method=BicScore(data))
-            print('estimation',pgm_no_target.nodes(),pgm_no_target.edges())
+            print("estimation", pgm_no_target.nodes(), pgm_no_target.edges())
             for node in MK_blanket:
                 if node != target:
                     pgm_no_target.add_edge(node, target)
@@ -246,7 +257,7 @@ class Explain:
 
             est = HillClimbSearch(data_ex)
             pgm_w_target_explanation = est.estimate(scoring_method=BicScore(data_ex))
-            print('estimation', pgm_w_target_explanation.nodes(), pgm_w_target_explanation.edges())
+            print("estimation", pgm_w_target_explanation.nodes(), pgm_w_target_explanation.edges())
             #   Create the pgm
             pgm_explanation = BayesianNetwork()
             for node in pgm_w_target_explanation.nodes():
@@ -257,8 +268,9 @@ class Explain:
             #   Fit the pgm
 
             pgm_explanation.fit(data_ex)
-            print('we added edges')
+            print("we added edges")
         return pgm_explanation
+
     def StructureLearning_bamt(self, target, data, subnodes, child=None):
 
         subnodes = [str(int(node)) for node in subnodes]
@@ -270,20 +282,20 @@ class Explain:
 
         if child == None:
             print(subnodes_no_target)
-           # est = HillClimbSearch(data[subnodes_no_target])
-           # pgm_no_target = est.estimate(scoring_method=BicScore(data))
+            # est = HillClimbSearch(data[subnodes_no_target])
+            # pgm_no_target = est.estimate(scoring_method=BicScore(data))
 
-            #for node in MK_blanket:
-             #   if node != target:
-              #      pgm_no_target.add_edge(node, target)
+            # for node in MK_blanket:
+            #   if node != target:
+            #      pgm_no_target.add_edge(node, target)
 
             #   Create the pgm
 
-            #pgm_explanation = BayesianNetwork()
-            #for node in pgm_no_target.nodes():
-             #   pgm_explanation.add_node(node)
-            #for edge in pgm_no_target.edges():
-             #   pgm_explanation.add_edge(edge[0], edge[1])
+            # pgm_explanation = BayesianNetwork()
+            # for node in pgm_no_target.nodes():
+            #   pgm_explanation.add_node(node)
+            # for edge in pgm_no_target.edges():
+            #   pgm_explanation.add_edge(edge[0], edge[1])
 
             #   Fit the pgm
 
@@ -297,18 +309,18 @@ class Explain:
             data_ex[target] = data_ex[target].astype(int)
 
             pgm_explanation = Nets.DiscreteBN()
-            p_info=dict()
-            p_info['types']=dict(list(zip(list(data_ex.columns), ['disc_num']*len(data_ex.columns))))
+            p_info = dict()
+            p_info["types"] = dict(list(zip(list(data_ex.columns), ["disc_num"] * len(data_ex.columns))))
             print(p_info)
             pgm_explanation.add_nodes(p_info)
 
             pgm_explanation.add_edges(
                 data_ex,
-                scoring_function=('BIC',),
-                #params=params,
+                scoring_function=("BIC",),
+                # params=params,
             )
 
-            #pgm_explanation.calculate_weights(discretized_data)
+            # pgm_explanation.calculate_weights(discretized_data)
             pgm_explanation.plot("BN1.html")
 
         else:
@@ -333,7 +345,7 @@ class Explain:
             for node in subnodes_no_target:
                 data_ex[node] = data[node].apply(self.generalize_others)
             pgm_explanation.fit(data_ex)
-            print('we added edges')
+            print("we added edges")
         return pgm_explanation
 
     #    return (f'{self.__class__.__name__}({self.in_channels}, '
@@ -349,8 +361,7 @@ class Explain:
         evidences = self.generate_evidence(evidence_list)
         elimination_order = [node for node in list(pgm_infer.variables) if node not in evidence_list]
         elimination_order = [node for node in elimination_order if node != target]
-        q = pgm_infer.query([target], evidence=evidences,
-                            elimination_order=elimination_order, show_progress=False)
+        q = pgm_infer.query([target], evidence=evidences, elimination_order=elimination_order, show_progress=False)
         return q.values[0]
 
     def search_MK(self, data, target, nodes):
@@ -372,6 +383,7 @@ class Explain:
                     count = count + 1
                     if count == len(MB):
                         return MB
+
     def generalize_target(self, x):
         if x > 10:
             return x - 10

@@ -5,6 +5,50 @@ This is a component for autonomous learning of explainable graph neural networks
 
 ## Installation
 
+As a first step, [Pytorch Geometric installation](https://github.com/pyg-team/pytorch_geometric/) and Torch 1.1.2 are required.
+
+#### PyTorch 1.12
+
+```
+# CUDA 10.2
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=10.2 -c pytorch
+# CUDA 11.3
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+# CUDA 11.6
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.6 -c pytorch -c conda-forge
+# CPU Only
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cpuonly -c pytorch
+```
+
+To install the PyTorch Geometric binaries for PyTorch 1.12.0, simply run
+
+
+```
+pip install pyg-lib torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-1.12.0+${CUDA}.html
+pip install torch-geometric
+```
+
+where `${CUDA}` should be replaced by either `cpu`, `cu102`, `cu113`, or `cu116` depending on your PyTorch installation.
+
+|             | `cpu` | `cu102` | `cu113` | `cu116` |
+|-------------|-------|---------|---------|---------|
+| **Linux**   | ✅    | ✅      | ✅      | ✅      |
+| **Windows** | ✅    |         | ✅      | ✅      |
+| **macOS**   | ✅    |         |         |         |
+
+
+When Torch and Torch Geometric are installed run:
+
+```
+pip install -r requirements.txt
+```
+
+To test the installation is sucessfull, run: 
+
+```
+python ./tests/test_install.py
+```
+
 ## Library Highlights
 It consists of three modules:
 * Graph: reading input data and learning graph structure
@@ -58,6 +102,19 @@ TODO
 
 ## Dependencies
 
+## Contribution
+To contribute this library, the current [code and documentation convention](docs/Development.md) should be followed.
+Project run linters and tests on each pull request, to install linters and testing-packages locally, run 
+
+```
+pip install -r requirements-dev.txt
+```
+To avoid any unnecessary commits please fix any linting and testing errors after running of the each linter:
+- `pflake8 .`
+- `black .`
+- `isort .`
+- `mypy StableGNN`
+- `pytest tests`
 
 ## Citing
 
