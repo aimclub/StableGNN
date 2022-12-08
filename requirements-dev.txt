@@ -1,0 +1,10 @@
+flake8
+pyproject-flake8
+flake8-docstrings
+flake8-rst-docstrings
+types-pkg_resources
+mypy
+isort
+black
+pytest
+pytest-cov

@@ -7,7 +7,10 @@ import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.utils import dense_to_sparse, negative_sampling
+<<<<<<< HEAD
 from torch_geometric.utils.undirected import to_undirected
+=======
+>>>>>>> main
 
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 # TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
@@ -133,6 +136,7 @@ class Graph(InMemoryDataset):
     def process_1graph(self):
         edge_index = self.read_edges(self.raw_dir)
         edge_index = to_undirected(edge_index)
+
         # labels reading
         y = self.read_labels(self.raw_dir)
 
@@ -155,6 +159,7 @@ class Graph(InMemoryDataset):
                 edge_index=edge_index,
                 num_negative_samples=self.num_negative_samples * len(x),
             )
+
 
         data = Data(x=x, edge_index=edge_index, y=y)
         data_list = [data]
@@ -210,15 +215,10 @@ class Graph(InMemoryDataset):
     def adjust(self, edge_index, num_negative_samples):  # Learn Structure
         # generation of genuine graph structure
         m = 64  # TODO найти какой именной тут размер, или гиперпараметр?
-        u = torch.normal(
-            mean=torch.zeros((self.num_nodes, m)),
-            std=torch.ones((self.num_nodes, m)) * self.sigma_u,
-        )
+        u = torch.normal(mean=torch.zeros((self.num_nodes, m)), std=torch.ones((self.num_nodes, m)) * self.sigma_u,)
         u.requires_grad = True
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
-        a_genuine = torch.nn.Sigmoid()(
-            -(u_diff * u_diff).sum(axis=2)
-        )  # high assortativity assumption
+        a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
         # a_approx = torch.bernoulli(torch.clamp(a_approx_prob, min=0, max=1)) #TODO в статье есть эта строчка однако я не понимаю зачем, если в ф.п. только log(prob)
         # generation of noise
         e = torch.normal(
@@ -243,13 +243,7 @@ class Graph(InMemoryDataset):
 
         for i in range(100):
             print(i)
-            loss = self.loss(
-                u,
-                e,
-                torch.clamp(a_approx_prob, min=1e-5, max=1),
-                edge_index,
-                negative_samples,
-            )
+            loss = self.loss(u, e, torch.clamp(a_approx_prob, min=1e-5, max=1), edge_index, negative_samples,)
             loss.backward(retain_graph=True)
             optimizer.step()
 
@@ -269,10 +263,7 @@ class Graph(InMemoryDataset):
         alpha_u = 1
         alpha_e = 1
         positive_indices_flattened = torch.concat(
-            [
-                edge_index[0] * self.num_nodes + edge_index[1],
-                edge_index[1] * self.num_nodes + edge_index[0],
-            ]
+            [edge_index[0] * self.num_nodes + edge_index[1], edge_index[1] * self.num_nodes + edge_index[0],]
         )
         loss_proximity = -torch.sum(
             torch.log(torch.take(a_approx, positive_indices_flattened))
@@ -286,13 +277,8 @@ class Graph(InMemoryDataset):
                 negative_samples[1] * self.num_nodes + negative_samples[0],
             ]
         )
-        loss_proximity_negative = -torch.sum(
-            torch.log(1 - torch.take(a_approx, negative_indices_flattened))
-        )
 
-        return (
-            loss_proximity
-            + alpha_u * loss_u
-            + alpha_e * loss_e
-            + loss_proximity_negative
-        )
+        loss_proximity_negative = -torch.sum(torch.log(1 - torch.take(a_approx, negative_indices_flattened)))
+
+        return loss_proximity + alpha_u * loss_u + alpha_e * loss_e + loss_proximity_negative
+
