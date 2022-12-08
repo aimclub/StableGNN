@@ -1,18 +1,19 @@
-from torch_geometric.nn.conv import MessagePassing
-
-import torch
-from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, ChebConv
-import torch.nn.functional as F
-from torch_geometric.data import NeighborSampler
-from datetime import datetime
 import collections
+from datetime import datetime
+
 import numpy as np
+import torch
+import torch.nn.functional as F
 from torch.nn import Linear
-from torch_geometric.utils import degree, to_dense_adj,dense_to_sparse
+from torch_geometric.data import NeighborSampler
+from torch_geometric.nn import ChebConv, GATConv, GCNConv, SAGEConv, SGConv
+from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
+
 
 class ModelName(torch.nn.Module):
     def __init__(
-        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2,SSL=False, heads = 1, **kwargs
+        self, dataset, device, conv="GAT", hidden_layer=64, dropout=0, num_layers=2, SSL=False, heads=1, **kwargs
     ):
         super(ModelName, self).__init__()
         self.conv = conv
@@ -28,7 +29,9 @@ class ModelName(torch.nn.Module):
         self.heads = heads
         num_classes = len(collections.Counter(self.data.y.tolist()))
         self.SSL = SSL
-        if self.SSL:  # TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
+        if (
+            self.SSL
+        ):  # TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
             self.deg = degree(self.data.edge_index[0], self.data.num_nodes)
 
         if self.conv == "GAT":
@@ -39,11 +42,11 @@ class ModelName(torch.nn.Module):
                 for i in range(1, self.num_layers):
                     self.convs.append(GATConv(self.heads * self.hidden_layer, self.hidden_layer))
 
-        self.linear = Linear(self.heads*self.hidden_layer, int(self.hidden_layer/2))
-        self.linear_classifier = Linear(int(self.hidden_layer/2), num_classes)
-        self.linear_degree_predictor = Linear(int(self.hidden_layer/2), 1)
+        self.linear = Linear(self.heads * self.hidden_layer, int(self.hidden_layer / 2))
+        self.linear_classifier = Linear(int(self.hidden_layer / 2), num_classes)
+        self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def forward(self, x, adjs,weights=None,batch=None):
+    def forward(self, x, adjs, weights=None, batch=None):
         for i, (edge_index, _, size) in enumerate(adjs):
             x_target = x[: size[1]]  # Target nodes are always placed first.
             x = self.convs[i]((x, x_target), edge_index)
@@ -75,10 +78,10 @@ class ModelName(torch.nn.Module):
     def VirtualVertex(self):
         pass
 
-    def SelfSupervisedLoss(self, deg_pred,dat=None):
-       #s num_parts = min(3, int(len(self.data.x) / 300))
+    def SelfSupervisedLoss(self, deg_pred, dat=None):
+        # s num_parts = min(3, int(len(self.data.x) / 300))
         # cluster = ClusterData(self.data, num_parts)
         # TODO пока нет расстояния до центра кластера - много дополнительный вычислений
         true_deg = degree(self.data.edge_index[0], self.data.num_nodes).to(self.device)[dat]
-       # print(deg_pred.squeeze(-1),true_deg)
+        # print(deg_pred.squeeze(-1),true_deg)
         return F.mse_loss(deg_pred.squeeze(-1), true_deg)  # +MSELoss(cluster_pred,cluster)
