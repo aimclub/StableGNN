@@ -1,11 +1,13 @@
-import torch
 import os
-from torch_geometric.utils import dense_to_sparse, negative_sampling
-from torch_geometric.data import InMemoryDataset, Data
-import numpy as np
-from typing import Callable, Optional
-from os import listdir
 import warnings
+from os import listdir
+from typing import Callable, Optional
+
+import numpy as np
+import torch
+from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.utils import dense_to_sparse, negative_sampling
+from torch_geometric.utils.undirected import to_undirected
 
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 # TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
@@ -35,7 +37,7 @@ class Graph(InMemoryDataset):
         self,
         name: str,
         root: str,
-        transform: Optional[Callable] =None,
+        transform: Optional[Callable] = None,
         pre_transform=None,
         pre_filter=None,
         ADJUST_FLAG=True,
@@ -85,19 +87,21 @@ class Graph(InMemoryDataset):
         #          data_list = [self.pre_transform(data) for data in data_list]
         names_datasets = listdir(self.raw_dir)
 
-        if len(names_datasets)==3: #1 graph: edge list, labels, attrs
+        if len(names_datasets) == 3:  # 1 graph: edge list, labels, attrs
             self.process_1graph()
-        else:#many graphs
+        else:  # many graphs
             self.process_manygraphs()
 
     def process_manygraphs(self):
         if self.ADJUST_FLAG:
-            warnings.warn('Warning! We can adjust only 1 graph, so use ADJUST_FLAG==True only for Node Classification tasks')
-        number_of_graphs = int(len(listdir(self.raw_dir))/2)
+            warnings.warn(
+                "Warning! We can adjust only 1 graph, so use ADJUST_FLAG==True only for Node Classification tasks"
+            )
+        number_of_graphs = int(len(listdir(self.raw_dir)) / 2)
         data_list = []
 
         for i in range(number_of_graphs):
-            lines = self.read_files('', self.raw_dir, 'edge_list_'+str(i)+'.txt')
+            lines = self.read_files("", self.raw_dir, "edge_list_" + str(i) + ".txt")
 
             edge_list = []
             for line in lines:
@@ -105,7 +109,7 @@ class Graph(InMemoryDataset):
                 edge_list.append([int(f[0]), int(f[1])])
             edge_index = torch.tensor(edge_list).T
 
-            lines = self.read_files('', self.raw_dir, 'attrs_'+str(i)+'.txt')
+            lines = self.read_files("", self.raw_dir, "attrs_" + str(i) + ".txt")
 
             attrs = []
             for line in lines:
@@ -126,38 +130,37 @@ class Graph(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-
     def process_1graph(self):
-            edge_index = self.read_edges(self.raw_dir)
+        edge_index = self.read_edges(self.raw_dir)
+        edge_index = to_undirected(edge_index)
+        # labels reading
+        y = self.read_labels(self.raw_dir)
 
-            # labels reading
-            y = self.read_labels(self.raw_dir)
+        self.num_nodes = len(y)
 
-            self.num_nodes = len(y)
+        try:  # TODO: это лучше через assert? + мы же не рассматриваем несвязаные графы?
+            max(
+                int(torch.max(edge_index[0])), int(torch.max(edge_index[1]))
+            ) == self.num_nodes - 1  # numbering starts with 0 so self.num_nodes = max_index+1
+        except:
+            raise Exception(
+                "number of nodes in your graph differ from max index of nodes. Possible reasons (but not the only one): your graph has connected components of size = 1, or numbering starts with 1 (should with 0)"
+            )
 
-            try:  # TODO: это лучше через assert? + мы же не рассматриваем несвязаные графы?
-                max(
-                    int(torch.max(edge_index[0])), int(torch.max(edge_index[1]))
-                ) == self.num_nodes - 1  # numbering starts with 0 so self.num_nodes = max_index+1
-            except:
-                raise Exception(
-                    "number of nodes in your graph differ from max index of nodes. Possible reasons (but not the only one): your graph has connected components of size = 1, or numbering starts with 1 (should with 0)"
-                )
+        # attributes reading
+        x, d = self.read_attrs(self.raw_dir)
 
-            # attributes reading
-            x, d = self.read_attrs(self.raw_dir)
+        if self.ADJUST_FLAG:
+            edge_index = self.adjust(
+                edge_index=edge_index,
+                num_negative_samples=self.num_negative_samples * len(x),
+            )
 
-            if self.ADJUST_FLAG:
-                edge_index = self.adjust(
-                    edge_index=edge_index,
-                    num_negative_samples=self.num_negative_samples * len(x),
-                )
-
-            data = Data(x=x, edge_index=edge_index, y=y)
-            data_list = [data]
-            data, slices = self.collate(data_list)
-            data = data if self.pre_transform is None else self.pre_transform(data)
-            torch.save((data, slices), self.processed_paths[0])
+        data = Data(x=x, edge_index=edge_index, y=y)
+        data_list = [data]
+        data, slices = self.collate(data_list)
+        data = data if self.pre_transform is None else self.pre_transform(data)
+        torch.save((data, slices), self.processed_paths[0])
 
     def read_edges(self, path_initial):
         edge_index = []
@@ -177,7 +180,7 @@ class Graph(InMemoryDataset):
         return y
 
     def read_attrs(self, path_initial):
-        d = 128  #случай если нет атрибутов добавляем случайные из норм распределения
+        d = 128  # случай если нет атрибутов добавляем случайные из норм распределения
         try:
             x = []
             for line in self.read_files(self.name, path_initial, "_attrs.txt"):
@@ -293,6 +296,3 @@ class Graph(InMemoryDataset):
             + alpha_e * loss_e
             + loss_proximity_negative
         )
-
-
-
