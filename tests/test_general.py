@@ -11,7 +11,7 @@ from StableGNN.Graph import Graph
 
 dt = datetime.now()
 
-name = "BACE"
+name = "wisconsin"
 conv = "GAT"
 TASK = "GC"
 
@@ -19,12 +19,13 @@ device = torch.device("cuda", 0)
 ADJUST_FLAG = True
 SSL_FLAG = False
 EXTRAPOLATE_FLAG = False
-root = "DataValidation/"
+root = "../DataValidation/"
 ####
 data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), ADJUST_FLAG=ADJUST_FLAG)
-
+print('I have read the graph')
+print(data[0])
 #######
-TRAIN_FLAG = True
+TRAIN_FLAG = False
 if TRAIN_FLAG:
     MO = TrainModelOptuna(data=data, conv=conv, device=device, SSL=SSL_FLAG, EXTRAPOLATE=EXTRAPOLATE_FLAG, task=TASK)
     best_values = MO.run(number_of_trials=3)
@@ -32,8 +33,8 @@ if TRAIN_FLAG:
     # best_values = {'hidden_layer': 32, 'dropout': 0.0, 'size of network, number of convs': 3, 'lr': 0.001,"number of negative samples for graph.adjust":5}
     model, test_acc_mi, test_acc_ma = M.run(best_values)
     torch.save(model, "model.pt")
-model = torch.load("model.pt")
-print(model)
+    model = torch.load("model.pt")
+    print(model)
 
 EXPLAIN_FLAG = False
 if EXPLAIN_FLAG:
