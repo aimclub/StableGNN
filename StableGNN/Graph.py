@@ -5,9 +5,9 @@ from typing import Callable, Optional
 
 import numpy as np
 import torch
-from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.data import Data, InMemoryDataset,download_url
 from torch_geometric.utils import dense_to_sparse, negative_sampling
-
+from torch_geometric.utils import coalesce
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 # TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
 # TODO именно поэтому в TrainModel number of negative samples for graph.adjust не влияет на результат - постоянно считывается один и тот же граф из папки
@@ -66,16 +66,30 @@ class Graph(InMemoryDataset):
         self.sigma_e = sigma_e
         self.ADJUST_FLAG = ADJUST_FLAG
         self.num_negative_samples = 5
+
+        if self.name == 'texas' or self.name=='wisconsin':
+            self.url = 'https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master/new_data/'+self.name
+
         super().__init__(self.root, self.transform, self.pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
+
+
     @property
     def raw_file_names(self):
-        return [
+        if self.name =='texas' or self.name == 'wisconsin':
+            out = ['out1_node_feature_label.txt', 'out1_graph_edges.txt']
+        else:
+            out = [
             self.name + "_attrs.txt",
             self.name + "_edges.txt",
             self.name + "_labels.txt",
         ]
+        return out
+
+    def download(self):
+        for f in self.raw_file_names:
+            download_url(f'{self.url}/{f}', self.raw_dir)
 
     @property
     def processed_file_names(self):
@@ -84,12 +98,16 @@ class Graph(InMemoryDataset):
     def process(self):
         #       if self.pre_transform is not None:
         #          data_list = [self.pre_transform(data) for data in data_list]
-        names_datasets = listdir(self.raw_dir)
 
-        if len(names_datasets) == 3:  # 1 graph: edge list, labels, attrs
-            self.process_1graph()
-        else:  # many graphs
-            self.process_manygraphs()
+        if self.name == 'texas' or self.name=='wisconsin':
+            self.process_texas()
+        else:
+            names_datasets = listdir(self.raw_dir)
+
+            if (len(names_datasets) == 3) or (len(names_datasets) == 2):  # 1 graph: edge list, labels, attrs
+                self.process_1graph()
+            else:  # many graphs
+                self.process_manygraphs()
 
     def process_manygraphs(self):
         if self.ADJUST_FLAG:
@@ -127,6 +145,30 @@ class Graph(InMemoryDataset):
             data_list = [self.pre_transform(d) for d in data_list]
 
         data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
+
+    def process_texas(self):
+        with open(self.raw_paths[0], 'r') as f:
+            data = f.read().split('\n')[1:-1]
+            x = [[float(v) for v in r.split('\t')[1].split(',')] for r in data]
+            x = torch.tensor(x, dtype=torch.float)
+
+            y = [int(r.split('\t')[2]) for r in data]
+            y = torch.tensor(y, dtype=torch.long)
+
+        with open(self.raw_paths[1], 'r') as f:
+            data = f.read().split('\n')[1:-1]
+            data = [[int(v) for v in r.split('\t')] for r in data]
+            edge_index = torch.tensor(data, dtype=torch.long).t().contiguous()
+            edge_index = coalesce(edge_index, num_nodes=x.size(0))
+        self.num_nodes = len(y)
+        print(self.num_nodes)
+        if self.ADJUST_FLAG:
+            edge_index = self.adjust(edge_index=edge_index, num_negative_samples=self.num_negative_samples * len(x), )
+        data = Data(x=x,y=y,edge_index=edge_index)
+        data_list = [data]
+        data, slices = self.collate(data_list)
+        data = data if self.pre_transform is None else self.pre_transform(data)
         torch.save((data, slices), self.processed_paths[0])
 
     def process_1graph(self):
