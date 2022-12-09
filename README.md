@@ -71,18 +71,20 @@ DataValidation/dataset_name/raw
 ```
 The data folder must contain three files: 
 
-* **dataset_name_edges.txt** consists of two columns of nodes, each row of this table is a pair of vertices connected by an edge.
-* **dataset_name_labels.txt** is a column of numbers, meaning labels of nodes. The size of this column is the size of input graph.
-* **dataset_name_edge_attrs.txt** TODO
+* **edges.txt** consists of two columns of nodes separeted with ',', each row of this table is a pair of vertices connected by an edge.
+* **labels.txt** is a column of numbers, meaning labels of nodes. The size of this column is the size of input graph.
+* **attrs.txt** with N lines, each line means attributes of corresponding node, attributes separated from each other with ','.
 
 
 _To load data, run:_
+
 ```python
-from StableGNN.Graph import Graph
+from stable_gnn.graph import Graph
 import torch_geometric.transforms as T
-root = 'DataValidation/'
+
+root = 'data_validation/'
 name = dataset_name
-adjust = True # flag to adjust Graph or not
+adjust = True  # flag to adjust Graph or not
 data = Graph(name, root=root + str(dataset_name), transform=T.NormalizeFeatures(), adjust_flag=adjust)[0]
 ```
  
