@@ -103,7 +103,7 @@ TODO
 ## Dependencies
 
 ## Contribution
-To contribute this library, the current [code and documentation convention](docs/Development.md) should be followed.
+To contribute this library, the current [code and documentation convention](wiki/Development.md) should be followed.
 Project run linters and tests on each pull request, to install linters and testing-packages locally, run 
 
 ```
