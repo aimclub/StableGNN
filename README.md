@@ -2,6 +2,8 @@
 This is a component for autonomous learning of explainable graph neural networks.
 
 [Documentation](https://gitlab.actcognitive.org/anpolol/stablegnn/-/wikis/HOME)
+[docs](/docs/index.html)
+
 
 ## Installation
 
