@@ -3,13 +3,12 @@ import collections
 import math
 import os
 import pickle
-from datetime import datetime
 
 import numpy as np
 import torch
 from torch_sparse import SparseTensor
 
-from .negative_sampling import _NegativeSampler
+from stable_gnn.embedding.negative_sampling import _NegativeSampler
 
 try:
     import torch_cluster  # noqa

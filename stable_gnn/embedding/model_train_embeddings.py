@@ -4,13 +4,11 @@ import pickle
 import optuna
 import torch
 import torch_geometric.transforms as T
-from torch.optim import lr_scheduler
 from torch_geometric.loader import NeighborSampler
 
 from stable_gnn.graph import Graph
 
-from .model import _Net
-from .sampling import _SamplerAPP, _SamplerContextMatrix, _SamplerFactorization, _SamplerRandomWalk
+from stable_gnn.embedding.model import _Net
 
 
 class _ModelTrainEmbeddings:
@@ -71,7 +69,7 @@ class _ModelTrainEmbeddings:
                     adjs = [adjs]
                 adjs = [adj.to(self.device) for adj in adjs]
                 out = model.forward(data.x[n_id.to(self.device)].to(self.device), adjs)
-                #out = model.forward(data.x[n_id], adjs)
+                # out = model.forward(data.x[n_id], adjs)
                 self.sampling(sampler, epoch, n_id[:batch_size], loss)
                 loss = model.loss(out, self.samples)  # pos_batch.to(device), neg_batch.to(device))
                 total_loss += loss

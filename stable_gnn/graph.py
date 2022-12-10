@@ -6,9 +6,7 @@ from typing import Callable, Optional
 import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset, download_url
-from torch_geometric.utils import dense_to_sparse, negative_sampling
-from torch_geometric.utils import coalesce
-
+from torch_geometric.utils import coalesce, dense_to_sparse, negative_sampling
 from torch_geometric.utils.undirected import to_undirected
 
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
@@ -163,9 +161,7 @@ class Graph(InMemoryDataset):
         self.num_nodes = len(y)
         print(self.num_nodes)
         if self.adjust_flag:
-            edge_index = self._adjust(
-                edge_index=edge_index
-            )
+            edge_index = self._adjust(edge_index=edge_index)
         data = Data(x=x, y=y, edge_index=edge_index)
         data_list = [data]
         data, slices = self.collate(data_list)

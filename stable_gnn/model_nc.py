@@ -2,12 +2,13 @@ import collections
 
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear
-from torch_geometric.utils import degree
-from torch_geometric.typing import Tensor
-from stable_gnn.graph import Graph
-from stable_gnn.geom_gcn import GeomGCN
 from torch import device
+from torch.nn import Linear
+from torch_geometric.typing import Tensor
+from torch_geometric.utils import degree
+
+from stable_gnn.geom_gcn import GeomGCN
+from stable_gnn.graph import Graph
 
 
 class ModelName(torch.nn.Module):

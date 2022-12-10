@@ -1,3 +1,5 @@
+from typing import List, Optional, Tuple
+
 import bamt.Networks as Nets
 import numpy as np
 import pandas as pd
@@ -7,11 +9,10 @@ from pgmpy.estimators.CITests import chi_square
 from pgmpy.inference import VariableElimination
 from pgmpy.models import BayesianNetwork
 from scipy.special import softmax
+from torch.nn import Module
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborSampler
 from torch_geometric.typing import Tensor
-from torch.nn import Module
-from typing import Optional, List
 
 
 class Explain:
@@ -30,7 +31,7 @@ class Explain:
     :param X: (Tensor): Feature matrix of input data.
     """
 
-    def __init__(self, model: Module, A: Tensor, X: Tensor):
+    def __init__(self, model: Module, A: Tensor, X: Tensor) -> None:
         self.model = model
         self.model.eval()
         self.A = A
@@ -80,7 +81,9 @@ class Explain:
         X_perturb[target] = perturb_array
         return X_perturb
 
-    def _data_generation(self, target: int, num_samples: int = 100, pred_threshold: float = 0.1):
+    def _data_generation(
+        self, target: int, num_samples: int = 100, pred_threshold: float = 0.1
+    ) -> Tuple[pd.DataFrame,]:
         print("Explaining node: " + str(target))
         nA = self._n_hops_A(self.n_hops)
         target_new, sub_A, sub_X, neighbors = self._extract_n_hops_neighbors(nA, target)

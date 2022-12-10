@@ -1,3 +1,5 @@
+from typing import List
+
 import bamt.Networks as Nets
 import numpy as np
 import pandas as pd
@@ -6,13 +8,13 @@ import torch.nn.functional as F
 from bamt.Preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
-from torch.nn import Linear
-from typing import List
-from torch_geometric.nn import GATConv, global_mean_pool
-from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
-from stable_gnn.graph import Graph
 from torch import device
-from torch_geometric.typing import Tensor, Adj
+from torch.nn import Linear
+from torch_geometric.nn import GATConv, global_mean_pool
+from torch_geometric.typing import Adj, Tensor
+from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
+
+from stable_gnn.graph import Graph
 
 
 class ModelName(torch.nn.Module):

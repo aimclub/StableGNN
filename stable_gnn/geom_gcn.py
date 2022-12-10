@@ -5,14 +5,13 @@ import numpy as np
 import torch
 from sklearn.neighbors import BallTree
 from torch import Tensor
-from torch.nn import Linear, Parameter
+from torch.nn import Linear
 from torch_geometric.nn import MessagePassing
 from torch_geometric.typing import Adj, OptPairTensor
 from torch_geometric.utils import add_self_loops, degree
-from torch_sparse import SparseTensor, matmul
 
-from .embedding.model_train_embeddings import _ModelTrainEmbeddings, _OptunaTrainEmbeddings
-from .embedding.sampling import _SamplerAPP, _SamplerContextMatrix, _SamplerFactorization, _SamplerRandomWalk
+from stable_gnn.embedding.model_train_embeddings import _ModelTrainEmbeddings, _OptunaTrainEmbeddings
+from stable_gnn.embedding.sampling import _SamplerAPP
 
 
 class GeomGCN(MessagePassing):
@@ -33,7 +32,7 @@ class GeomGCN(MessagePassing):
     :param last_layer: (bool): When true, the virtual vertices are summed, otherwise -- concatenated.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, data_name: str, last_layer: bool = False):
+    def __init__(self, in_channels: int, out_channels: int, data_name: str, last_layer: bool = False) -> None:
         super().__init__(aggr="add")
         self.lin = Linear(in_channels, out_channels, bias=False)
         self.reset_parameters()
@@ -41,7 +40,7 @@ class GeomGCN(MessagePassing):
         self.last_layer = last_layer
         self.reset_parameters()
 
-    def reset_parameters(self):
+    def reset_parameters(self) -> None:
         self.lin.reset_parameters()
 
     def forward(self, x: Tensor, edge_index: Adj) -> Tensor:

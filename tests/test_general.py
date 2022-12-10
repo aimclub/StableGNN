@@ -4,10 +4,10 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
-from tutorials.train_model import TrainModel, TrainModelOptuna
 
 from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
+from tutorials.train_model import TrainModel, TrainModelOptuna
 
 dt = datetime.now()
 
@@ -29,9 +29,25 @@ print("i have read data")
 #######
 train_flag = True
 if train_flag:
-    MO = TrainModelOptuna(data=data,dataset_name=name, conv=conv, device=device, ssl_flag=ssl_flag, extrapolate_flag=extrapolate_flag, task=task)
+    MO = TrainModelOptuna(
+        data=data,
+        dataset_name=name,
+        conv=conv,
+        device=device,
+        ssl_flag=ssl_flag,
+        extrapolate_flag=extrapolate_flag,
+        task=task,
+    )
     best_values = MO.run(number_of_trials=3)
-    M = TrainModel(data=data, conv=conv,dataset_name=name, device=device, ssl_flag=ssl_flag, task=task, extrapolate_flag=extrapolate_flag)
+    M = TrainModel(
+        data=data,
+        conv=conv,
+        dataset_name=name,
+        device=device,
+        ssl_flag=ssl_flag,
+        task=task,
+        extrapolate_flag=extrapolate_flag,
+    )
 
     # best_values = {'hidden_layer': 32, 'dropout': 0.0, 'size of network, number of convs': 3, 'lr': 0.001,"number of negative samples for graph.adjust":5}
     model, test_acc_mi, test_acc_ma = M.run(best_values)
