@@ -9,6 +9,7 @@ from torch_geometric.utils import degree
 
 from stable_gnn.geom_gcn import GeomGCN
 from stable_gnn.graph import Graph
+from typing import Tuple
 
 
 class ModelName(torch.nn.Module):
@@ -28,7 +29,7 @@ class ModelName(torch.nn.Module):
         self,
         dataset: Graph,
         data_name: str,
-        device: device,  # Я не знаю как правильно тут  тип обозначить и выше тоже
+        device: device,
         hidden_layer: int = 64,
         dropout: int = 0,
         num_layers: int = 2,
@@ -40,7 +41,6 @@ class ModelName(torch.nn.Module):
         self.data = dataset
         self.data_name = data_name
         self.num_features = dataset.x.shape[1]
-        # print(dataset.num_features)
         self.convs = torch.nn.ModuleList()
 
         self.hidden_layer = hidden_layer
@@ -79,7 +79,7 @@ class ModelName(torch.nn.Module):
         self.linear_classifier = Linear(int(self.hidden_layer / 2), self.num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def inference(self, data: Graph) -> (Tensor, Tensor):  # вот тту опять тип ГРАФ
+    def inference(self, data: Graph) -> Tuple[Tensor, Tensor]:
         """
         :param data: (Graph): Input Graph
         :return: (Tensor, Tensor):  Predicted probabilities of labels and predicted degrees of nodes

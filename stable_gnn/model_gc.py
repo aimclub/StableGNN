@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import bamt.Networks as Nets
 import numpy as np
@@ -15,6 +15,7 @@ from torch_geometric.typing import Adj, Tensor
 from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
 
 from stable_gnn.graph import Graph
+from torch_geometric.data import Batch
 
 
 class ModelName(torch.nn.Module):
@@ -33,7 +34,7 @@ class ModelName(torch.nn.Module):
     def __init__(
         self,
         dataset: List[Graph],
-        device: device,  # Я не знаю как правильно тут  тип обозначить и выше тоже
+        device: device,
         hidden_layer: int = 64,
         dropout: int = 0,
         num_layers: int = 2,
@@ -47,7 +48,6 @@ class ModelName(torch.nn.Module):
         self.num_layers = num_layers
         self.data = dataset
         self.num_features = dataset[0].x.shape[1]
-        # print(dataset.num_features)
         self.convs = torch.nn.ModuleList()
         self.hidden_layer = hidden_layer
         self.dropout = dropout
@@ -74,9 +74,7 @@ class ModelName(torch.nn.Module):
         self.linear_classifier = Linear(int(self.hidden_layer / 2), num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def forward(
-        self, x: Tensor, edge_index: Adj, batch
-    ) -> (Tensor, float):  # Тут тоже не знаю как правильно указать тип у batch
+    def forward(self, x: Tensor, edge_index: Adj, batch) -> Tuple[Tensor, float]:
         """
 
 
@@ -122,7 +120,7 @@ class ModelName(torch.nn.Module):
         remove_init_edges: bool = False,
         white_list: bool = False,
         score_func: str = "MI",
-    ) -> (List[Graph], List[Graph], List[Graph]):
+    ) -> Tuple[List[Graph], List[Graph], List[Graph]]:
         """
         Adjust dataset so that to increase extrapolation ability
 
@@ -132,7 +130,7 @@ class ModelName(torch.nn.Module):
         :param remove_init_edges: If True, it is possible that edges from init_list would be removed during the structure learning of Bayesian Net(default:'False')
         :param white_list: If True, edges inBayesian Net would be only from this white list (default:'False')
         :param score_func: (str): Name of score function to optimize, either 'MI' or 'K2' (default:'MI')
-        :return:
+        :return: (List[Graph], List[Graph], List[Graph]): Lists of train, test and validation graphs
         """
         self.init_edges = init_edges
         self.remove_init_edges = remove_init_edges
@@ -149,7 +147,7 @@ class ModelName(torch.nn.Module):
         self.n_min = n_min
 
         data_bamt = self._data_eigen_exctractor(train_dataset)
-        bn = self._bn_build(data_bamt)
+        bn = self._bayesian_network_build(data_bamt)
         lis = list(
             map(lambda x: self._func(x), bn.edges)
         )  # мы берем только те веришны, которые исходят из y или входят в у
@@ -157,9 +155,10 @@ class ModelName(torch.nn.Module):
         left_edges = list(filter(lambda x: x[0] == "y" or x[1] == "y", bn.edges))
         left_edges = sorted(left_edges, key=lambda x: int(x[0][5:] if x[1] == "y" else int(x[1][5:])))
         ll = list(map(lambda x: bn.weights[tuple(x)], left_edges))
-        N = len(ll)  # TODO подумать: мб тут было бы логичнее взять N = число переменных из которых строилась bn
-        weights_preprocessed = list(map(lambda x: x * N / sum(ll), ll))
-        # print(weights_preprocessed, left_vertices)
+        len_of_remaining_nodes = len(
+            ll
+        )  # TODO подумать: мб тут было бы логичнее взять N = число переменных из которых строилась bn
+        weights_preprocessed = list(map(lambda x: x * len_of_remaining_nodes / sum(ll), ll))
         train_dataset = self._convolve(train_dataset, weights_preprocessed, left_vertices)
         val_dataset = self._convolve(val_dataset, weights_preprocessed, left_vertices)
         test_dataset = self._convolve(test_dataset, weights_preprocessed, left_vertices)
@@ -168,7 +167,7 @@ class ModelName(torch.nn.Module):
 
     def convert_dataset(
         self, data: List[Graph], train_indices: List[int], val_indices: List[int]
-    ) -> (List[Graph], List[Graph], List[Graph], int):  # data - правильно ли так тип указывать??
+    ) -> Tuple[List[Graph], List[Graph], List[Graph], int]:
         """
         Convert input dataset to train,test, val according to provided indices
 
@@ -208,15 +207,15 @@ class ModelName(torch.nn.Module):
         columns_list = list(map(lambda x: "eigen" + str(x), range(self.n_min)))
         data_bamt = pd.DataFrame(columns=columns_list + ["y"])
         for gr in dataset:
-            A = to_dense_adj(gr.edge_index)
-            eig = torch.eig(A.reshape(A.shape[1], A.shape[2]))[0].T[0].T
+            adj_matrix = to_dense_adj(gr.edge_index)
+            eig = torch.eig(adj_matrix.reshape(adj_matrix.shape[1], adj_matrix.shape[2]))[0].T[0].T
             ordered, indices = torch.sort(eig[: gr.num_nodes], descending=True)
             to_append = pd.Series(ordered[: self.n_min].tolist() + gr.y.tolist(), index=data_bamt.columns)
             data_bamt = data_bamt.append(to_append, ignore_index=True)
 
         return data_bamt
 
-    def _bn_build(self, data_bamt):
+    def _bayesian_network_build(self, data_bamt):
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
 
@@ -264,7 +263,6 @@ class ModelName(torch.nn.Module):
             ordered, indices = torch.sort(eig[: graph.num_nodes], descending=True)
             lef = indices[left_vertices]
             zeroed = torch.tensor(list(set(range(len(eig))) - set(lef.tolist())))
-            # print(zeroed)
             if len(zeroed) > 0:
                 eig[zeroed] = 0
 
@@ -275,13 +273,12 @@ class ModelName(torch.nn.Module):
             convolved = torch.matmul(torch.matmul(eigenvectors, eigenvalues), eigenvectors.T)
 
             graph.edge_index, graph.edge_weight = dense_to_sparse(convolved)
-            graph.edge_weight = graph.edge_weight  # .type(torch.FloatTensor)
+            graph.edge_weight = graph.edge_weight
             graph.edge_index = graph.edge_index.type(torch.LongTensor)
-            # print((graph.edge_weight).dtype)
             new_Data.append(graph)
         return new_Data
 
-    def self_supervised_loss(self, deg_pred: Tensor, batch) -> Tensor:  # тут опять batch не знаю какой тип...
+    def self_supervised_loss(self, deg_pred: Tensor, batch: Batch) -> Tensor:
         """
         Self Supervised Loss for Graph Classsification task, MSE between predicted average degree of each graph and genuine ones
 

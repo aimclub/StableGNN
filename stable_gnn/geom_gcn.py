@@ -1,4 +1,3 @@
-import collections
 import os
 
 import numpy as np
@@ -8,10 +7,10 @@ from torch import Tensor
 from torch.nn import Linear
 from torch_geometric.nn import MessagePassing
 from torch_geometric.typing import Adj, OptPairTensor
-from torch_geometric.utils import add_self_loops, degree
+from torch_geometric.utils import degree
 
-from stable_gnn.embedding.model_train_embeddings import _ModelTrainEmbeddings, _OptunaTrainEmbeddings
-from stable_gnn.embedding.sampling import _SamplerAPP
+from stable_gnn.embedding.model_train_embeddings import ModelTrainEmbeddings, OptunaTrainEmbeddings
+from stable_gnn.embedding.sampling import SamplerAPP
 
 
 class GeomGCN(MessagePassing):
@@ -59,9 +58,12 @@ class GeomGCN(MessagePassing):
     def _virtual_vertex(self, edge_index, x):
         if isinstance(x, Tensor):
             x: OptPairTensor = (x, x)
-        graph_size = max(
-            len(collections.Counter(edge_index[0].tolist())),
-            len(collections.Counter(edge_index[1].tolist())),
+        graph_size = (
+            max(
+                edge_index[0].max(),
+                edge_index[1].max(),
+            )
+            + 1
         )
         deg = degree(edge_index[0], graph_size)
         emb = self._embedding()
@@ -121,11 +123,11 @@ class GeomGCN(MessagePassing):
                 "loss var": "Context Matrix",
                 "flag_tosave": True,
                 "alpha": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-                "Sampler": _SamplerAPP,
+                "Sampler": SamplerAPP,
             }  # APP
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            MO = _OptunaTrainEmbeddings(name=self.data_name, conv="SAGE", device=device, loss_function=loss)
-            best_values = MO.run(number_of_trials=500)
+            optuna_training = OptunaTrainEmbeddings(name=self.data_name, conv="SAGE", device=device, loss_function=loss)
+            best_values = optuna_training.run(number_of_trials=10)
 
             loss_trgt = dict()
             for par in loss:
@@ -134,16 +136,18 @@ class GeomGCN(MessagePassing):
             loss_trgt["alpha"] = best_values["alpha"]
             loss_trgt["num_negative_samples"] = best_values["num_negative_samples"]
 
-            M = _ModelTrainEmbeddings(name=self.data_name, conv="SAGE", device=device, loss_function=loss_trgt)
-            out = M.run(best_values)
+            model_training = ModelTrainEmbeddings(
+                name=self.data_name, conv="SAGE", device=device, loss_function=loss_trgt
+            )
+            out = model_training.run(best_values)
             torch.cuda.empty_cache()
             np.save(
                 "./data_validation/" + self.data_name + "/processed" + "/embeddings_" + self.data_name + ".npy",
                 out.detach().cpu().numpy(),
             )
-            return out
+            return out.detach().cpu().numpy()
 
-    def _Relation(self, emb1, emb2):
+    def _relation(self, emb1, emb2):
         if (emb1[0] > emb2[0]) and (emb1[1] <= emb2[1]):
             return 1
         elif (emb1[0] <= emb2[0]) and (emb1[1] > emb2[1]):
@@ -226,7 +230,7 @@ class GeomGCN(MessagePassing):
 
                 dist, ind = tree.query(emb[i : i + 1], k=int(deg[i]))
                 for nei in ind[0]:  # indices of 3 closest neighbors
-                    _Relation = self._Relation(emb[i], emb[nei])
+                    _Relation = self._relation(emb[i], emb[nei])
                     new_edge_index.append([i, nei, _Relation])
 
             np.save(
@@ -250,7 +254,7 @@ class GeomGCN(MessagePassing):
         list_of__Relations = []
         iterating = edge_index.T.tolist()
         for e in iterating:
-            list_of__Relations.append(self._Relation(emb[e[0]], emb[e[1]]))
+            list_of__Relations.append(self._relation(emb[e[0]], emb[e[1]]))
 
         return torch.concat(
             [

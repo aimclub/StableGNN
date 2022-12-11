@@ -93,8 +93,6 @@ class Graph(InMemoryDataset):
         return [self.name + "_data.pt"]
 
     def process(self):
-        #       if self.pre_transform is not None:
-        #          data_list = [self.pre_transform(data) for data in data_list]
 
         if self.name == "texas" or self.name == "wisconsin":
             self._process_texas()

@@ -1,18 +1,27 @@
-import os
-import pickle
-
 import optuna
 import torch
 import torch_geometric.transforms as T
 from torch_geometric.loader import NeighborSampler
 
 from stable_gnn.graph import Graph
+from torch import device
+from stable_gnn.embedding.model import Net
+from .sampling import Sampler
+from typing import Dict
+from torch_geometric.typing import Tensor
 
-from stable_gnn.embedding.model import _Net
 
+class ModelTrainEmbeddings:
+    """
+    Model for training Net, wcich building embeddings for Geom-GCN layer
 
-class _ModelTrainEmbeddings:
-    def __init__(self, name, conv="SAGE", device="cuda", loss_function="APP"):
+    :param name: (str): Name of input Graph
+    :param loss_function: (dict): Dict of parameters of unsupervised loss function
+    :param conv: (str): Name of convolution (default:'GCN')
+    :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
+    """
+
+    def __init__(self, name: str, loss_function: Dict, conv: str = "GCN", device: device = "cuda") -> None:
         data = Graph(
             name,
             root="./data_validation/" + str(name),
@@ -29,33 +38,13 @@ class _ModelTrainEmbeddings:
         self.dataset_name = name
         self.flag = self.loss["flag_tosave"]
         self.help_data = "stableGNN/data_help/"
-        super(_ModelTrainEmbeddings, self).__init__()
+        super(ModelTrainEmbeddings, self).__init__()
 
-    def sampling(self, sampler, epoch, nodes, loss):
+    def _sampling(self, sampler, epoch, nodes, loss):
         if epoch == 0:
-            if self.flag:
-                if "alpha" in self.loss:
-                    name_of_file = (
-                        self.dataset_name + "_samples_" + loss["Name"] + "_alpha_" + str(loss["alpha"]) + ".pickle"
-                    )
-                elif "betta" in self.loss:
-                    name_of_file = (
-                        self.dataset_name + "_samples_" + loss["Name"] + "_betta_" + str(loss["betta"]) + ".pickle"
-                    )
-                else:
-                    name_of_file = self.dataset_name + "_samples_" + loss["Name"] + ".pickle"
+            self.samples = sampler.sample(nodes)
 
-                if os.path.exists(f"{self.help_data}/" + str(name_of_file)):
-                    with open(f"{self.help_data}/" + str(name_of_file), "rb") as f:
-                        self.samples = pickle.load(f)
-                else:
-                    self.samples = sampler.sample(nodes)
-                    with open(f"{self.help_data}/" + str(name_of_file), "wb") as f:
-                        pickle.dump(self.samples, f)
-            else:
-                self.samples = sampler.sample(nodes)
-
-    def train(self, model, data, optimizer, sampler, train_loader, dropout, epoch, loss):
+    def _train(self, model, data, optimizer, sampler, train_loader, dropout, epoch, loss):
         model.train()
         total_loss = 0
         optimizer.zero_grad()
@@ -69,18 +58,21 @@ class _ModelTrainEmbeddings:
                     adjs = [adjs]
                 adjs = [adj.to(self.device) for adj in adjs]
                 out = model.forward(data.x[n_id.to(self.device)].to(self.device), adjs)
-                # out = model.forward(data.x[n_id], adjs)
-                self.sampling(sampler, epoch, n_id[:batch_size], loss)
-                loss = model.loss(out, self.samples)  # pos_batch.to(device), neg_batch.to(device))
+                self._sampling(sampler, epoch, n_id[:batch_size], loss)
+                loss = model.loss(out, self.samples)
                 total_loss += loss
         total_loss.backward()
         optimizer.step()
         return total_loss / len(train_loader), out
 
-    def run(self, params):
+    def run(self, params: Dict) -> Tensor:
+        """
+        Learn embeddings
 
+        :param params: dict[str,float,int,float]: Parameters for learning: size of hidden layer, dropout, number of layers for the model, learning rate
+        :return: (Tensor): The output embeddings
+        """
         hidden_layer = params["hidden_layer"]
-        # out_layer = params['out_layer']
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
@@ -93,10 +85,9 @@ class _ModelTrainEmbeddings:
             self.data,
             device=self.device,
             mask=self.train_mask,
-            loss_info=self.loss,
-            help_dir=self.help_data,
+            loss_info=self.loss
         )
-        model = _Net(
+        model = Net(
             dataset=self.data,
             conv=self.Conv,
             loss_function=self.loss,
@@ -112,7 +103,7 @@ class _ModelTrainEmbeddings:
 
         for epoch in range(99):
             print(epoch)
-            loss, _ = self.train(
+            loss, _ = self._train(
                 model,
                 self.data,
                 optimizer,
@@ -122,7 +113,7 @@ class _ModelTrainEmbeddings:
                 epoch,
                 self.loss,
             )
-        _, out = self.train(
+        _, out = self._train(
             model,
             self.data,
             optimizer,
@@ -132,15 +123,21 @@ class _ModelTrainEmbeddings:
             epoch,
             self.loss,
         )
-        # np.save('../data_help/embedings_'+str(self.dataset_name)+str(self.loss['name'])+'.npy', out.cpu().numpy())
-
-        # scheduler.step()
 
         return out
 
 
-class _OptunaTrainEmbeddings(_ModelTrainEmbeddings):
-    def objective(self, trial):
+class OptunaTrainEmbeddings(ModelTrainEmbeddings):
+    """
+    Model for training Net, wcich building embeddings for Geom-GCN layer
+
+    :param name: (str): Name of input Graph
+    :param loss_function: (dict): Dict of parameters of unsupervised loss function
+    :param conv: (str): Name of convolution (default:'GCN')
+    :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
+    """
+
+    def _objective(self, trial):
         # Integer parameter
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         out_layer = 2
@@ -179,7 +176,7 @@ class _OptunaTrainEmbeddings(_ModelTrainEmbeddings):
             loss_to_train["p"] = var_5
 
         sampler = loss_to_train["Sampler"]
-        model = _Net(
+        model = Net(
             dataset=self.data,
             conv=Conv,
             loss_function=loss_to_train,
@@ -197,13 +194,13 @@ class _OptunaTrainEmbeddings(_ModelTrainEmbeddings):
             device=self.device,
             mask=self.train_mask,
             loss_info=loss_to_train,
-            help_dir=self.help_data,
+
         )
         model.to(self.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         for epoch in range(50):
-            loss, _ = self.train(
+            loss, _ = self._train(
                 model,
                 self.data,
                 optimizer,
@@ -215,9 +212,14 @@ class _OptunaTrainEmbeddings(_ModelTrainEmbeddings):
             )
         return loss
 
-    def run(self, number_of_trials):
+    def run(self, number_of_trials: int) -> Dict:
+        """
+        Tuning parameters for learning embeddings
 
+        :param number_of_trials: (int): Number of trials for optuna
+        :return: (dict[str,float,int,float]): Learned parameters: size of hidden layer, dropout, number of layers for the model, learning rate
+        """
         study = optuna.create_study(direction="minimize")
-        study.optimize(self.objective, n_trials=number_of_trials)
+        study.optimize(self._objective, n_trials=number_of_trials)
         trial = study.best_trial
         return trial.params

@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 
 import bamt.Networks as Nets
 import numpy as np
+
 import pandas as pd
 import torch
 from pgmpy.estimators import BicScore, HillClimbSearch, K2Score
@@ -31,20 +32,20 @@ class Explain:
     :param X: (Tensor): Feature matrix of input data.
     """
 
-    def __init__(self, model: Module, A: Tensor, X: Tensor) -> None:
+    def __init__(self, model: Module, adj_matrix: Tensor, features: Tensor) -> None:
         self.model = model
         self.model.eval()
-        self.A = A
-        self.X = X
+        self.adj_matrix = adj_matrix
+        self.features = features
         self.n_hops = len(model.convs)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print("Explainer settings")
-        print("\\ A dim: ", self.A.shape)
-        print("\\ X dim: ", self.X.shape)
+        print("\\ A dim: ", self.adj_matrix.shape)
+        print("\\ X dim: ", self.features.shape)
 
     def _n_hops_A(self, n_hops):
         # Compute the n-hops adjacency matrix
-        adj = torch.tensor(self.A, dtype=torch.float)
+        adj = torch.tensor(self.adj_matrix, dtype=torch.float)
         hop_adj = power_adj = adj
         for i in range(n_hops - 1):
             power_adj = power_adj @ adj
@@ -58,15 +59,11 @@ class Explain:
         print("node_nA_row", sum(node_nA_row))
         neighbors = np.nonzero(node_nA_row)[0]
         target_new = sum(node_nA_row[:target])
-        sub_A = self.A[neighbors][:, neighbors]
-        sub_X = self.X[neighbors]
+        sub_A = self.adj_matrix[neighbors][:, neighbors]
+        sub_X = self.features[neighbors]
         return target_new, sub_A, sub_X, neighbors
 
     def _perturb_features_on_node(self, feature_matrix, target, random=0, mode=0):
-        # return a random perturbed feature matrix
-        # random = 0 for nothing, 1 for random.
-        # mode = 0 for random 0-1, 1 for scaling with original feature
-
         X_perturb = feature_matrix
         if random == 0:
             perturb_array = X_perturb[target]
@@ -90,9 +87,9 @@ class Explain:
 
         if target not in neighbors:
             neighbors = np.append(neighbors, target)
-        print(self.X)
-        X_torch = torch.tensor([self.X], dtype=torch.float).squeeze()
-        A_torch = torch.tensor([self.A], dtype=torch.float).squeeze()
+        print(self.features)
+        X_torch = torch.tensor([self.features], dtype=torch.float).squeeze()
+        A_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
 
         data = Data(x=X_torch, edge_index=A_torch.nonzero().t().contiguous())
 
@@ -113,16 +110,15 @@ class Explain:
                 data.x[n_id.to(self.device)].to(self.device), edge_index, edge_weight, batch, graph_level=False
             )
 
-        # pred_torch, _ = self.model.forward(data, )
         soft_pred = np.asarray(
-            [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])]
+            [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.features.shape[0])]
         )  # TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
 
         samples = []
         pred_samples = []
 
         for iteration in range(num_samples):
-            X_perturb = self.X.copy()
+            X_perturb = self.features.copy()
             sample = []
             for node in neighbors:
                 seed = np.random.randint(2)
@@ -134,7 +130,7 @@ class Explain:
                 sample.append(latent)
 
             X_perturb_torch = torch.tensor([X_perturb], dtype=torch.float).squeeze()
-            A_torch = torch.tensor([self.A], dtype=torch.float).squeeze()
+            A_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
             data_perturb = Data(x=X_perturb_torch, edge_index=A_torch.nonzero().t().contiguous())
             loader_perturb = NeighborSampler(
                 data_perturb.edge_index,
@@ -159,7 +155,10 @@ class Explain:
                 )
 
             soft_pred_perturb = np.asarray(
-                [softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data)) for node_ in range(self.X.shape[0])]
+                [
+                    softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data))
+                    for node_ in range(self.features.shape[0])
+                ]
             )
 
             sample_bool = []
