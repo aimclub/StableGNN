@@ -6,7 +6,8 @@
 Welcome to StableGNN's documentation!
 =====================================
 
-.. mdinclude:: ../../README.md
+.. automodule:: stable_gnn
+    :members:
 
 .. toctree::
    :maxdepth: 2
