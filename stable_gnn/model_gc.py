@@ -40,7 +40,6 @@ class ModelName(torch.nn.Module):
         num_layers: int = 2,
         ssl_flag: bool = False,
         heads: int = 1,
-        **kwargs
     ):
 
         super(ModelName, self).__init__()
@@ -74,14 +73,14 @@ class ModelName(torch.nn.Module):
         self.linear_classifier = Linear(int(self.hidden_layer / 2), num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def forward(self, x: Tensor, edge_index: Adj, batch) -> Tuple[Tensor, float]:
+    def forward(self, x: Tensor, edge_index: Adj, batch) -> Tuple[Tensor, Tensor]:
         """
-
+        Count the representation of node on the next layer of the model
 
         :param x (Tensor): Input features
         :param edge_index (Adj): Edge index of a batch
         :param batch: Batch of data
-        :return:
+        :return: (Tensor, Tensor): Predicted probabilities of labels and predicted degrees of graphs
         """
         # 1. Obtain node embeddings
         for i, conv in enumerate(self.convs):
@@ -130,7 +129,7 @@ class ModelName(torch.nn.Module):
         :param remove_init_edges: If True, it is possible that edges from init_list would be removed during the structure learning of Bayesian Net(default:'False')
         :param white_list: If True, edges inBayesian Net would be only from this white list (default:'False')
         :param score_func: (str): Name of score function to optimize, either 'MI' or 'K2' (default:'MI')
-        :return: (List[Graph], List[Graph], List[Graph]): Lists of train, test and validation graphs
+        :return: ([Graph], [Graph], [Graph]): Lists of train, test and validation graphs
         """
         self.init_edges = init_edges
         self.remove_init_edges = remove_init_edges

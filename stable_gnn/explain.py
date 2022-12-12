@@ -12,7 +12,6 @@ from pgmpy.models import BayesianNetwork
 from scipy.special import softmax
 from torch.nn import Module
 from torch_geometric.data import Data
-from torch_geometric.loader import NeighborSampler
 from torch_geometric.typing import Tensor
 
 
@@ -56,59 +55,45 @@ class Explain:
     def _extract_n_hops_neighbors(self, nA, target):
         # Return the n-hops neighbors of a node
         node_nA_row = nA[target]
-        print("node_nA_row", sum(node_nA_row))
         neighbors = np.nonzero(node_nA_row)[0]
         target_new = sum(node_nA_row[:target])
-        sub_A = self.adj_matrix[neighbors][:, neighbors]
-        sub_X = self.features[neighbors]
-        return target_new, sub_A, sub_X, neighbors
+        sub_adj_matrix = self.adj_matrix[neighbors][:, neighbors]
+        sub_features = self.features[neighbors]
+        return target_new, sub_adj_matrix, sub_features, neighbors
 
     def _perturb_features_on_node(self, feature_matrix, target, random=0, mode=0):
-        X_perturb = feature_matrix
+        features_perturb = feature_matrix
         if random == 0:
-            perturb_array = X_perturb[target]
+            perturb_array = features_perturb[target]
         else:
             if mode == 0:
-                perturb_array = np.random.randint(2, size=X_perturb[target].shape[0])
+                perturb_array = np.random.randint(2, size=features_perturb[target].shape[0])
             elif mode == 1:
                 perturb_array = np.multiply(
-                    X_perturb[target],
-                    np.random.uniform(low=0.0, high=2.0, size=X_perturb[target].shape[0]),
+                    features_perturb[target],
+                    np.random.uniform(low=0.0, high=2.0, size=features_perturb[target].shape[0]),
                 )
-        X_perturb[target] = perturb_array
-        return X_perturb
+        features_perturb[target] = perturb_array
+        return features_perturb
 
     def _data_generation(
         self, target: int, num_samples: int = 100, pred_threshold: float = 0.1
     ) -> Tuple[pd.DataFrame,]:
         print("Explaining node: " + str(target))
         nA = self._n_hops_A(self.n_hops)
-        target_new, sub_A, sub_X, neighbors = self._extract_n_hops_neighbors(nA, target)
+        target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(nA, target)
 
         if target not in neighbors:
             neighbors = np.append(neighbors, target)
-        print(self.features)
-        X_torch = torch.tensor([self.features], dtype=torch.float).squeeze()
-        A_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
 
-        data = Data(x=X_torch, edge_index=A_torch.nonzero().t().contiguous())
+        features_torch = torch.tensor([self.features], dtype=torch.float).squeeze()
+        adj_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
 
-        loader = NeighborSampler(
-            data.edge_index,
-            node_idx=torch.tensor([True] * len(X_torch)),
-            batch_size=int(len(X_torch)),
-            sizes=[-1] * 1,
+        data = Data(x=features_torch, edge_index=adj_torch.nonzero().t().contiguous())
+
+        pred_torch = self.model.inference(
+                data.to(self.device)
         )
-        for batch_size, n_id, adjs in loader:
-            if len(loader.sizes) == 1:
-                adjs = [adjs]
-            adjs = [adj.to(self.device) for adj in adjs]
-            edge_index = adjs[0].edge_index
-            edge_weight = None
-            batch = None
-            pred_torch = self.model.forward(
-                data.x[n_id.to(self.device)].to(self.device), edge_index, edge_weight, batch, graph_level=False
-            )
 
         soft_pred = np.asarray(
             [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.features.shape[0])]
@@ -118,41 +103,24 @@ class Explain:
         pred_samples = []
 
         for iteration in range(num_samples):
-            X_perturb = self.features.copy()
+            features_perturb = self.features.copy()
             sample = []
             for node in neighbors:
                 seed = np.random.randint(2)
                 if seed == 1:
                     latent = 1
-                    X_perturb = self._perturb_features_on_node(X_perturb, node, random=seed)
+                    features_perturb = self._perturb_features_on_node(features_perturb, node, random=seed)
                 else:
                     latent = 0
                 sample.append(latent)
 
-            X_perturb_torch = torch.tensor([X_perturb], dtype=torch.float).squeeze()
+            features_perturb_torch = torch.tensor([features_perturb], dtype=torch.float).squeeze()
             A_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
-            data_perturb = Data(x=X_perturb_torch, edge_index=A_torch.nonzero().t().contiguous())
-            loader_perturb = NeighborSampler(
-                data_perturb.edge_index,
-                node_idx=torch.tensor([True] * len(X_perturb_torch)),
-                batch_size=int(len(X_perturb_torch)),
-                sizes=[-1] * 1,
-            )
+            data_perturb = Data(x=features_perturb_torch, edge_index=A_torch.nonzero().t().contiguous())
 
-            for batch_size, n_id, adjs in loader_perturb:
-                if len(loader_perturb.sizes) == 1:
-                    adjs = [adjs]
-                adjs = [adj.to(self.device) for adj in adjs]
-                edge_index = adjs[0].edge_index
-                edge_weight = None
-                batch = None
-                pred_perturb_torch = self.model.forward(
-                    data_perturb.x[n_id.to(self.device)].to(self.device),
-                    edge_index,
-                    edge_weight,
-                    batch,
-                    graph_level=False,
-                )
+            pred_perturb_torch = self.model.inference(
+                    data_perturb.to(self.device)
+            )
 
             soft_pred_perturb = np.asarray(
                 [
@@ -174,7 +142,6 @@ class Explain:
         samples = np.asarray(samples)
         pred_samples = np.asarray(pred_samples)
         Combine_Samples = samples - samples
-        print("combine samples", Combine_Samples.shape)
         for s in range(samples.shape[0]):
             Combine_Samples[s] = np.asarray(
                 [samples[s, i] * 10 + pred_samples[s, i] + 1 for i in range(samples.shape[1])]
@@ -183,7 +150,7 @@ class Explain:
         data = pd.DataFrame(Combine_Samples)
         return data, neighbors
 
-    def _variable_selection(self, target, top_node=None, num_samples=20, pred_threshold=0.1):
+    def _variable_selection(self, target, top_node=None, num_samples=100, pred_threshold=0.1):
         data, neighbors = self._data_generation(target=target, num_samples=num_samples, pred_threshold=pred_threshold)
         ind_sub_to_ori = dict(
             zip(list(data.columns), neighbors)
@@ -196,12 +163,12 @@ class Explain:
         dependent_neighbors_p_values = []
 
         for node in neighbors:
-            chi2, p, _ = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[target], [], data, boolean=False)
-            p_values.append(p)
-            if p < 0.05:
-                dependent_neighbors.append(node)
-                dependent_neighbors_p_values.append(p)
-
+            if node != target:
+                chi2, p, _ = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[target], [], data, boolean=False)
+                p_values.append(p)
+                if p < 0.05:
+                    dependent_neighbors.append(node)
+                    dependent_neighbors_p_values.append(p)
         pgm_stats = dict(zip(neighbors, p_values))
 
         if top_node is None:
@@ -235,16 +202,13 @@ class Explain:
         :return: (BayesianNetwork): Pgm explanation in Bayesian Net form
         """
         subnodes, data, pgm_stats = self._variable_selection(target, top_node, num_samples, pred_threshold)
-        print("after var selection", subnodes)
         subnodes = [str(int(node)) for node in subnodes]
         target = str(int(target))
         subnodes_no_target = [node for node in subnodes if node != target]
         data.columns = data.columns.astype(str)
-
         MK_blanket = self._search_MK(data, target, subnodes_no_target.copy())
 
         if child is None:
-            print(subnodes_no_target)
             est = HillClimbSearch(data[subnodes_no_target])
             pgm_no_target = est.estimate(scoring_method=BicScore(data))
             print("estimation", pgm_no_target.nodes(), pgm_no_target.edges())
@@ -253,7 +217,6 @@ class Explain:
                     pgm_no_target.add_edge(node, target)
 
             #   Create the pgm
-
             pgm_explanation = BayesianNetwork()
             for node in pgm_no_target.nodes():
                 pgm_explanation.add_node(node)
@@ -289,7 +252,6 @@ class Explain:
             #   Fit the pgm
 
             pgm_explanation.fit(data_ex)
-            print("we added edges")
         return pgm_explanation
 
     def structure_learning_bamt(
@@ -356,7 +318,6 @@ class Explain:
             for node in subnodes_no_target:
                 data_ex[node] = data[node].apply(self._generalize_others)
             pgm_explanation.fit(data_ex)
-            print("we added edges")
         return pgm_explanation
 
     def pgm_conditional_prob(self, target: int, pgm_explanation: BayesianNetwork, evidence_list: List[str]) -> float:
@@ -396,14 +357,18 @@ class Explain:
             return x
 
     def _search_MK(self, data, target, nodes):
+
         target = str(int(target))
+
         data.columns = data.columns.astype(str)
+
         nodes = [str(int(node)) for node in nodes]
 
         MB = nodes
         while True:
             count = 0
             for node in nodes:
+
                 evidences = MB.copy()
                 evidences.remove(node)
                 _, p, _ = chi_square(target, node, evidences, data[nodes + [target]], boolean=False)

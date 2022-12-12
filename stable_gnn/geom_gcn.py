@@ -40,10 +40,17 @@ class GeomGCN(MessagePassing):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
+        """Reset parameters"""
         self.lin.reset_parameters()
 
-    def forward(self, x: Tensor, edge_index: Adj) -> Tensor:
-        """"""
+    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+        """
+        Modify representations, convolutional layer
+
+        :param x: (Tensor): Representations of nodes
+        :param edge_index: (Tensor): Edges of input graph
+        :return: Hodden representation of nodes on the next layer
+        """
         out = self._virtual_vertex(edge_index=edge_index, x=x)
         out = self.lin(out)
         return out
@@ -104,7 +111,14 @@ class GeomGCN(MessagePassing):
         # не уверена можно ли использовать propogate на разные соседства, нет ли там какого-то пересечения, сохранения инфы в ходе дела?
         return x
 
-    def message(self, x_j, norm):
+    def message(self, x_j: Tensor, norm: Tensor) -> Tensor:
+        """
+        Count message from the neighbour
+
+        :param x_j: Representation of the node neighbour
+        :param norm: Normalization term
+        :return: (Tensor): Message from the neighbor
+        """
         return norm.view(-1, 1) * x_j
 
     def _embedding(self):

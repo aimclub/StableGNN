@@ -97,13 +97,15 @@ class Net(torch.nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
+        """Reset parameters"""
         for conv in self.convs:
             conv.reset_parameters()
 
     def forward(self, x: Tensor, adjs: EdgeIndex) -> Tensor:
         """
+        Find representations of the node
 
-        :param x: (Tensor): Inpur representations of nodes
+        :param x: (Tensor): Features of nodes
         :param adjs: (EdgeIndex): Edge indices of computational graph for each layer
         :return: (Tensor): Representations of nodes
         """
@@ -117,6 +119,7 @@ class Net(torch.nn.Module):
 
     def inference(self, data: Graph, dp: float = 0) -> Tensor:
         """
+        Count representations of the node
 
         :param data: (Graph): Input data
         :param dp: (float): Dropout (default:0.0)

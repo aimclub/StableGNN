@@ -34,7 +34,7 @@ class ModelName(torch.nn.Module):
         dropout: int = 0,
         num_layers: int = 2,
         ssl_flag: bool = False,
-        **kwargs
+
     ):
         super(ModelName, self).__init__()
         self.num_layers = num_layers
@@ -81,6 +81,8 @@ class ModelName(torch.nn.Module):
 
     def inference(self, data: Graph) -> Tuple[Tensor, Tensor]:
         """
+        Count the representation of the node on the next layer of the model
+
         :param data: (Graph): Input Graph
         :return: (Tensor, Tensor):  Predicted probabilities of labels and predicted degrees of nodes
         """
@@ -97,6 +99,8 @@ class ModelName(torch.nn.Module):
 
     def loss_sup(self, pred: Tensor, label: Tensor) -> Tensor:
         """
+        Count negative log likelihood loss function
+
         :param pred: (Tensor): Predicted labels
         :param label: (Tensor): Genuine labels
         :return: (Tensor): Loss

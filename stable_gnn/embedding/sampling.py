@@ -1,4 +1,3 @@
-import abc
 import collections
 import math
 import os
@@ -15,6 +14,7 @@ from typing import Dict
 from torch_geometric.data import Batch
 from torch_geometric.typing import Tensor
 from typing import Tuple
+from abc import ABC, abstractmethod
 
 try:
     import torch_cluster  # noqa
@@ -26,7 +26,7 @@ except ImportError:
 from torch_geometric.utils import subgraph
 
 
-class Sampler:
+class Sampler(ABC):
     """
     Base class for sampling of positive and negative edges for unsupervised loss function
 
@@ -36,34 +36,24 @@ class Sampler:
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict, **kwargs) -> None:
-        self.device = device
-        self.dataset_name = dataset_name
-        self.data = data.to(self.device)
-
-        self.negative_sampler = NegativeSampler(self.data, self.device)
-        self.loss = loss_info
-        super(Sampler, self).__init__()
-
     def _edge_index_to_adj_train(self, batch):
         x_new = torch.sort(batch).values
-        # долго работает наверное из-за .nonzero(as_tuple =True)
 
         x_new = x_new.tolist()
 
-        A = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
+        adj_matrix = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
         edge_index_0 = self.data.edge_index[0].tolist()
         edge_index_1 = self.data.edge_index[1].tolist()
         for j, i in enumerate(edge_index_0):
             if i in x_new:
                 if edge_index_1[j] in x_new:
-                    A[i][edge_index_1[j]] = 1
+                    adj_matrix[i][edge_index_1[j]] = 1
 
-        return A
+        return adj_matrix
 
-    def _edge_index_to_adj_train_old(self, mask, batch):
-        x_new = torch.tensor(np.where(mask == True)[0], dtype=torch.int32)
-        A = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
+    def _edge_index_to_adj_train_old(self, mask):
+        x_new = torch.tensor(np.where(mask == 1)[0], dtype=torch.int32)
+        adj_matrix = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
 
         edge_index_0 = self.data.edge_index[0].to("cpu")
         edge_index_1 = self.data.edge_index[1].to("cpu")
@@ -71,10 +61,10 @@ class Sampler:
         for j, i in enumerate(edge_index_0):
             if i in x_new:
                 if edge_index_1[j] in x_new:
-                    A[i][edge_index_1[j]] = 1
-        return A
+                    adj_matrix[i][edge_index_1[j]] = 1
+        return adj_matrix
 
-    @abc.abstractmethod
+    @abstractmethod
     def sample(self, batch: Batch):
         """
         Sample positive edges. Must be implemented
@@ -94,10 +84,6 @@ class SamplerWithNegSamples(Sampler):
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        Sampler.__init__(self, dataset_name, data, device, loss_info)
-        self.num_negative_samples = self.loss["num_negative_samples"]
-
     def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
         """
         Sample positive and negative edges for batch nodes
@@ -109,7 +95,7 @@ class SamplerWithNegSamples(Sampler):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
         return (self._pos_sample(batch), self._neg_sample(batch))
 
-    @abc.abstractmethod
+    @abstractmethod
     def _pos_sample(self, batch):
         pass
 
@@ -130,8 +116,13 @@ class SamplerRandomWalk(SamplerWithNegSamples):
     """
 
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
+        self.device = device
+        self.dataset_name = dataset_name
+        self.data = data.to(self.device)
+        self.negative_sampler = NegativeSampler(self.data, self.device)
         self.loss = loss_info
+        self.num_negative_samples = self.loss["num_negative_samples"]
+
         self.p = self.loss["p"]
         self.q = self.loss["q"]
         self.walk_length = self.loss["walk_length"]
@@ -139,6 +130,7 @@ class SamplerRandomWalk(SamplerWithNegSamples):
         self.context_size = (
             self.loss["context_size"] if self.walk_length >= self.loss["context_size"] else self.walk_length
         )
+        super().__init__()
 
     def _neg_sample(self, batch):
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
@@ -198,12 +190,18 @@ class SamplerContextMatrix(SamplerWithNegSamples):
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     :param help_dir: (str): Name of directory for helping data
     """
+
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict, help_dir: str) -> None:
-        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
+        self.device = device
+        self.dataset_name = dataset_name
+        self.data = data.to(self.device)
+        self.negative_sampler = NegativeSampler(self.data, self.device)
         self.loss = loss_info
+        self.num_negative_samples = self.loss["num_negative_samples"]
         self.help_dir = help_dir
         if self.loss["C"] == "PPR":
             self.alpha = round(self.loss["alpha"], 1)
+        super().__init__()
 
     def _pos_sample(self, batch):
         batch = batch
@@ -224,9 +222,10 @@ class SamplerContextMatrix(SamplerWithNegSamples):
                 with open(name, "rb") as f:
                     pos_batch = pickle.load(f)
             else:
-                Adj = self._edge_index_to_adj_train(batch).type(torch.FloatTensor)
 
-                A = (Adj / sum(Adj)).t()
+                adj = self._edge_index_to_adj_train(batch).type(torch.FloatTensor)
+
+                A = (adj / sum(adj)).t()
                 A[torch.isinf(A)] = 0
                 A[torch.isnan(A)] = 0
                 pos_batch = self._convert_to_samples(batch, A)
@@ -239,8 +238,8 @@ class SamplerContextMatrix(SamplerWithNegSamples):
                 with open(sim_rank_name, "rb") as f:
                     A = pickle.load(f)
             else:
-                Adj, _ = subgraph(batch, self.data.edge_index)
-                row, col = Adj
+                adj, _ = subgraph(batch, self.data.edge_index)
+                row, col = adj
                 row = row.to(self.device)
                 col = col.to(self.device)
                 ASparse = SparseTensor(row=row, col=col, sparse_sizes=(len(batch), len(batch)))
@@ -274,14 +273,14 @@ class SamplerContextMatrix(SamplerWithNegSamples):
                 with open(name_of_file, "rb") as f:
                     pos_batch = pickle.load(f)
             else:
-                Adg = self._edge_index_to_adj_train(batch).type(torch.FloatTensor)
+                adj = self._edge_index_to_adj_train(batch).type(torch.FloatTensor)
                 print("1")
-                invD = torch.diag(1 / sum(Adg.t()))
+                invD = torch.diag(1 / sum(adj.t()))
                 invD[torch.isinf(invD)] = 0
                 print("2")
-                A = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(Adg))) - alpha * torch.matmul(invD, Adg))
+                adj_matrix = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(adj))) - alpha * torch.matmul(invD, adj))
                 print("3")
-                pos_batch = self._convert_to_samples(batch, A)
+                pos_batch = self._convert_to_samples(batch, adj_matrix)
                 print("4")
                 with open(name_of_file, "wb") as f:
                     pickle.dump(pos_batch, f)
@@ -299,17 +298,17 @@ class SamplerContextMatrix(SamplerWithNegSamples):
 
         return torch.tensor(pos_batch)
 
-    def _find_sim_rank_for_batch_torch(self, batch, Adj, device, mask, mask_new, r):
+    def _find_sim_rank_for_batch_torch(self, batch, adj, device, mask, mask_new, r):
         t = 10
         # approx with SARW
         batch = batch.to(device)
-        Adj = Adj.to(device)
+        adj = adj.to(device)
         SimRank = torch.zeros(len(batch), len(batch)).to(device)  # O(n^2)
         for u in batch:  # O(n^3*(tr))
             print("{}/{}".format(u, len(batch)))
             for nei in batch:
-                pi_u = Adj.random_walk(u.repeat(r).flatten(), walk_length=t)  # O(tnr)
-                pi_v = Adj.random_walk(nei.repeat(r).flatten(), walk_length=t)  # O(tnr)
+                pi_u = adj.random_walk(u.repeat(r).flatten(), walk_length=t)  # O(tnr)
+                pi_v = adj.random_walk(nei.repeat(r).flatten(), walk_length=t)  # O(tnr)
                 pi_u = pi_u[:, 1:]
                 pi_v = pi_v[:, 1:]
                 mask = mask.to(self.device)
@@ -337,6 +336,15 @@ class SamplerFactorization(Sampler):
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     :param help_dir: (str): Name of directory for helping data
     """
+
+    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
+        self.device = device
+        self.dataset_name = dataset_name
+        self.data = data.to(self.device)
+        self.negative_sampler = NegativeSampler(self.data, self.device)
+        self.loss = loss_info
+        super().__init__()
+
     def sample(self, batch: Batch) -> Tensor:
         """
         Sample of positive and negative edges for Graph Factorization-based unsupervosed loss functions
@@ -347,41 +355,41 @@ class SamplerFactorization(Sampler):
         if not isinstance(batch, torch.Tensor):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
 
-        A = self._edge_index_to_adj_train(batch)
+        adj_matrix = self._edge_index_to_adj_train(batch)
         if self.loss["loss var"] == "Factorization":
             if self.loss["C"] == "Adj":
-                C = A
+                context_matrix = adj_matrix
             elif self.loss["C"] == "CN":
-                A = A.type(torch.FloatTensor).to(self.device)
-                C = torch.matmul(A, A)
+                adj_matrix = adj_matrix.type(torch.FloatTensor).to(self.device)
+                context_matrix = torch.matmul(adj_matrix, adj_matrix)
             elif self.loss["C"] == "AA":
                 if True:
-                    D = torch.diag(1 / (sum(A) + sum(A.t())))
-                    A = A.type(torch.FloatTensor)
-                    D[torch.isinf(D)] = 0
-                    D[torch.isnan(D)] = 0
-                    C = torch.matmul(torch.matmul(A, D), A)
+                    deg_matrix = torch.diag(1 / (sum(adj_matrix) + sum(adj_matrix.t())))
+                    adj_matrix = adj_matrix.type(torch.FloatTensor)
+                    deg_matrix[torch.isinf(deg_matrix)] = 0
+                    deg_matrix[torch.isnan(deg_matrix)] = 0
+                    context_matrix = torch.matmul(torch.matmul(adj_matrix, deg_matrix), adj_matrix)
 
             elif self.loss["C"] == "Katz":
 
-                A = A.type(torch.FloatTensor)
-                A[torch.isinf(A)] = 0
-                A[torch.isnan(A)] = 0
+                adj_matrix = adj_matrix.type(torch.FloatTensor)
+                adj_matrix[torch.isinf(adj_matrix)] = 0
+                adj_matrix[torch.isnan(adj_matrix)] = 0
                 betta = self.loss["betta"]
-                I_matrix = torch.diag(torch.ones(len(A)))
-                inv = torch.cholesky_inverse(I_matrix - betta * A)
-                C = betta * torch.matmul(inv, A)
+                ones_matrix = torch.diag(torch.ones(len(adj_matrix)))
+                inv = torch.cholesky_inverse(ones_matrix - betta * adj_matrix)
+                context_matrix = betta * torch.matmul(inv, adj_matrix)
             elif self.loss["C"] == "RPR":
                 alpha = self.loss["alpha"]
                 if True:
-                    A = A.type(torch.FloatTensor)
-                    invD = torch.diag(1 / sum(A.t()))
+                    adj_matrix = adj_matrix.type(torch.FloatTensor)
+                    invD = torch.diag(1 / sum(adj_matrix.t()))
                     invD[torch.isinf(invD)] = 0
-                    C = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(A))) - alpha * torch.matmul(invD, A))
+                    context_matrix = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(adj_matrix))) - alpha * torch.matmul(invD, adj_matrix))
 
-            return C
+            return context_matrix
         else:
-            return A
+            return adj_matrix
 
 
 class SamplerAPP(SamplerWithNegSamples):
@@ -391,13 +399,17 @@ class SamplerAPP(SamplerWithNegSamples):
     :param dataset_name: (str): Name of the inout dataset
     :param data: (Graph): Input dataset
     :param device: (device): Either 'cuda' or 'cpu'
-    :param mask: (Tensor): Tensor of True and False, True is on indices of nodes which are in the train set
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict,mask = Tensor) -> None:
-        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
+    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
+
         self.device = device
+        self.dataset_name = dataset_name
+        self.data = data.to(self.device)
+        self.negative_sampler = NegativeSampler(self.data, self.device)
+        self.loss = loss_info
+        self.num_negative_samples = self.loss["num_negative_samples"]
         self.alpha = self.loss["alpha"]
         self.r = 200
         self.num_negative_samples *= 10
@@ -411,6 +423,7 @@ class SamplerAPP(SamplerWithNegSamples):
                 new_edge_index.append([edge[1], edge[0]])
         new_edge_index = torch.tensor(new_edge_index).t()
         self.data.edge_index = new_edge_index
+        super().__init__()
 
     def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
         """

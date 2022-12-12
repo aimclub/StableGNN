@@ -54,13 +54,13 @@ class NegativeSampler:
         :return: (Tensor): Negative samples
         """
         a, _ = subgraph(batch, self.data.edge_index)
-        Adj = self._adj_list(a)
+        adj = self._adj_list(a)
         g = dict()
         batch = batch.tolist()
         for node in batch:
             g[node] = batch
 
-        for node, neighbors in Adj.items():
+        for node, neighbors in adj.items():
             g[node] = list(
                 set(set(batch) - set(neighbors)) - set([node])
             )  # тут все элементы которые не являются соседними, но при этом входят в батч

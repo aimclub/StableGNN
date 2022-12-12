@@ -6,7 +6,6 @@ from torch_geometric.loader import NeighborSampler
 from stable_gnn.graph import Graph
 from torch import device
 from stable_gnn.embedding.model import Net
-from .sampling import Sampler
 from typing import Dict
 from torch_geometric.typing import Tensor
 

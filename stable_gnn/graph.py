@@ -8,6 +8,7 @@ import torch
 from torch_geometric.data import Data, InMemoryDataset, download_url
 from torch_geometric.utils import coalesce, dense_to_sparse, negative_sampling
 from torch_geometric.utils.undirected import to_undirected
+from typing import List
 
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 # TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
@@ -73,7 +74,12 @@ class Graph(InMemoryDataset):
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
-    def raw_file_names(self):
+    def raw_file_names(self) -> List[str]:
+        """
+        Find str names of the raw input data files
+
+        :return: (list): List of str names
+        """
         if self.name == "texas" or self.name == "wisconsin":
             out = ["out1_node_feature_label.txt", "out1_graph_edges.txt"]
         else:
@@ -85,15 +91,20 @@ class Graph(InMemoryDataset):
         return out
 
     def download(self):
+        """Download the data from the link given"""
         for f in self.raw_file_names:
             download_url(f"{self.url}/{f}", self.raw_dir)
 
     @property
-    def processed_file_names(self):
+    def processed_file_names(self) -> List[str]:
+        """Return the name of the file of the processed input graph
+
+        return: ([str]): the name of the processed file
+        """
         return [self.name + "_data.pt"]
 
     def process(self):
-
+        """Process the raw files of the input data"""
         if self.name == "texas" or self.name == "wisconsin":
             self._process_texas()
         else:
@@ -161,6 +172,7 @@ class Graph(InMemoryDataset):
         if self.adjust_flag:
             edge_index = self._adjust(edge_index=edge_index)
         data = Data(x=x, y=y, edge_index=edge_index)
+        np.save(self.root + "/X.npy", x.numpy())
         data_list = [data]
         data, slices = self.collate(data_list)
         data = data if self.pre_transform is None else self.pre_transform(data)
@@ -217,9 +229,9 @@ class Graph(InMemoryDataset):
 
     def _read_attrs(self, path_initial):
         d = 128  # случай если нет атрибутов добавляем случайные из норм распределения
-        try:
+        if os.path.exists(path_initial + "/" + 'attrs.txt'):
             x = []
-            for line in self._read_files("", path_initial, "_attrs.txt"):
+            for line in self._read_files("", path_initial, "attrs.txt"):
                 split_line = line.split(",")
                 x_attr = []
                 for attr in split_line:
@@ -229,7 +241,7 @@ class Graph(InMemoryDataset):
             d = x.shape[1]
             np.save(self.root + "/X.npy", x.numpy())
             return x, d
-        except:
+        else:
             x = torch.rand(self.num_nodes, d)
             np.save(self.root + "/X.npy", x.numpy())
             return x, d
