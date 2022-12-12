@@ -1,9 +1,11 @@
+import collections
 from datetime import datetime
+
 import numpy as np
 import torch
 import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
-import collections
+
 from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
 from tutorials.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
@@ -19,7 +21,7 @@ root = "../data_validation/"
 ####
 
 data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust_flag)[0]
-assert (max( float(data.edge_index[0].max()) , float(data.edge_index[1].max()) )+1) == len(data.x) == data.num_nodes
+assert (max(float(data.edge_index[0].max()), float(data.edge_index[1].max())) + 1) == len(data.x) == data.num_nodes
 assert len(collections.Counter((data.y).tolist())) == 5
 assert data.x.shape[1] == 1703
 
@@ -61,6 +63,6 @@ if explain_flag:
     explainer = Explain(model=model, adj_matrix=adj_matrix, features=features)
 
     pgm_explanation = explainer.structure_learning_bamt(34)
-    assert len(pgm_explanation.nodes)>=2
-    assert len(pgm_explanation.edges)>=1
+    assert len(pgm_explanation.nodes) >= 2
+    assert len(pgm_explanation.edges) >= 1
     print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)

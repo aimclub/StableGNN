@@ -1,14 +1,13 @@
 import os
 import warnings
 from os import listdir
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset, download_url
 from torch_geometric.utils import coalesce, dense_to_sparse, negative_sampling
 from torch_geometric.utils.undirected import to_undirected
-from typing import List
 
 # TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
 # TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
@@ -229,7 +228,7 @@ class Graph(InMemoryDataset):
 
     def _read_attrs(self, path_initial):
         d = 128  # случай если нет атрибутов добавляем случайные из норм распределения
-        if os.path.exists(path_initial + "/" + 'attrs.txt'):
+        if os.path.exists(path_initial + "/" + "attrs.txt"):
             x = []
             for line in self._read_files("", path_initial, "attrs.txt"):
                 split_line = line.split(",")

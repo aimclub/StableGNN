@@ -2,7 +2,6 @@ from typing import List, Optional, Tuple
 
 import bamt.Networks as Nets
 import numpy as np
-
 import pandas as pd
 import torch
 from pgmpy.estimators import BicScore, HillClimbSearch, K2Score
@@ -91,9 +90,7 @@ class Explain:
 
         data = Data(x=features_torch, edge_index=adj_torch.nonzero().t().contiguous())
 
-        pred_torch = self.model.inference(
-                data.to(self.device)
-        )
+        pred_torch = self.model.inference(data.to(self.device))
 
         soft_pred = np.asarray(
             [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.features.shape[0])]
@@ -118,9 +115,7 @@ class Explain:
             A_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
             data_perturb = Data(x=features_perturb_torch, edge_index=A_torch.nonzero().t().contiguous())
 
-            pred_perturb_torch = self.model.inference(
-                    data_perturb.to(self.device)
-            )
+            pred_perturb_torch = self.model.inference(data_perturb.to(self.device))
 
             soft_pred_perturb = np.asarray(
                 [

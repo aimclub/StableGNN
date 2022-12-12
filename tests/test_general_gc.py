@@ -1,6 +1,8 @@
 from datetime import datetime
+
 import torch
 import torch_geometric.transforms as T
+
 from stable_gnn.graph import Graph
 from tutorials.train_model_pipeline import TrainModelGC, TrainModelOptunaGC
 
@@ -43,4 +45,3 @@ if train_flag:
     torch.save(model, "model.pt")
 model = torch.load("model.pt")
 print(model)
-

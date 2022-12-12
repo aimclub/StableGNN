@@ -1,13 +1,14 @@
+from typing import Dict
+
 import optuna
 import torch
 import torch_geometric.transforms as T
-from torch_geometric.loader import NeighborSampler
-
-from stable_gnn.graph import Graph
 from torch import device
-from stable_gnn.embedding.model import Net
-from typing import Dict
+from torch_geometric.loader import NeighborSampler
 from torch_geometric.typing import Tensor
+
+from stable_gnn.embedding.model import Net
+from stable_gnn.graph import Graph
 
 
 class ModelTrainEmbeddings:
@@ -80,11 +81,7 @@ class ModelTrainEmbeddings:
         sampler = self.loss["Sampler"]
 
         loss_sampler = sampler(
-            self.dataset_name,
-            self.data,
-            device=self.device,
-            mask=self.train_mask,
-            loss_info=self.loss
+            self.dataset_name, self.data, device=self.device, mask=self.train_mask, loss_info=self.loss
         )
         model = Net(
             dataset=self.data,
@@ -193,7 +190,6 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
             device=self.device,
             mask=self.train_mask,
             loss_info=loss_to_train,
-
         )
         model.to(self.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)

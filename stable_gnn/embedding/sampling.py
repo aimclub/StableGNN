@@ -2,19 +2,18 @@ import collections
 import math
 import os
 import pickle
+from abc import ABC, abstractmethod
+from typing import Dict, Tuple
 
 import numpy as np
 import torch
+from torch import device
+from torch_geometric.data import Batch
+from torch_geometric.typing import Tensor
 from torch_sparse import SparseTensor
 
 from stable_gnn.embedding.negative_sampling import NegativeSampler
 from stable_gnn.graph import Graph
-from torch import device
-from typing import Dict
-from torch_geometric.data import Batch
-from torch_geometric.typing import Tensor
-from typing import Tuple
-from abc import ABC, abstractmethod
 
 try:
     import torch_cluster  # noqa
@@ -278,7 +277,9 @@ class SamplerContextMatrix(SamplerWithNegSamples):
                 invD = torch.diag(1 / sum(adj.t()))
                 invD[torch.isinf(invD)] = 0
                 print("2")
-                adj_matrix = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(adj))) - alpha * torch.matmul(invD, adj))
+                adj_matrix = (1 - alpha) * torch.inverse(
+                    torch.diag(torch.ones(len(adj))) - alpha * torch.matmul(invD, adj)
+                )
                 print("3")
                 pos_batch = self._convert_to_samples(batch, adj_matrix)
                 print("4")
@@ -385,7 +386,9 @@ class SamplerFactorization(Sampler):
                     adj_matrix = adj_matrix.type(torch.FloatTensor)
                     invD = torch.diag(1 / sum(adj_matrix.t()))
                     invD[torch.isinf(invD)] = 0
-                    context_matrix = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(adj_matrix))) - alpha * torch.matmul(invD, adj_matrix))
+                    context_matrix = (1 - alpha) * torch.inverse(
+                        torch.diag(torch.ones(len(adj_matrix))) - alpha * torch.matmul(invD, adj_matrix)
+                    )
 
             return context_matrix
         else:

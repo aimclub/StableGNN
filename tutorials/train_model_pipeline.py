@@ -1,22 +1,22 @@
 import random
 import warnings
+from abc import ABC, abstractmethod
+from typing import Dict, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 import torch
 from sklearn.metrics import accuracy_score, f1_score
-from torch_geometric.loader import DataLoader
-from typing import Tuple, Dict
-
-from stable_gnn.model_gc import ModelName as Model_GC
-from stable_gnn.model_nc import ModelName as Model_NC
-from abc import ABC, abstractmethod
+from torch.cuda import device
 from torch.nn import Module
 from torch.optim import Optimizer
-from stable_gnn.graph import Graph
-from torch.cuda import device
+from torch_geometric.loader import DataLoader
 from torch_geometric.typing import Tensor
+
+from stable_gnn.graph import Graph
+from stable_gnn.model_gc import ModelName as Model_GC
+from stable_gnn.model_nc import ModelName as Model_NC
 
 
 class TrainModel(ABC):
@@ -234,7 +234,9 @@ class TrainModelGC(TrainModel):
             train_accs_ma.append(train_acc_ma)
             print(log.format(loss, epoch, train_acc_mi, train_acc_ma))
 
-        test_acc_mi, test_acc_ma = self.test(model, )
+        test_acc_mi, test_acc_ma = self.test(
+            model,
+        )
         # scheduler.step()
         print(
             "Loss: {:.4f}, Epoch: {:03d}, test acc micro: {:.4f}, test acc macro: {:.4f}".format(

@@ -1,4 +1,5 @@
 import collections
+from typing import Tuple
 
 import torch
 import torch.nn.functional as F
@@ -9,7 +10,6 @@ from torch_geometric.utils import degree
 
 from stable_gnn.geom_gcn import GeomGCN
 from stable_gnn.graph import Graph
-from typing import Tuple
 
 
 class ModelName(torch.nn.Module):
@@ -34,7 +34,6 @@ class ModelName(torch.nn.Module):
         dropout: int = 0,
         num_layers: int = 2,
         ssl_flag: bool = False,
-
     ):
         super(ModelName, self).__init__()
         self.num_layers = num_layers

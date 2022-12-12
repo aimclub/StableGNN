@@ -1,11 +1,12 @@
 import random
-import torch
-from torch_geometric.utils import subgraph
 
+import torch
+from torch import device
 from torch_geometric.data import Batch
 from torch_geometric.typing import Tensor
+from torch_geometric.utils import subgraph
+
 from stable_gnn.graph import Graph
-from torch import device
 
 
 class NegativeSampler:

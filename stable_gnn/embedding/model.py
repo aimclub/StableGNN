@@ -1,11 +1,13 @@
+from typing import Dict
+
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import ChebConv, GATConv, GCNConv, SAGEConv, SGConv
-from stable_gnn.graph import Graph
 from torch import device
 from torch_geometric.loader.neighbor_sampler import EdgeIndex
+from torch_geometric.nn import ChebConv, GATConv, GCNConv, SAGEConv, SGConv
 from torch_geometric.typing import Tensor
-from typing import Dict
+
+from stable_gnn.graph import Graph
 
 
 class Net(torch.nn.Module):

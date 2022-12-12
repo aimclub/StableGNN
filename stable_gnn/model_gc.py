@@ -10,12 +10,12 @@ from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch import device
 from torch.nn import Linear
+from torch_geometric.data import Batch
 from torch_geometric.nn import GATConv, global_mean_pool
 from torch_geometric.typing import Adj, Tensor
 from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
 
 from stable_gnn.graph import Graph
-from torch_geometric.data import Batch
 
 
 class ModelName(torch.nn.Module):
