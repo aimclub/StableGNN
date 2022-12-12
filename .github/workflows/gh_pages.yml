@@ -20,8 +20,8 @@ jobs:
         sudo update-locale
     - run: pip install sphinx sphinx-rtd-theme
     - uses: actions/checkout@master
-        with:
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+      with:
+        fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
     - run: sphinx-apidoc -o ./docs ./stable_gnn
     - id: deployment
       uses: sphinx-notes/pages@v3
