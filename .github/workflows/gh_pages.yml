@@ -21,6 +21,7 @@ jobs:
     - uses: awalsh128/cache-apt-pkgs-action@v1.2.0
       with:
         packages: lilypond timidity imagemagick fonts-noto-cjk graphviz plantuml ffmpeg
+    - run:  cd docs && sphinx-apidoc -o . ../stable_gnn
     - id: deployment
       uses: sphinx-notes/pages@v3
       with:

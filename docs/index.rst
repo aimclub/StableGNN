@@ -11,10 +11,7 @@ Welcome to StableGNN's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   .. automodule:: stable_gnn
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   modules
 
 
 Indices and tables
