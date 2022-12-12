@@ -1,5 +1,10 @@
 scikit-learn==1.1.2
 scipy==1.9.1
+<<<<<<< HEAD
 bamt
 optuna
 
+=======
+pgmpy
+pandas
+>>>>>>> 43a6a02 (update requs)

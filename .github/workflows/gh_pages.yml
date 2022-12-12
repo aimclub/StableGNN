@@ -1,4 +1,4 @@
-name: Publish Github Pages
+name: Documentation
 
 on:
   push:
