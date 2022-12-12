@@ -23,6 +23,7 @@ class ModelName(torch.nn.Module):
     :param dropout: (float): Dropout (defualt: 0.0)
     :param num_layers: (int): Number of layers in the model (default:2)
     :param ssl_flag: (bool): If True, self supervised loss will be optimized additionally to semi-supervised (default: False)
+    :param loss_name: (str): Name of loss function for embedding learning in GeomGCN layer
     """
 
     def __init__(
@@ -34,6 +35,7 @@ class ModelName(torch.nn.Module):
         dropout: int = 0,
         num_layers: int = 2,
         ssl_flag: bool = False,
+        loss_name: str = "APP",
     ):
         super(ModelName, self).__init__()
         self.num_layers = num_layers
@@ -54,12 +56,7 @@ class ModelName(torch.nn.Module):
 
         if self.num_layers == 1:
             self.convs.append(
-                GeomGCN(
-                    self.num_features,
-                    self.hidden_layer,
-                    last_layer=True,
-                    data_name=data_name,
-                )
+                GeomGCN(self.num_features, self.hidden_layer, last_layer=True, data_name=data_name, loss_name=loss_name)
             )
         else:
             self.convs.append(GeomGCN(self.num_features * 8, self.hidden_layer, data_name=data_name))

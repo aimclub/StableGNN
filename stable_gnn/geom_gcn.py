@@ -10,7 +10,7 @@ from torch_geometric.typing import Adj, OptPairTensor
 from torch_geometric.utils import degree
 
 from stable_gnn.embedding.model_train_embeddings import ModelTrainEmbeddings, OptunaTrainEmbeddings
-from stable_gnn.embedding.sampling import SamplerAPP
+from stable_gnn.embedding.sampling import SamplerAPP, SamplerContextMatrix, SamplerFactorization
 
 
 class GeomGCN(MessagePassing):
@@ -29,14 +29,18 @@ class GeomGCN(MessagePassing):
     :param out_channels: (int): Size of each output sample.
     :param data_name: (str): Name of your dataset. this is needed for saving embedding.
     :param last_layer: (bool): When true, the virtual vertices are summed, otherwise -- concatenated.
+    :param loss_name: (str): Name of the loss function fo unsupervised representation learning
     """
 
-    def __init__(self, in_channels: int, out_channels: int, data_name: str, last_layer: bool = False) -> None:
+    def __init__(
+        self, in_channels: int, out_channels: int, data_name: str, last_layer: bool = False, loss_name: str = "APP"
+    ) -> None:
         super().__init__(aggr="add")
         self.lin = Linear(in_channels, out_channels, bias=False)
         self.reset_parameters()
         self.data_name = data_name
         self.last_layer = last_layer
+        self.loss_name = loss_name
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -51,7 +55,7 @@ class GeomGCN(MessagePassing):
         :param edge_index: (Tensor): Edges of input graph
         :return: Hodden representation of nodes on the next layer
         """
-        out = self._virtual_vertex(edge_index=edge_index, x=x)
+        out = self._virtual_vertex(edge_index=edge_index, x=x, loss_name=self.loss_name)
         out = self.lin(out)
         return out
 
@@ -62,7 +66,7 @@ class GeomGCN(MessagePassing):
         norm = deg_sqrt[row] * deg_sqrt[col]
         return norm
 
-    def _virtual_vertex(self, edge_index, x):
+    def _virtual_vertex(self, edge_index, x, loss_name):
         if isinstance(x, Tensor):
             x: OptPairTensor = (x, x)
         graph_size = (
@@ -73,7 +77,7 @@ class GeomGCN(MessagePassing):
             + 1
         )
         deg = degree(edge_index[0], graph_size)
-        emb = self._embedding()
+        emb = self._embedding(loss_name)
         (
             edge_index_s_ur,
             edge_index_s_ul,
@@ -121,15 +125,8 @@ class GeomGCN(MessagePassing):
         """
         return norm.view(-1, 1) * x_j
 
-    def _embedding(self):
-        if os.path.exists(
-            "./data_validation/" + self.data_name + "/processed" + "/embeddings_" + self.data_name + ".npy"
-        ):
-            emb = np.load(
-                "./data_validation/" + self.data_name + "/processed" + "/embeddings_" + self.data_name + ".npy"
-            )
-            return emb
-        else:
+    def _embedding(self, loss_name):
+        if loss_name == "APP":
             loss = {
                 "Name": "APP",
                 "C": "PPR",
@@ -139,16 +136,67 @@ class GeomGCN(MessagePassing):
                 "alpha": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
                 "Sampler": SamplerAPP,
             }  # APP
+        elif loss_name == "LINE":
+            loss = {
+                "Name": "LINE",
+                "C": "Adj",
+                "num_negative_samples": [1, 6, 11, 16, 21],
+                "loss var": "Context Matrix",
+                "flag_tosave": False,
+                "Sampler": SamplerContextMatrix,
+                "lmbda": [0.0, 1.0],
+            }
+        elif loss_name == "HOPE_AA":
+            loss = {
+                "Name": "HOPE_AA",
+                "C": "AA",
+                "loss var": "Factorization",
+                "flag_tosave": True,
+                "Sampler": SamplerFactorization,
+                "lmbda": [0.0, 1.0],
+            }
+        elif loss_name == "VERSE_Adj":
+            loss = {
+                "Name": "VERSE_Adj",
+                "C": "Adj",
+                "num_negative_samples": [1, 6, 11, 16, 21],
+                "loss var": "Context Matrix",
+                "flag_tosave": False,
+                "Sampler": SamplerContextMatrix,
+                "lmbda": [0.0, 1.0],
+            }
+        else:
+            raise NameError
+
+        embeddings_name = (
+            "../data_validation/"
+            + self.data_name
+            + "/processed/"
+            + "embeddings_"
+            + self.data_name
+            + "_"
+            + self.loss_name
+            + ".npy"
+        )
+        if os.path.exists(embeddings_name):
+            emb = np.load(embeddings_name)
+            return emb
+        else:
+
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             optuna_training = OptunaTrainEmbeddings(name=self.data_name, conv="SAGE", device=device, loss_function=loss)
-            best_values = optuna_training.run(number_of_trials=10)
+            best_values = optuna_training.run(number_of_trials=50)
 
             loss_trgt = dict()
             for par in loss:
                 loss_trgt[par] = loss[par]
 
-            loss_trgt["alpha"] = best_values["alpha"]
-            loss_trgt["num_negative_samples"] = best_values["num_negative_samples"]
+            if "alpha" in loss_trgt:
+                loss_trgt["alpha"] = best_values["alpha"]
+            if "num_negative_samples" in loss_trgt:
+                loss_trgt["num_negative_samples"] = best_values["num_negative_samples"]
+            if "lmbda" in loss_trgt:
+                loss_trgt["lmbda"] = best_values["num_negative_samples"]
 
             model_training = ModelTrainEmbeddings(
                 name=self.data_name, conv="SAGE", device=device, loss_function=loss_trgt
@@ -156,7 +204,7 @@ class GeomGCN(MessagePassing):
             out = model_training.run(best_values)
             torch.cuda.empty_cache()
             np.save(
-                "./data_validation/" + self.data_name + "/processed" + "/embeddings_" + self.data_name + ".npy",
+                embeddings_name,
                 out.detach().cpu().numpy(),
             )
             return out.detach().cpu().numpy()
@@ -221,7 +269,7 @@ class GeomGCN(MessagePassing):
         self, emb, deg
     ):  # для каждой связи добавляем третий инедекс вес который означает именно _Relation
         if os.path.exists(
-            "./data_validation/"
+            "../data_validation/"
             + self.data_name
             + "/processed"
             + "/structural_neighbourhood_"
@@ -229,7 +277,7 @@ class GeomGCN(MessagePassing):
             + ".npy"
         ):
             new_edge_index = np.load(
-                "./data_validation/"
+                "../data_validation/"
                 + self.data_name
                 + "/processed"
                 + "/structural_neighbourhood_"
@@ -248,7 +296,7 @@ class GeomGCN(MessagePassing):
                     new_edge_index.append([i, nei, _Relation])
 
             np.save(
-                "./data_validation/"
+                "../data_validation/"
                 + self.data_name
                 + "/processed"
                 + "/structural_neighbourhood_"

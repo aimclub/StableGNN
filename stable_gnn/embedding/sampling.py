@@ -35,6 +35,15 @@ class Sampler(ABC):
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
+    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
+        self.device = device
+        self.dataset_name = dataset_name
+        self.data = data.to(self.device)
+
+        self.negative_sampler = NegativeSampler(self.data, self.device)
+        self.loss = loss_info
+        super(Sampler, self).__init__()
+
     def _edge_index_to_adj_train(self, batch):
         x_new = torch.sort(batch).values
 
@@ -83,6 +92,10 @@ class SamplerWithNegSamples(Sampler):
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
+    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
+        Sampler.__init__(self, dataset_name, data, device, loss_info)
+        self.num_negative_samples = self.loss["num_negative_samples"]
+
     def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
         """
         Sample positive and negative edges for batch nodes
@@ -115,12 +128,7 @@ class SamplerRandomWalk(SamplerWithNegSamples):
     """
 
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        self.device = device
-        self.dataset_name = dataset_name
-        self.data = data.to(self.device)
-        self.negative_sampler = NegativeSampler(self.data, self.device)
-        self.loss = loss_info
-        self.num_negative_samples = self.loss["num_negative_samples"]
+        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
 
         self.p = self.loss["p"]
         self.q = self.loss["q"]
@@ -129,7 +137,6 @@ class SamplerRandomWalk(SamplerWithNegSamples):
         self.context_size = (
             self.loss["context_size"] if self.walk_length >= self.loss["context_size"] else self.walk_length
         )
-        super().__init__()
 
     def _neg_sample(self, batch):
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
@@ -191,16 +198,10 @@ class SamplerContextMatrix(SamplerWithNegSamples):
     """
 
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict, help_dir: str) -> None:
-        self.device = device
-        self.dataset_name = dataset_name
-        self.data = data.to(self.device)
-        self.negative_sampler = NegativeSampler(self.data, self.device)
-        self.loss = loss_info
-        self.num_negative_samples = self.loss["num_negative_samples"]
+        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
         self.help_dir = help_dir
         if self.loss["C"] == "PPR":
             self.alpha = round(self.loss["alpha"], 1)
-        super().__init__()
 
     def _pos_sample(self, batch):
         batch = batch
@@ -339,12 +340,7 @@ class SamplerFactorization(Sampler):
     """
 
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        self.device = device
-        self.dataset_name = dataset_name
-        self.data = data.to(self.device)
-        self.negative_sampler = NegativeSampler(self.data, self.device)
-        self.loss = loss_info
-        super().__init__()
+        Sampler.__init__(dataset_name, data, device, loss_info)
 
     def sample(self, batch: Batch) -> Tensor:
         """
@@ -406,13 +402,7 @@ class SamplerAPP(SamplerWithNegSamples):
     """
 
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-
-        self.device = device
-        self.dataset_name = dataset_name
-        self.data = data.to(self.device)
-        self.negative_sampler = NegativeSampler(self.data, self.device)
-        self.loss = loss_info
-        self.num_negative_samples = self.loss["num_negative_samples"]
+        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
         self.alpha = self.loss["alpha"]
         self.r = 200
         self.num_negative_samples *= 10
@@ -426,7 +416,6 @@ class SamplerAPP(SamplerWithNegSamples):
                 new_edge_index.append([edge[1], edge[0]])
         new_edge_index = torch.tensor(new_edge_index).t()
         self.data.edge_index = new_edge_index
-        super().__init__()
 
     def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
         """

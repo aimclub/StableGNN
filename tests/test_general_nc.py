@@ -15,6 +15,7 @@ dt = datetime.now()
 name = "texas"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 adjust_flag = False
+loss_name = "APP"  # APP, LINE, HOPE_AA, VERSE_Adj
 
 ssl_flag = False
 root = "../data_validation/"
@@ -26,7 +27,7 @@ assert len(collections.Counter((data.y).tolist())) == 5
 assert data.x.shape[1] == 1703
 
 #######
-train_flag = False
+train_flag = True
 if train_flag:
     optuna_training = TrainModelOptunaNC(
         data=data,
@@ -35,7 +36,7 @@ if train_flag:
         ssl_flag=ssl_flag,
     )
 
-    best_values = optuna_training.run(number_of_trials=3)
+    best_values = optuna_training.run(number_of_trials=10)
     model_training = TrainModelNC(
         data=data,
         dataset_name=name,
@@ -47,7 +48,7 @@ if train_flag:
     torch.save(model, "model.pt")
 
     assert train_acc_mi > test_acc_mi
-    assert np.isclose(test_acc_mi, 0.6, atol=0.1)
+    assert np.isclose(test_acc_mi, 0.4, atol=0.1)  # это для loss_name=APP, для остальных там другие значения, меньше
     assert np.isclose(train_acc_mi, 0.9, atol=0.1)
 
 

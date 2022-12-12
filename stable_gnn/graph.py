@@ -68,6 +68,8 @@ class Graph(InMemoryDataset):
 
         if self.name == "texas" or self.name == "wisconsin":
             self.url = "https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master/new_data/" + self.name
+        elif self.name == "BACE":
+            self.url = "https://raw.githubusercontent.com/anpolol/data_validation/main/BACE/"
 
         super().__init__(self.root, self.transform, self.pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
@@ -81,6 +83,12 @@ class Graph(InMemoryDataset):
         """
         if self.name == "texas" or self.name == "wisconsin":
             out = ["out1_node_feature_label.txt", "out1_graph_edges.txt"]
+        elif self.name == "BACE":
+            out = []
+            for i in range(500):
+                out.append("attrs_" + str(i) + ".txt")
+            for i in range(500):
+                out.append("edge_list_" + str(i) + ".txt")
         else:
             out = [
                 self.name + "_attrs.txt",
@@ -91,8 +99,12 @@ class Graph(InMemoryDataset):
 
     def download(self):
         """Download the data from the link given"""
-        for f in self.raw_file_names:
-            download_url(f"{self.url}/{f}", self.raw_dir)
+        if self.name in ["texas", "wisconsin"]:
+            for f in self.raw_file_names:
+                download_url(f"{self.url}/{f}", self.raw_dir)
+        if self.name == "BACE":
+            for f in self.raw_file_names:
+                download_url(f"{self.url}/{f}", self.raw_dir)
 
     @property
     def processed_file_names(self) -> List[str]:
@@ -112,7 +124,7 @@ class Graph(InMemoryDataset):
             if (len(names_datasets) == 3) or (len(names_datasets) == 2):  # 1 graph: edge list, labels, attrs
                 self.process_1graph()
             else:  # many graphs
-                self.process_manygraphs()
+                self._process_many_graphs()
 
     def _process_many_graphs(self):
         if self.adjust_flag:

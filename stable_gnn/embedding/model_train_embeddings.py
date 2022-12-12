@@ -80,9 +80,7 @@ class ModelTrainEmbeddings:
 
         sampler = self.loss["Sampler"]
 
-        loss_sampler = sampler(
-            self.dataset_name, self.data, device=self.device, mask=self.train_mask, loss_info=self.loss
-        )
+        loss_sampler = sampler(self.dataset_name, self.data, device=self.device, loss_info=self.loss)
         model = Net(
             dataset=self.data,
             conv=self.Conv,
@@ -188,7 +186,6 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
             self.dataset_name,
             self.data,
             device=self.device,
-            mask=self.train_mask,
             loss_info=loss_to_train,
         )
         model.to(self.device)

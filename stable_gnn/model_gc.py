@@ -24,6 +24,7 @@ class ModelName(torch.nn.Module):
 
     :param dataset: ([Graph]): List of input graphs
     :param device: (device): Device -- 'cuda' or 'cpu'
+    :param conv: (str): Name of the convolution used for Neural Network
     :param hidden_layer: (int): The size of hidden layer (default: 64)
     :param dropout: (int): Dropout (default: 0)
     :param num_layers: (int): Number of layers in the model (default: 2)
@@ -35,6 +36,7 @@ class ModelName(torch.nn.Module):
         self,
         dataset: List[Graph],
         device: device,
+        conv: str = "GAT",
         hidden_layer: int = 64,
         dropout: int = 0,
         num_layers: int = 2,
@@ -43,7 +45,7 @@ class ModelName(torch.nn.Module):
     ):
 
         super(ModelName, self).__init__()
-        self.conv = "GAT"
+        self.conv = conv
         self.num_layers = num_layers
         self.data = dataset
         self.num_features = dataset[0].x.shape[1]

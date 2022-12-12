@@ -20,7 +20,28 @@ from stable_gnn.model_nc import ModelName as Model_NC
 
 
 class TrainModel(ABC):
-    """Base class for training pipeline"""
+    """
+    Base class for Training pipeline
+
+    :param data: (Graph): Input graph data
+    :param dataset_name: (str): Name of the dataset
+    :param device: (device): Either 'cuda' or 'cpu'
+    :param ssl_flag: (bool): If True, self supervised loss will be used along with semi-supervised
+    """
+
+    def __init__(
+        self,
+        data: Graph,
+        dataset_name: str,
+        device: device = "cuda",
+        ssl_flag: bool = False,
+    ) -> None:
+        self.data = data
+        self.device = device
+        self.ssl_flag = ssl_flag
+        self.data_name = dataset_name
+
+        super(TrainModel, self).__init__()
 
     @abstractmethod
     def train(self, model: Module, optimizer: Optimizer) -> None:
@@ -95,15 +116,13 @@ class TrainModelGC(TrainModel):
         device: device = "cuda",
         ssl_flag: bool = False,
         extrapolate_flag: bool = True,
-    ):
+    ) -> None:
+        TrainModel.__init__(self, data, dataset_name, device, ssl_flag)
 
         self.Conv = conv
-        self.device = device
-        self.ssl_flag = ssl_flag
         self.extrapolate_flag = extrapolate_flag
-        self.data_name = dataset_name
         self.Model = Model_GC
-        self.data = data
+
         N = len(data)
 
         (
@@ -114,8 +133,6 @@ class TrainModelGC(TrainModel):
             self.val_mask,
             self.test_mask,
         ) = self._train_test_split(N)
-
-        super(TrainModel, self).__init__()
 
     def train(self, model: Module, optimizer: Optimizer, train_loader: DataLoader) -> float:
         """
@@ -140,7 +157,7 @@ class TrainModelGC(TrainModel):
 
             loss = model.loss_sup(out, y)
             total_loss += loss
-            if self.SSL:
+            if self.ssl_flag:
                 loss_SSL = model.SelfSupervisedLoss(deg_pred, dat)
                 total_loss += loss_SSL
                 loss_SSL.backward(retain_graph=True)
@@ -163,7 +180,7 @@ class TrainModelGC(TrainModel):
         accs_macro = []
         for dat in loader:
             dat = dat.to(self.device)
-            out, _ = model.forward(dat.x, dat.edge_index, dat.edge_weight, dat.batch)
+            out, _ = model.forward(dat.x, dat.edge_index, dat.batch)
             y_pred = out.cpu().argmax(dim=1, keepdim=True)
             y_true = dat.y
             accs_micro.append(accuracy_score(y_true.cpu().tolist(), y_pred.squeeze().tolist()))
@@ -184,7 +201,6 @@ class TrainModelGC(TrainModel):
 
         model = self.Model(
             dataset=self.data,
-            data_name=self.data_name,
             conv=self.Conv,
             device=self.device,
             hidden_layer=hidden_layer,
@@ -221,45 +237,23 @@ class TrainModelGC(TrainModel):
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         losses = []
-        train_accs_mi = []
-        train_accs_ma = []
-        log = "Loss: {:.4f}, Epoch: {:03d}, Train acc micro: {:.4f}, Train acc macro: {:.4f}"
 
         for epoch in range(100):
 
             loss = self.train(model, optimizer, train_loader)
             losses.append(loss.detach().cpu())
-            train_acc_mi, train_acc_ma = self.test(model, loader=test_loader)
-            train_accs_mi.append(train_acc_mi)
-            train_accs_ma.append(train_acc_ma)
-            print(log.format(loss, epoch, train_acc_mi, train_acc_ma))
+            print(float(loss.detach().cpu()))
 
-        test_acc_mi, test_acc_ma = self.test(
-            model,
-        )
-        # scheduler.step()
+        test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
+        train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
+
         print(
-            "Loss: {:.4f}, Epoch: {:03d}, test acc micro: {:.4f}, test acc macro: {:.4f}".format(
-                loss, epoch, test_acc_mi, test_acc_ma
+            "Loss: {:.4f}, Epoch: {:03d}, train acc micro: {:.4f}, train acc macro: {:.4f}, test acc micro: {:.4f}, test acc macro: {:.4f}".format(
+                loss, epoch, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
             )
         )
-        plt.plot(losses)
-        plt.title(" loss")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
-        plt.plot(train_accs_mi)
-        plt.title(" train f1 micro")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
 
-        plt.plot(train_accs_ma)
-        plt.title(" train f1 macro")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
-        return model, test_acc_mi, test_acc_ma
+        return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 
 
 class TrainModelOptunaGC(TrainModelGC):
@@ -280,7 +274,6 @@ class TrainModelOptunaGC(TrainModelGC):
             num_layers=size,
             dropout=dropout,
             ssl_flag=self.ssl_flag,
-            data_name=self.data_name,
         )
 
         if self.extrapolate_flag:
@@ -310,16 +303,8 @@ class TrainModelOptunaGC(TrainModelGC):
 
         for epoch in range(50):
             _ = self.train(model, optimizer, train_loader)
-        val_acc_mi, val_acc_ma = self.test(model, val_loader=val_loader, mask=self.val_mask)
+        val_acc_mi, val_acc_ma = self.test(model, loader=val_loader)
         return np.sqrt(val_acc_mi * val_acc_ma)
-
-        model.to(self.device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-
-        for epoch in range(50):
-            _ = self.train(model, optimizer, train_loader=train_loader)
-        val_acc_mi, val_acc_ma = self.test(model, mask=self.val_mask, loader=val_loader)
-        return val_acc_mi
 
     def run(self, number_of_trials: int) -> Dict:
         """
@@ -342,21 +327,15 @@ class TrainModelNC(TrainModel):
     :param dataset_name: (str): Name of the input dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param ssl_flag: (bool): If True, self supervised loss function is optimized along with semi-supervised loss
+    :param loss_name: (str): Name of the loss for embedding learning in GeomGCN layer
     """
 
     def __init__(
-        self,
-        data: Graph,
-        dataset_name: str,
-        device: device = "cuda",
-        ssl_flag: bool = False,
+        self, data: Graph, dataset_name: str, device: device = "cuda", ssl_flag: bool = False, loss_name: str = "APP"
     ):
-
-        self.device = device
-        self.ssl_flag = ssl_flag
-        self.data_name = dataset_name
+        TrainModel.__init__(self, data, dataset_name, device, ssl_flag)
         self.Model = Model_NC
-        self.data = data
+        self.loss_name = loss_name
         self.y = self.data.y.squeeze()
         N = len(self.data.x)
 
@@ -435,6 +414,7 @@ class TrainModelNC(TrainModel):
             num_layers=size,
             dropout=dropout,
             ssl_flag=self.ssl_flag,
+            loss_name=self.loss_name,
         )
 
         model.to(self.device)
@@ -496,6 +476,7 @@ class TrainModelOptunaNC(TrainModelNC):
             dropout=dropout,
             ssl_flag=self.ssl_flag,
             data_name=self.data_name,
+            loss_name=self.loss_name,
         )
 
         model.to(self.device)
