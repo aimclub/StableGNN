@@ -6,13 +6,15 @@
 Welcome to StableGNN's documentation!
 =====================================
 
-.. automodule:: stable_gnn
-    :members:
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   .. automodule:: stable_gnn
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Indices and tables
