@@ -26,3 +26,4 @@ jobs:
       with:
         documentation_path: ./docs
         requirements_path: ./requirements.txt
+        cache: true
