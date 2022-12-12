@@ -1,8 +1,9 @@
 # StableGNN
 This is a component for autonomous learning of explainable graph neural networks.
 
+[![Testing](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml)
+
 [Documentation](https://gitlab.actcognitive.org/anpolol/stablegnn/-/wikis/HOME)
-[docs](/docs/index.html)
 
 
 ## Installation
