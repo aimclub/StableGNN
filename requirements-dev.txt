@@ -9,4 +9,3 @@ black
 pytest
 pytest-cov
 sphinx-rtd-theme
-sphinx-autodoc
