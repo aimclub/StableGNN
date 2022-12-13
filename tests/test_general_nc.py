@@ -30,13 +30,8 @@ def test_general_nc():
     train_flag = True
     if train_flag:
         optuna_training = TrainModelOptunaNC(
-            data=data,
-            dataset_name=name,
-            device=device,
-            ssl_flag=ssl_flag,
-            loss_name=loss_name
+            data=data, dataset_name=name, device=device, ssl_flag=ssl_flag, loss_name=loss_name
         )
-
 
         best_values = optuna_training.run(number_of_trials=10)
         model_training = TrainModelNC(
@@ -50,9 +45,10 @@ def test_general_nc():
         torch.save(model, "model.pt")
 
         assert train_acc_mi > test_acc_mi
-        assert np.isclose(test_acc_mi, 0.4, atol=0.1)  # это для loss_name=APP, для остальных там другие значения, меньше
+        assert np.isclose(
+            test_acc_mi, 0.4, atol=0.1
+        )  # это для loss_name=APP, для остальных там другие значения, меньше
         assert np.isclose(train_acc_mi, 0.9, atol=0.1)
-
 
     model = torch.load("model.pt")
     explain_flag = True
