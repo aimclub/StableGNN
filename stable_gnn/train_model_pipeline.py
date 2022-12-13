@@ -404,6 +404,7 @@ class TrainModelNC(TrainModel):
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
 
+        torch.manual_seed(0)
         model = self.Model(
             dataset=self.data,
             data_name=self.data_name,

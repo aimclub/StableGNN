@@ -122,7 +122,7 @@ class Graph(InMemoryDataset):
             names_datasets = listdir(self.raw_dir)
 
             if (len(names_datasets) == 3) or (len(names_datasets) == 2):  # 1 graph: edge list, labels, attrs
-                self.process_1graph()
+                self._process_1graph()
             else:  # many graphs
                 self._process_many_graphs()
 
@@ -223,7 +223,7 @@ class Graph(InMemoryDataset):
 
     def _read_edges(self, path_initial):
         edge_index = []
-        for line in self._read_files("", path_initial, "_edges.txt"):
+        for line in self._read_files("", path_initial, "edges.txt"):
             split_line = line.split(",")
             edge_index.append([int(split_line[0]), int(split_line[1])])
         edge_index = torch.tensor(edge_index)
@@ -233,7 +233,7 @@ class Graph(InMemoryDataset):
 
     def _read_labels(self, path_initial):
         y = []
-        for line in self._read_files("", path_initial, "_labels.txt"):
+        for line in self._read_files("", path_initial, "labels.txt"):
             y.append(int(line))
         y = torch.tensor(y)
         return y

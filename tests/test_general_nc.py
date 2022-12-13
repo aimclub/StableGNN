@@ -39,11 +39,12 @@ def test_general_nc():
             dataset_name=name,
             device=device,
             ssl_flag=ssl_flag,
+            loss_name=loss_name
         )
 
         model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
         torch.save(model, "model.pt")
-
+        print(train_acc_mi,test_acc_mi)
         assert train_acc_mi > test_acc_mi
         assert np.isclose(
             test_acc_mi, 0.4, atol=0.1
@@ -61,7 +62,9 @@ def test_general_nc():
 
         explainer = Explain(model=model, adj_matrix=adj_matrix, features=features)
 
-        pgm_explanation = explainer.structure_learning_bamt(34)
+        pgm_explanation = explainer.structure_learning(34)
         assert len(pgm_explanation.nodes) >= 2
         assert len(pgm_explanation.edges) >= 1
         print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
+
+test_general_nc()
