@@ -1,6 +1,4 @@
-scipy==1.9.1
 bamt==1.1.25
 optuna==2.10.1
 pgmpy==0.1.20
 pandas==1.4.0
-
