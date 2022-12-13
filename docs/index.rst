@@ -6,6 +6,7 @@
 .. mdinclude:: ./README.md
 
 .. toctree::
+   :titlesonly:
    :maxdepth: 2
    :caption: Contents:
 
