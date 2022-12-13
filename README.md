@@ -1,7 +1,7 @@
 # StableGNN
 
 <p align="center">
-  <img src="docs/stable_gnn.png" width="300px"> 
+  <img src="https://github.com/anpolol/StableGNN/blob/main/docs/stable_gnn.png?raw=true" width="300px"> 
 </p>
 
 

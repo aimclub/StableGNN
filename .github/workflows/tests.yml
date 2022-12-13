@@ -32,26 +32,8 @@ jobs:
       - name: Test with pytest
         run: |
           pytest --cov=./stable_gnn --cov-report xml tests
-      - name: Check test coverage
-        id: test-coverage
-        uses: johanvanhelden/gha-clover-test-coverage-check@v1
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
         with:
-          percentage: "10"
-          filename: "./coverage.xml"
-      - name: Generate the badge SVG image
-        uses: emibcn/badge-action@v1
-        id: badge
-        with:
-          label: 'Coverage'
-          status: ${{ steps.coverage.outputs.coverage }}
-          path: ./badges/test-coverage.svg
-          color:
-              ${{steps.coverage.outputs.coverage > 90 && 'green'              || 
-                        steps.coverage.outputs.coverage > 80 && 'yellow,green'       || 
-                        steps.coverage.outputs.coverage > 70 && 'yellow'             ||
-                        steps.coverage.outputs.coverage > 60 && 'orange,yellow'      ||
-                        steps.coverage.outputs.coverage > 50 && 'orange'             ||
-                        steps.coverage.outputs.coverage > 40 && 'red,orange'         ||
-                        steps.coverage.outputs.coverage > 30 && 'red,red,orange'     ||
-                        steps.coverage.outputs.coverage > 0 && 'red,red,red,orange' ||
-                        'red' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path--to-lcov: coverage.xml
