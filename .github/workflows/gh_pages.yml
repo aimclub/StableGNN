@@ -54,7 +54,7 @@ jobs:
       shell: bash
       run: |
         echo ::group::Push to gh-pages
-        git add -f $DIR_HTML
+        git add -A
         git commit -m "From $GITHUB_REF $SHA"
         git push origin `git subtree split --prefix $DIR_HTML ${{ inputs.branch }}`:gh-pages --force
         echo ::endgroup::
