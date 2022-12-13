@@ -44,12 +44,8 @@ jobs:
         echo ::group::Sphinx apidocs generation
         sphinx-apidoc -o . ../stable_gnn
         echo ::endgroup::
-    - name: sphinx html docs compilation
-      shell: bash -l {0}      # This is needed to work with conda here. See:https://github.com/marketplace/actions/setup-miniconda#IMPORTANT
-      working-directory: ./docs
-      run: |
         echo ::group::Sphinx docs compilation
-        sphinx-build -M html . _build
+        make html
         echo ::endgroup::
     - name: pushing to gh-pages
       shell: bash
@@ -57,5 +53,5 @@ jobs:
         echo ::group::Push to gh-pages
         git add -A
         git commit -m "From $GITHUB_REF $SHA"
-        git push origin `git subtree split --prefix $DIR_HTML ${{ inputs.branch }}`:gh-pages --force
+        git push origin gh-pages --force
         echo ::endgroup::
