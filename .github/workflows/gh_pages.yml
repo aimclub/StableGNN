@@ -20,16 +20,17 @@ jobs:
       with:
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
     - name: sphinx apidoc generation
-        run: |
-          echo ::group::Sphinx apidocs generation
-          cd docs
-          sphinx-apidoc -o . ../stable_gnn
-          echo ::endgroup::
-          echo ::group::Sphinx docs compilation
-          sphinx-build -M html . _build
-          echo ::endgroup::
+      shell: bash -l {0}
+      working-directory: ./docs
+      run: |
+        echo ::group::Sphinx apidocs generation
+        sphinx-apidoc -o . ../stable_gnn
+        echo ::endgroup::
+        echo ::group::Sphinx docs compilation
+        sphinx-build -M html . _build
+        echo ::endgroup::
     - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_build/html
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html
