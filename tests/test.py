@@ -1,1 +1,2 @@
-assert 1 == 1
+def test():
+  assert 1 == 1
