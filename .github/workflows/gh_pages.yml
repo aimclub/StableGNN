@@ -36,12 +36,13 @@ jobs:
       shell: bash
       run: |
         git checkout gh-pages
+        ls -la
     - name: sphinx apidoc generation
       shell: bash -l {0}
       working-directory: ./docs
       run: |
         echo ::group::Sphinx apidocs generation
-        sphinx-apidoc '-o . ../stable_gnn'
+        sphinx-apidoc -o . ../stable_gnn
         echo ::endgroup::
     - name: sphinx html docs compilation
       shell: bash -l {0}      # This is needed to work with conda here. See:https://github.com/marketplace/actions/setup-miniconda#IMPORTANT
