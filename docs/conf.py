@@ -23,17 +23,19 @@ extensions = [
     'sphinxcontrib.katex',
     'sphinx_mdinclude']
 
+add_module_names = False
+html_theme_options = {
+  "show_nav_level": 2,
+  "navigation_depth": 3
+}
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', 'tutorials']
 autodoc_mock_imports = ["torch", "torch_geometric", "bamt", "optuna", "pgmpy", "sklearn", "pandas", "scipy", "torch_sparse", "numpy"]
-html_theme_options = {
-  "show_nav_level": 2,
-    "navigation_depth": 3
-}
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
-add_module_names = False
+
