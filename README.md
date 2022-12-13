@@ -42,7 +42,7 @@ where `${CUDA}` should be replaced by either `cpu`, `cu102`, `cu113`, or `cu116`
 When Torch and Torch Geometric are installed clone this repo and run:
 
 ```
-python setup.py install
+pip install . 
 ```
 
 To test the installation is sucessfull, run: 
