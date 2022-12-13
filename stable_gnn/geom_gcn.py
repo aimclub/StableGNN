@@ -25,7 +25,7 @@ class GeomGCN(MessagePassing):
 
 
     where :math:`\textbf{e}_{(i,r)}^{v,l+1}` is a virtual vertex, recieved by summing up representations :math:`\textbf{h}_u^l` of nodes on layer l in structural neighbourhoods :math:`i=s` and graph neighbourhood :math:`i=g` separately for each neighbors with relation :math:`r` from the set of relations :math:`R`.
-    :math:'z_v' is an embedding of nodes in latent space, :math:'deg(v)' is a degree of node :math:'v'
+    :math:`z_v` is an embedding of nodes in latent space, :math:`deg(v)` is a degree of node :math:`v`
 
     :param in_channels: (int): Size of each input sample.
     :param out_channels: (int): Size of each output sample.
