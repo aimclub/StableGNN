@@ -346,7 +346,6 @@ class TrainModelNC(TrainModel):
             self.val_mask,
             self.test_mask,
         ) = self._train_test_split(N)
-
         super(TrainModel, self).__init__()
 
     def train(self, model: Module, optimizer: Optimizer) -> float:
@@ -484,6 +483,7 @@ class TrainModelOptunaNC(TrainModelNC):
         for epoch in range(50):
             _ = self.train(model, optimizer)
         val_acc_mi, val_acc_ma = self.test(model, mask=self.val_mask)
+
         return val_acc_mi
 
     def run(self, number_of_trials: int) -> Dict:

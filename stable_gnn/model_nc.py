@@ -56,18 +56,39 @@ class ModelName(torch.nn.Module):
 
         if self.num_layers == 1:
             self.convs.append(
-                GeomGCN(self.num_features, self.hidden_layer, last_layer=True, data_name=data_name, loss_name=loss_name)
+                GeomGCN(
+                    self.num_features,
+                    self.hidden_layer,
+                    last_layer=True,
+                    data_name=data_name,
+                    data=self.data,
+                    loss_name=loss_name,
+                )
             )
         else:
-            self.convs.append(GeomGCN(self.num_features * 8, self.hidden_layer, data_name=data_name))
+            self.convs.append(
+                GeomGCN(
+                    self.num_features * 8, self.hidden_layer, data_name=data_name, data=self.data, loss_name=loss_name
+                )
+            )
             for i in range(1, self.num_layers - 1):
-                self.convs.append(GeomGCN(self.hidden_layer * 8, self.hidden_layer, data_name=data_name))
+                self.convs.append(
+                    GeomGCN(
+                        self.hidden_layer * 8,
+                        self.hidden_layer,
+                        data_name=data_name,
+                        data=self.data,
+                        loss_name=loss_name,
+                    )
+                )
             self.convs.append(
                 GeomGCN(
                     self.hidden_layer,
                     self.hidden_layer,
                     last_layer=True,
                     data_name=data_name,
+                    data=self.data,
+                    loss_name=loss_name,
                 )
             )
 

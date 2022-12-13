@@ -1,6 +1,4 @@
 import collections
-from datetime import datetime
-
 import numpy as np
 import torch
 import torch_geometric.transforms as T
@@ -9,8 +7,6 @@ from torch_geometric.utils import to_dense_adj
 from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
 from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
-
-dt = datetime.now()
 
 name = "texas"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,6 +30,7 @@ if train_flag:
         dataset_name=name,
         device=device,
         ssl_flag=ssl_flag,
+        loss_name=loss_name
     )
 
     best_values = optuna_training.run(number_of_trials=10)
