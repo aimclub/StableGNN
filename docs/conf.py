@@ -20,6 +20,7 @@ author = 'NCCR Team (ITMO University)'
 extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
+    'sphinx.ext.pngmath',
     'sphinx_mdinclude']
 
 templates_path = ['_templates']
