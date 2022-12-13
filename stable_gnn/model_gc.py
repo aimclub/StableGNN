@@ -75,12 +75,12 @@ class ModelName(torch.nn.Module):
         self.linear_classifier = Linear(int(self.hidden_layer / 2), num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def forward(self, x: Tensor, edge_index: Adj, batch) -> Tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor, edge_index: Adj, batch: Batch) -> Tuple[Tensor, Tensor]:
         """
         Count the representation of node on the next layer of the model
 
-        :param x (Tensor): Input features
-        :param edge_index (Adj): Edge index of a batch
+        :param x: (Tensor) Input features
+        :param edge_index: (Adj) Edge index of a batch
         :param batch: Batch of data
         :return: (Tensor, Tensor): Predicted probabilities of labels and predicted degrees of graphs
         """
@@ -166,8 +166,9 @@ class ModelName(torch.nn.Module):
 
         return train_dataset, test_dataset, val_dataset
 
+    @staticmethod
     def convert_dataset(
-        self, data: List[Graph], train_indices: List[int], val_indices: List[int]
+        data: List[Graph], train_indices: List[int], val_indices: List[int]
     ) -> Tuple[List[Graph], List[Graph], List[Graph], int]:
         """
         Convert input dataset to train,test, val according to provided indices
@@ -194,7 +195,7 @@ class ModelName(torch.nn.Module):
 
         return train_dataset, test_dataset, val_dataset, n_min
 
-    def _func(self, x):
+    def _func(self, x) -> int:
         if x[1] == "y" and len(x[0]) > 1:
             number = int(x[0][5:])
         elif x[0] == "y" and len(x[1]) > 1:
@@ -203,7 +204,7 @@ class ModelName(torch.nn.Module):
             number = np.nan
         return number
 
-    def _data_eigen_exctractor(self, dataset):
+    def _data_eigen_exctractor(self, dataset: List[Graph]) -> pd.DataFrame:
 
         columns_list = list(map(lambda x: "eigen" + str(x), range(self.n_min)))
         data_bamt = pd.DataFrame(columns=columns_list + ["y"])
@@ -216,7 +217,7 @@ class ModelName(torch.nn.Module):
 
         return data_bamt
 
-    def _bayesian_network_build(self, data_bamt):
+    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets.HybridBN:
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
 
@@ -254,8 +255,9 @@ class ModelName(torch.nn.Module):
         bn.plot("BN1.html")
         return bn
 
-    def _convolve(self, dataset, weights, left_vertices):
-        new_Data = []
+    @staticmethod
+    def _convolve(dataset: List[Graph], weights: List[float], left_vertices: List[int]) -> List[Graph]:
+        new_data = []
         for graph in dataset:
             A = to_dense_adj(graph.edge_index)
             eigs = torch.eig(A.reshape(A.shape[1], A.shape[2]), True)
@@ -276,10 +278,11 @@ class ModelName(torch.nn.Module):
             graph.edge_index, graph.edge_weight = dense_to_sparse(convolved)
             graph.edge_weight = graph.edge_weight
             graph.edge_index = graph.edge_index.type(torch.LongTensor)
-            new_Data.append(graph)
-        return new_Data
+            new_data.append(graph)
+        return new_data
 
-    def self_supervised_loss(self, deg_pred: Tensor, batch: Batch) -> Tensor:
+    @staticmethod
+    def self_supervised_loss(deg_pred: Tensor, batch: Batch) -> Tensor:
         """
         Self Supervised Loss for Graph Classsification task, MSE between predicted average degree of each graph and genuine ones
 

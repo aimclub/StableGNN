@@ -1,4 +1,5 @@
 import random
+from typing import Dict, List
 
 import torch
 from torch import device
@@ -23,14 +24,15 @@ class NegativeSampler:
         super(NegativeSampler, self).__init__()
 
     @staticmethod
-    def _not_less_than(num_negative_samples, all_negative_samples):
+    def _not_less_than(num_negative_samples: int, all_negative_samples: List[int]) -> List[int]:  # type: ignore
         if len(all_negative_samples) <= num_negative_samples:
             return all_negative_samples
         if len(all_negative_samples) > num_negative_samples:
             return random.choices(all_negative_samples, k=num_negative_samples)
 
-    def _adj_list(self, edge_index):  # считаем список рёбер из edge_index
-        adj_list = dict()
+    @staticmethod
+    def _adj_list(edge_index: Tensor) -> Dict[int, List[int]]:  # считаем список рёбер из edge_index
+        adj_list: Dict[int, List[int]] = dict()
         for x in list(zip(edge_index[0].tolist(), edge_index[1].tolist())):
             if x[0] in adj_list:
                 adj_list[x[0]].append(x[1])
@@ -38,7 +40,8 @@ class NegativeSampler:
                 adj_list[x[0]] = [x[1]]
         return adj_list
 
-    def _torch_list(self, adj_list):
+    @staticmethod
+    def _torch_list(adj_list: Dict[int, List[int]]) -> Tensor:
         line = list()
         other_line = list()
         for node, neighbors in adj_list.items():
@@ -63,7 +66,7 @@ class NegativeSampler:
 
         for node, neighbors in adj.items():
             g[node] = list(
-                set(set(batch) - set(neighbors)) - set([node])
+                set(batch) - set(neighbors) - {node}
             )  # тут все элементы которые не являются соседними, но при этом входят в батч
         for node, neg_elem in g.items():
             g[node] = self._not_less_than(

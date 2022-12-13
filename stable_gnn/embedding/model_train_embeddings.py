@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 
 import optuna
 import torch
@@ -204,7 +204,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
             )
         return loss
 
-    def run(self, number_of_trials: int) -> Dict:
+    def run(self, number_of_trials: int) -> Dict[Any, Any]:
         """
         Tuning parameters for learning embeddings
 

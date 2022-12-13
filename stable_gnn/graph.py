@@ -49,7 +49,7 @@ class Graph(InMemoryDataset):
     def __init__(
         self,
         name: str,
-        root: str = None,
+        root: Optional[str] = None,
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None,
         adjust_flag: bool = True,

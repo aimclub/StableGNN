@@ -1,4 +1,5 @@
 import os
+from typing import Any, Union
 
 import numpy as np
 import torch
@@ -43,6 +44,9 @@ class GeomGCN(MessagePassing):
         self.loss_name = loss_name
         self.reset_parameters()
 
+        # TODO проверить можем ли мы пробрасывать девайс снаружи
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def reset_parameters(self) -> None:
         """Reset parameters"""
         self.lin.reset_parameters()
@@ -59,16 +63,17 @@ class GeomGCN(MessagePassing):
         out = self.lin(out)
         return out
 
-    def _normalization_term(self, edge_index, x):
+    @staticmethod
+    def _normalization_term(edge_index: Tensor, x: Any) -> float:
         row, col = edge_index
         deg = degree(col, 251, dtype=x[0].dtype)
         deg_sqrt = deg.pow(0.5)
         norm = deg_sqrt[row] * deg_sqrt[col]
         return norm
 
-    def _virtual_vertex(self, edge_index, x, loss_name):
+    def _virtual_vertex(self, edge_index: Tensor, x: Union[Tensor, OptPairTensor], loss_name: str) -> np.array:
         if isinstance(x, Tensor):
-            x: OptPairTensor = (x, x)
+            x = (x, x)
         graph_size = (
             max(
                 edge_index[0].max(),
@@ -94,13 +99,16 @@ class GeomGCN(MessagePassing):
         e_g_lr = self.propagate(edge_index_g_lr, x=x, norm=self._normalization_term(edge_index_g_lr, x))
         e_g_ll = self.propagate(edge_index_g_ll, x=x, norm=self._normalization_term(edge_index_g_ll, x))
 
-        ei = edge_index_s_ur.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+        ei = edge_index_s_ur.to(self.device)
         e_s_ur = self.propagate(ei, x=x, norm=self._normalization_term(ei, x))
-        ei = edge_index_s_ul.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+
+        ei = edge_index_s_ul.to(self.device)
         e_s_ul = self.propagate(ei, x=x, norm=self._normalization_term(ei, x))
-        ei = edge_index_s_lr.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+
+        ei = edge_index_s_lr.to(self.device)
         e_s_lr = self.propagate(ei, x=x, norm=self._normalization_term(ei, x))
-        ei = edge_index_s_ll.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+
+        ei = edge_index_s_ll.to(self.device)
         e_s_ll = self.propagate(ei, x=x, norm=self._normalization_term(ei, x))
 
         # здесь конкат для всех кроме последнего слоя, для последнего должно быть mean
@@ -125,7 +133,7 @@ class GeomGCN(MessagePassing):
         """
         return norm.view(-1, 1) * x_j
 
-    def _embedding(self, loss_name):
+    def _embedding(self, loss_name: str) -> np.array:
         if loss_name == "APP":
             loss = {
                 "Name": "APP",

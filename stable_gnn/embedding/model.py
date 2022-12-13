@@ -49,7 +49,6 @@ class Net(torch.nn.Module):
         self.out_layer = out_layer
         self.dropout = dropout
         self.device = device
-        self.history = []
         out_channels = self.out_layer
         self.heads = heads
 

@@ -5,7 +5,6 @@ import pickle
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 
-import numpy as np
 import torch
 from torch import device
 from torch_geometric.data import Batch
@@ -44,7 +43,7 @@ class Sampler(ABC):
         self.loss = loss_info
         super(Sampler, self).__init__()
 
-    def _edge_index_to_adj_train(self, batch):
+    def _edge_index_to_adj_train(self, batch: Batch) -> Tensor:
         x_new = torch.sort(batch).values
 
         x_new = x_new.tolist()
@@ -59,21 +58,8 @@ class Sampler(ABC):
 
         return adj_matrix
 
-    def _edge_index_to_adj_train_old(self, mask):
-        x_new = torch.tensor(np.where(mask == 1)[0], dtype=torch.int32)
-        adj_matrix = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
-
-        edge_index_0 = self.data.edge_index[0].to("cpu")
-        edge_index_1 = self.data.edge_index[1].to("cpu")
-
-        for j, i in enumerate(edge_index_0):
-            if i in x_new:
-                if edge_index_1[j] in x_new:
-                    adj_matrix[i][edge_index_1[j]] = 1
-        return adj_matrix
-
     @abstractmethod
-    def sample(self, batch: Batch):
+    def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
         """
         Sample positive edges. Must be implemented
 
@@ -105,13 +91,13 @@ class SamplerWithNegSamples(Sampler):
         """
         if not isinstance(batch, torch.Tensor):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
-        return (self._pos_sample(batch), self._neg_sample(batch))
+        return self._pos_sample(batch), self._neg_sample(batch)
 
     @abstractmethod
-    def _pos_sample(self, batch):
+    def _pos_sample(self, batch: Batch) -> Tensor:
         pass
 
-    def _neg_sample(self, batch):
+    def _neg_sample(self, batch: Batch) -> Tensor:
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
         neg_batch = self.negative_sampler.negative_sampling(batch, num_negative_samples=self.num_negative_samples)
         return neg_batch
@@ -336,11 +322,10 @@ class SamplerFactorization(Sampler):
     :param data: (Graph): Input dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
-    :param help_dir: (str): Name of directory for helping data
     """
 
     def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        Sampler.__init__(dataset_name, data, device, loss_info)
+        super().__init__(dataset_name=dataset_name, data=data, device=device, loss_info=loss_info)
 
     def sample(self, batch: Batch) -> Tensor:
         """
@@ -380,10 +365,10 @@ class SamplerFactorization(Sampler):
                 alpha = self.loss["alpha"]
                 if True:
                     adj_matrix = adj_matrix.type(torch.FloatTensor)
-                    invD = torch.diag(1 / sum(adj_matrix.t()))
-                    invD[torch.isinf(invD)] = 0
+                    inv_d = torch.diag(1 / sum(adj_matrix.t()))
+                    inv_d[torch.isinf(inv_d)] = 0
                     context_matrix = (1 - alpha) * torch.inverse(
-                        torch.diag(torch.ones(len(adj_matrix))) - alpha * torch.matmul(invD, adj_matrix)
+                        torch.diag(torch.ones(len(adj_matrix))) - alpha * torch.matmul(inv_d, adj_matrix)
                     )
 
             return context_matrix
@@ -428,7 +413,7 @@ class SamplerAPP(SamplerWithNegSamples):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
         return self._pos_sample(batch), self._neg_sample(batch)
 
-    def _pos_sample(self, batch):
+    def _pos_sample(self, batch: Batch) -> Tensor:
         batch = batch.to(self.device)
         len_batch = len(batch)
         mask = torch.tensor([False] * len(self.data.x))
@@ -439,8 +424,8 @@ class SamplerAPP(SamplerWithNegSamples):
         row = row.to(self.device)
         col = col.to(self.device)
 
-        ASparse = SparseTensor(row=row, col=col, sparse_sizes=(len_batch, len_batch))
-        pos_dict = self._find_PPR_approx(batch, ASparse, self.device, self.r, self.alpha, row)
+        sparse_matrix = SparseTensor(row=row, col=col, sparse_sizes=(len_batch, len_batch))
+        pos_dict = self._find_ppr_approx(batch, sparse_matrix, self.r, self.alpha, row)
         pos_batch = []
         for pos_pair in pos_dict:
             pos_row = list(pos_pair)
@@ -448,14 +433,16 @@ class SamplerAPP(SamplerWithNegSamples):
             pos_batch.append(pos_row)
         return torch.tensor(pos_batch)
 
-    def _find_PPR_approx(self, batch, Adj, device, r, alpha, row):
-        N = math.ceil(math.log(1 / (r * alpha), (1 - alpha)))
-        length = list(map(lambda x: int((1 - alpha) ** x * alpha * r), list(range(N - 1))))
+    def _find_ppr_approx(
+        self, batch: Batch, sparse_matrix: SparseTensor, r: float, alpha: float, row: int
+    ) -> Dict[Tuple[int, int], int]:
+        n = math.ceil(math.log(1 / (r * alpha), (1 - alpha)))
+        length = list(map(lambda x: int((1 - alpha) ** x * alpha * r), list(range(n - 1))))
         r = sum(length)
-        dict_data = dict()
+        dict_data: Dict[Tuple[int, int], int] = dict()
         for u in batch:
             if len(torch.where(row == u)[0]) > 0:
-                pi_u = Adj.random_walk(u.to(device).repeat(r).flatten(), walk_length=N)
+                pi_u = sparse_matrix.random_walk(u.to(self.device).repeat(r).flatten(), walk_length=n)
                 split = torch.split(pi_u, length)
 
                 for i, seg in enumerate(split):
