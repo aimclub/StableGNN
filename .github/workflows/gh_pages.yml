@@ -30,6 +30,7 @@ jobs:
         echo ::group::Sphinx docs compilation
         sphinx-build -M html . _build
         echo ::endgroup::
+    - run: cp ./README.md ./docs/README.md
     - name: Setup Pages
       uses: actions/configure-pages@v2
     - name: Upload artifact
