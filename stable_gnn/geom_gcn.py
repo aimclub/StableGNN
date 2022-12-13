@@ -20,8 +20,10 @@ class GeomGCN(MessagePassing):
     .. math::
         \textbf{e}_{(i,r)}^{v,l+1} = \sum_{u \in N_{i}(v)} \delta(\tau(z_v,z_u),r)(deg(v)deg(u))^{\frac{1}{2}} \textbf{h}_u^l, \forall i \in {g,s}, \forall r \in R
 
+
     ..math::
         \textbf{h}_v^{l+1}=\sigma(W_l \cdot \mathbin\Vert_{i\in \{g,s\}} \mathbin\Vert_{r \in R} \textbf{e}_{(i,r)}^{v,l+1})
+
 
     where :math: '\textbf{e}_{(i,r)}^{v,l+1}' is a virtual vertex, recieved by summing up representations :math: '\textbf{h}_u^l' of nodes on layer l in structural neighbourhoods :math:'i=s' and graph neighbourhood :math: 'i=g' separately for each neighbors with relation :math:'r' from the set of relations :math:'R'.
     :math:'z_v' is an embedding of nodes in latent space, :math:'deg(v)' is a degree of node :math:'v'

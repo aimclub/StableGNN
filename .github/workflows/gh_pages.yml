@@ -17,7 +17,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
-    - run: pip install sphinx sphinx-rtd-theme sphinx-mdinclude
+    - run: pip install sphinx sphinx-rtd-theme sphinx-mdinclude sphinxcontrib-katex
     - uses: actions/checkout@master
       with:
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
@@ -26,7 +26,7 @@ jobs:
       working-directory: ./docs
       run: |
         echo ::group::Sphinx apidocs generation
-        sphinx-apidoc --separate --force --module-first -o . ../stable_gnn
+        sphinx-apidoc --separate --force --no-headers --module-first -o . ../stable_gnn
         echo ::endgroup::
         echo ::group::Sphinx docs compilation
         sphinx-build -M html . _build
