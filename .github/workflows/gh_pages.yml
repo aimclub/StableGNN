@@ -21,6 +21,7 @@ jobs:
     - uses: actions/checkout@master
       with:
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+    - run: cp ./README.md ./docs/README.md
     - name: sphinx apidoc generation
       working-directory: ./docs
       run: |
@@ -30,7 +31,6 @@ jobs:
         echo ::group::Sphinx docs compilation
         sphinx-build -M html . _build
         echo ::endgroup::
-    - run: cp ./README.md ./docs/README.md
     - name: Setup Pages
       uses: actions/configure-pages@v2
     - name: Upload artifact
