@@ -1,4 +1,5 @@
 import collections
+
 import numpy as np
 import torch
 import torch_geometric.transforms as T
@@ -60,7 +61,7 @@ if explain_flag:
 
     explainer = Explain(model=model, adj_matrix=adj_matrix, features=features)
 
-    pgm_explanation = explainer.structure_learning_bamt(34)
+    pgm_explanation = explainer.structure_learning(34)
     assert len(pgm_explanation.nodes) >= 2
     assert len(pgm_explanation.edges) >= 1
     print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
