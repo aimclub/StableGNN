@@ -18,11 +18,43 @@ jobs:
     - uses: actions/checkout@master
       with:
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-    - name: Running the Sphinx to gh-pages Action
-      uses: uibcdf/action-sphinx-docs-to-gh-pages@v1.0.0
-      with:
-        branch: pages
-        dir_docs: docs
-        sphinxapiopts: '-o . ../stable_gnn'
-        sphinxapiexclude: '../*setup* ../*.ipynb'
-        sphinxopts: ''
+
+    - name: setting the committer name and email
+      id: committer
+      shell: bash
+      run: |
+        author_name="$(git show --format=%an -s)"
+        author_email="$(git show --format=%ae -s)"
+        echo "::group::Set committer"
+        echo "git config user.name $author_name"
+        git config user.name $author_name
+        echo "git config user.email $author_email"
+        git config user.email $author_email
+        echo "::endgroup::"
+    - name: Moving to branch where sphinx docs are located
+      id: to-branch-with-docs
+      shell: bash
+      run: |
+        git checkout gh-pages
+    - name: sphinx apidoc generation
+      shell: bash -l {0}
+      working-directory: ./docs
+      run: |
+        echo ::group::Sphinx apidocs generation
+        sphinx-apidoc '-o . ../stable_gnn'
+        echo ::endgroup::
+    - name: sphinx html docs compilation
+      shell: bash -l {0}      # This is needed to work with conda here. See:https://github.com/marketplace/actions/setup-miniconda#IMPORTANT
+      working-directory: ./docs
+      run: |
+        echo ::group::Sphinx docs compilation
+        sphinx-build -M html . _build
+        echo ::endgroup::
+    - name: pushing to gh-pages
+      shell: bash
+      run: |
+        echo ::group::Push to gh-pages
+        git add -f $DIR_HTML
+        git commit -m "From $GITHUB_REF $SHA"
+        git push origin `git subtree split --prefix $DIR_HTML ${{ inputs.branch }}`:gh-pages --force
+        echo ::endgroup::
