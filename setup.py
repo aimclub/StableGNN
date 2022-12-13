@@ -1,10 +1,3 @@
-try:
-    import torch
-    from torch_geometric.typing import Tensor
-except ModuleNotFoundError:
-    raise ModuleNotFoundError(
-        "You need install torch and torch geometric first. See https://github.com/anpolol/StableGNN#installation for deatails")
-
 from typing import Dict
 
 from setuptools import find_packages, setup
