@@ -26,7 +26,7 @@ jobs:
       working-directory: ./docs
       run: |
         echo ::group::Sphinx apidocs generation
-        sphinx-apidoc --separate --force -o . ../stable_gnn
+        sphinx-apidoc --separate --force --no-headings -o . ../stable_gnn
         echo ::endgroup::
         echo ::group::Sphinx docs compilation
         sphinx-build -M html . _build
