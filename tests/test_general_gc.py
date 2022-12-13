@@ -5,7 +5,7 @@ import torch
 import torch_geometric.transforms as T
 
 from stable_gnn.graph import Graph
-from tutorials.train_model_pipeline import TrainModelGC, TrainModelOptunaGC
+from stable_gnn.train_model_pipeline import TrainModelGC, TrainModelOptunaGC
 
 dt = datetime.now()
 

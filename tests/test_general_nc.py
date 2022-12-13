@@ -8,7 +8,7 @@ from torch_geometric.utils import to_dense_adj
 
 from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
-from tutorials.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
+from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
 
 dt = datetime.now()
 
