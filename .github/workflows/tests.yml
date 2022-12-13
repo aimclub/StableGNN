@@ -22,10 +22,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
+          pip install pytest pytest-cov
       - name: Test with pytest
         run: |
-          pytest tests --cov=./stable_gnn --cov-report xml
+          pytest --cov=./stable_gnn --cov-report xml tests
       - name: Codecov
         uses: codecov/codecov-action@v1.0.13
         with:
