@@ -19,11 +19,18 @@ jobs:
     - uses: actions/checkout@master
       with:
         fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-    - name: Running the Sphinx to gh-pages Action
-      uses: uibcdf/action-sphinx-docs-to-gh-pages@v1.0.0
+    - name: sphinx apidoc generation
+        shell: bash -l {0}
+        working-directory: ./docs
+        run: |
+          echo ::group::Sphinx apidocs generation
+          sphinx-apidoc -o . ../stable_gnn
+          echo ::endgroup::
+          echo ::group::Sphinx docs compilation
+          sphinx-build -M html . _build
+          echo ::endgroup::
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
       with:
-        branch: pages
-        dir_docs: docs
-        sphinxapiopts: '-o . ../stable_gnn'
-        sphinxapiexclude: '../*setup* ../*.ipynb'
-        sphinxopts: ''
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html
