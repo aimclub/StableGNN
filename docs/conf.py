@@ -19,7 +19,8 @@ author = 'NCCR Team (ITMO University)'
 
 extensions = [
     'sphinx_rtd_theme',
-    'sphinx.ext.autodoc',]
+    'sphinx.ext.autodoc',
+    'sphinx_mdinclude']
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', 'tutorials']
