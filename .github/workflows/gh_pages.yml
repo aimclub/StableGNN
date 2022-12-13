@@ -14,6 +14,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      contents: write
     steps:
     - run: pip install sphinx sphinx-rtd-theme
     - uses: actions/checkout@master
