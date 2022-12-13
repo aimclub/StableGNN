@@ -9,6 +9,7 @@ from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
 from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
 
+
 def test_general_nc():
 
     name = "texas"
