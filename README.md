@@ -1,5 +1,10 @@
 # StableGNN
+
+<a href="link" style="text-align: center">
+<img src="docs/stable_gnn.png" width="300px"> </a>
+
 This is a component for autonomous learning of explainable graph neural networks.
+
 
 [![Linters](https://github.com/anpolol/StableGNN/actions/workflows/linters.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml)
 [![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://anpolol.github.io/StableGNN/index.html)
