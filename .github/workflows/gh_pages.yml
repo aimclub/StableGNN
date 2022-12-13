@@ -31,5 +31,5 @@ jobs:
         sphinx-build -M html . _build
         echo ::endgroup::
     - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
+      id: deployment
+      uses: actions/deploy-pages@v1
