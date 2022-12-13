@@ -7,11 +7,25 @@ Welcome to StableGNN's documentation!
 =====================================
 
 
+StableGNN consists of three modules:
+
+**Graph**: reading input data and learning graph structure
+**Model**: predicting over nodes for disassortative graphs with high extrapolating ability
+**Explain**: explanation of models results
+
+**Graph** consists of
+
+- y - list of labels of all nodes in Graphs; dimension is (1,num_nodes)
+- num_nodes - number of nodes in your graph
+- x - attributes of dimension (num_nodes,d)
+- d - dimension of attributes
+- edge_index - edge list: (2,m) where m is the number of edges
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-   modules
+   stable_gnn
 
 
 Indices and tables
