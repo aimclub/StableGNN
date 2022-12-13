@@ -23,7 +23,7 @@ extensions = [
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', 'tutorials']
-autodoc_mock_imports = ["torch", "torch_geometric", "bamt", "optuna", "pgmpy", "sklearn", "pandas", "scipy"]
+autodoc_mock_imports = ["torch", "torch_geometric", "bamt", "optuna", "pgmpy", "sklearn", "pandas", "scipy", "torch_sparse", "numpy"]
 
 
 # -- Options for HTML output -------------------------------------------------
