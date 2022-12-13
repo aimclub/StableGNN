@@ -1,0 +1,37 @@
+name: Documentation
+
+on:
+  push:
+    branches: [pages]
+
+jobs:
+  pages:
+    runs-on: ubuntu-20.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+    permissions:
+      pages: write
+      id-token: write
+      contents: write
+    steps:
+    - run: pip install sphinx sphinx-rtd-theme
+    - uses: actions/checkout@master
+      with:
+        fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+    - name: sphinx apidoc generation
+      shell: bash -l {0}
+      working-directory: ./docs
+      run: |
+        echo ::group::Sphinx apidocs generation
+        sphinx-apidoc -o . ../stable_gnn
+        echo ::endgroup::
+        echo ::group::Sphinx docs compilation
+        sphinx-build -M html . _build
+        echo ::endgroup::
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: docs/_build/html

@@ -1,7 +1,12 @@
 # StableGNN
 This is a component for autonomous learning of explainable graph neural networks.
 
+[![Linters & Tests](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml)
+[![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml)
+
+
 [Documentation](https://gitlab.actcognitive.org/anpolol/stablegnn/-/wikis/HOME)
+
 
 ## Installation
 
@@ -103,7 +108,7 @@ TODO
 ## Dependencies
 
 ## Contribution
-To contribute this library, the current [code and documentation convention](docs/Development.md) should be followed.
+To contribute this library, the current [code and documentation convention](wiki/Development.md) should be followed.
 Project run linters and tests on each pull request, to install linters and testing-packages locally, run 
 
 ```
