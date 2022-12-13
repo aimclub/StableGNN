@@ -31,9 +31,6 @@ jobs:
           pip install .
       - name: Test with pytest
         run: |
-          pytest --cov=./stable_gnn --cov-report xml tests
+          pytest tests --cov=./stable_gnn --cov-report xml
       - name: Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage.xml
+        uses: AndreMiras/coveralls-python-action@develop
