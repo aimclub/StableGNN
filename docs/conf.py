@@ -24,9 +24,10 @@ extensions = [
     'sphinx_mdinclude']
 
 add_module_names = False
+add_package_names = False
 html_theme_options = {
-  "show_nav_level": 2,
-  "navigation_depth": 3
+  'collapse_navigation': False,
+  'titles_only': True
 }
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', 'tutorials']
