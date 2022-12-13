@@ -26,7 +26,7 @@ jobs:
           pip install torch==1.12.0+cpu torchvision==0.13.0+cpu torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cpu
           pip install pyg-lib torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
           pip install torch-geometric
-          pip install setup.py
+          python setup.py install
       - name: Test with pytest
         run: |
           pytest --cov=./stable_gnn --cov-report xml tests

@@ -5,6 +5,7 @@ This is a component for autonomous learning of explainable graph neural networks
 [![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://anpolol.github.io/StableGNN/index.html)
 
 ## Installation
+Python >= 3.9 is required
 
 As a first step, [Pytorch Geometric installation](https://github.com/pyg-team/pytorch_geometric/) and Torch 1.1.2 are required.
 
@@ -41,7 +42,7 @@ where `${CUDA}` should be replaced by either `cpu`, `cu102`, `cu113`, or `cu116`
 When Torch and Torch Geometric are installed clone this repo and run:
 
 ```
-pip install setup.py
+python setup.py install
 ```
 
 To test the installation is sucessfull, run: 
