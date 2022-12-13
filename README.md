@@ -2,11 +2,7 @@
 This is a component for autonomous learning of explainable graph neural networks.
 
 [![Linters & Tests](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml)
-[![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml)
-
-
-[Documentation](https://gitlab.actcognitive.org/anpolol/stablegnn/-/wikis/HOME)
-
+[![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://anpolol.github.io/StableGNN/index.html)
 
 ## Installation
 
