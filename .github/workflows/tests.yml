@@ -25,7 +25,7 @@ jobs:
           pip install pytest
       - name: Test with pytest
         run: |
-          pytest  --instafail --cov=./stable_gnn --cov-report xml --cov-branch tests
+          pytest tests --cov=./stable_gnn --cov-report xml
       - name: Codecov
         uses: codecov/codecov-action@v1.0.13
         with:
