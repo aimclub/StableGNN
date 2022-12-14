@@ -5,6 +5,7 @@
 </p>
 
 
+[![Tests](https://github.com/anpolol/StableGNN/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/anpolol/StableGNN/actions/workflows/tests.yml)
 [![Linters](https://github.com/anpolol/StableGNN/actions/workflows/linters.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml)
 [![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://anpolol.github.io/StableGNN/index.html)
 
