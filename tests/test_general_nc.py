@@ -21,7 +21,8 @@ def test_general_nc():
     root = "../data_validation/"
     ####
 
-    data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust_flag)[0]
+    dataset = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust_flag)
+    data = dataset[0]
     assert (max(float(data.edge_index[0].max()), float(data.edge_index[1].max())) + 1) == len(data.x) == data.num_nodes
     assert len(collections.Counter((data.y).tolist())) == 5
     assert data.x.shape[1] == 1703
@@ -29,29 +30,21 @@ def test_general_nc():
     #######
     train_flag = True
     if train_flag:
-        optuna_training = TrainModelOptunaNC(
-            data=data, dataset_name=name, device=device, ssl_flag=ssl_flag, loss_name=loss_name
-        )
+        optuna_training = TrainModelOptunaNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
         best_values = optuna_training.run(number_of_trials=10)
-        model_training = TrainModelNC(
-            data=data,
-            dataset_name=name,
-            device=device,
-            ssl_flag=ssl_flag,
-            loss_name=loss_name
-        )
+        model_training = TrainModelNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
         model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
-        torch.save(model, "model.pt")
-        print(train_acc_mi,test_acc_mi)
+        torch.save(model,root + str(name) + "/model.pt")
+        print(train_acc_mi, test_acc_mi)
         assert train_acc_mi > test_acc_mi
         assert np.isclose(
-            test_acc_mi, 0.4, atol=0.1
+            test_acc_mi, 0.5, atol=0.1
         )  # это для loss_name=APP, для остальных там другие значения, меньше
         assert np.isclose(train_acc_mi, 0.9, atol=0.1)
 
-    model = torch.load("model.pt")
+    model = torch.load(root + str(name) + "/model.pt")
     explain_flag = True
     if explain_flag:
         features = np.load(root + name + "/X.npy")
@@ -66,5 +59,3 @@ def test_general_nc():
         assert len(pgm_explanation.nodes) >= 2
         assert len(pgm_explanation.edges) >= 1
         print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
-
-test_general_nc()

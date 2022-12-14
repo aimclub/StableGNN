@@ -30,7 +30,6 @@ class GeomGCN(MessagePassing):
 
     :param in_channels: (int): Size of each input sample.
     :param out_channels: (int): Size of each output sample.
-    :param data_name: (str): Name of your dataset. This is needed for saving embedding.
     :param data: (Graph): Input dataset
     :param last_layer: (bool): When true, the virtual vertices are summed, otherwise -- concatenated.
     :param loss_name: (str): Name of the loss function fo unsupervised representation learning
@@ -40,18 +39,18 @@ class GeomGCN(MessagePassing):
         self,
         in_channels: int,
         out_channels: int,
-        data_name: str,
         data: Graph,
         last_layer: bool = False,
         loss_name: str = "APP",
     ) -> None:
         super().__init__(aggr="add")
+
         self.lin = Linear(in_channels, out_channels, bias=False)
-        self.reset_parameters()
-        self.data_name = data_name
-        self.data = data
+        self.data_name = data.name
+        self.data = data[0]
         self.last_layer = last_layer
         self.loss_name = loss_name
+        torch.manual_seed(0)
         self.reset_parameters()
 
         # TODO проверить можем ли мы пробрасывать девайс снаружи

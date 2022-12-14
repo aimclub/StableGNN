@@ -23,7 +23,6 @@ class TrainModel(ABC):
     Base class for Training pipeline
 
     :param data: (Graph): Input graph data
-    :param dataset_name: (str): Name of the dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param ssl_flag: (bool): If True, self supervised loss will be used along with semi-supervised
     """
@@ -31,14 +30,12 @@ class TrainModel(ABC):
     def __init__(
         self,
         data: Graph,
-        dataset_name: str,
         device: device = "cuda",
         ssl_flag: bool = False,
     ) -> None:
         self.data = data
         self.device = device
         self.ssl_flag = ssl_flag
-        self.data_name = dataset_name
 
         super(TrainModel, self).__init__()
 
@@ -329,14 +326,12 @@ class TrainModelNC(TrainModel):
     :param loss_name: (str): Name of the loss for embedding learning in GeomGCN layer
     """
 
-    def __init__(
-        self, data: Graph, dataset_name: str, device: device = "cuda", ssl_flag: bool = False, loss_name: str = "APP"
-    ):
-        TrainModel.__init__(self, data, dataset_name, device, ssl_flag)
+    def __init__(self, data: Graph, device: device = "cuda", ssl_flag: bool = False, loss_name: str = "APP"):
+        TrainModel.__init__(self, data, device, ssl_flag)
         self.Model = Model_NC
         self.loss_name = loss_name
-        self.y = self.data.y.squeeze()
-        N = len(self.data.x)
+        self.y = self.data[0].y.squeeze()
+        N = len(self.data[0].x)
 
         (
             self.train_indices,
@@ -360,7 +355,7 @@ class TrainModelNC(TrainModel):
         optimizer.zero_grad()
         total_loss = 0
 
-        out, deg_pred = model.inference(self.data.to(self.device))
+        out, deg_pred = model.inference(self.data[0].to(self.device))
 
         y = self.y.type(torch.LongTensor)
         y = y.to(self.device)
@@ -384,7 +379,7 @@ class TrainModelNC(TrainModel):
         :return: (float,float): Micro and Macro averaged f1 scores for test data
         """
         model.eval()
-        out, _ = model.inference(self.data.to(self.device))
+        out, _ = model.inference(self.data[0].to(self.device))
         y_pred = out.cpu().argmax(dim=-1, keepdim=True)
 
         accs_micro = accuracy_score(self.y.detach()[mask].cpu().numpy(), y_pred[mask])
@@ -407,7 +402,6 @@ class TrainModelNC(TrainModel):
         torch.manual_seed(0)
         model = self.Model(
             dataset=self.data,
-            data_name=self.data_name,
             device=self.device,
             hidden_layer=hidden_layer,
             num_layers=size,
@@ -462,6 +456,7 @@ class TrainModelOptunaNC(TrainModelNC):
     """Class for optimizing hyperparameters of training pipeline for Node Classification task"""
 
     def _objective(self, trial):
+        random.seed(10)
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
@@ -474,7 +469,6 @@ class TrainModelOptunaNC(TrainModelNC):
             num_layers=size,
             dropout=dropout,
             ssl_flag=self.ssl_flag,
-            data_name=self.data_name,
             loss_name=self.loss_name,
         )
 

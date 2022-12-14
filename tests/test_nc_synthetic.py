@@ -1,22 +1,21 @@
-import collections
 import os
 
+import networkx as nx
+import networkx.generators as gen
 import numpy as np
 import torch
-import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
 
 from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
 from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
-import networkx.generators as gen
-import networkx as nx
+
 
 def test_explain():
-    root='../data_validation/'
-    name = 'stars'
+    root = "../data_validation/"
+    name = "stars"
 
-    if not os.path.exists(root+str(name)):
+    if not os.path.exists(root + str(name)):
 
         size_of_star = 5
         num_of_stars = 20
@@ -39,27 +38,27 @@ def test_explain():
                 if node > node2:
                     G.add_edge(node, node2)
 
-        path_to_dir = '../data_validation/stars/'
-        if not os.path.exists('../data_validation/'):
-            os.mkdir('../data_validation/')
+        path_to_dir = "../data_validation/stars/"
+        if not os.path.exists("../data_validation/"):
+            os.mkdir("../data_validation/")
         if not os.path.exists(path_to_dir):
             os.mkdir(path_to_dir)
-        if not os.path.exists(path_to_dir + 'raw'):
-            os.mkdir(path_to_dir + 'raw')
+        if not os.path.exists(path_to_dir + "raw"):
+            os.mkdir(path_to_dir + "raw")
 
-        with open(path_to_dir + 'raw/' + 'labels.txt', 'a') as f:
-            for i in (G.nodes()):
+        with open(path_to_dir + "raw/" + "labels.txt", "a") as f:
+            for i in G.nodes():
                 if i in central_nodes:
-                    f.write(str(1) + '\n')
+                    f.write(str(1) + "\n")
                 else:
-                    f.write(str(0) + '\n')
+                    f.write(str(0) + "\n")
 
-        with open(path_to_dir + 'raw/' + 'edges.txt', 'a') as f:
-            for i in (G.edges()):
-                f.write(str(i[0]) + ',' + str(i[1]) + '\n')
+        with open(path_to_dir + "raw/" + "edges.txt", "a") as f:
+            for i in G.edges():
+                f.write(str(i[0]) + "," + str(i[1]) + "\n")
 
     adjust_flag = False
-    data = Graph(root='../data_validation/' + str(name), name=name,adjust_flag=adjust_flag)[0]
+    data = Graph(root="../data_validation/" + str(name), name=name, adjust_flag=adjust_flag)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -69,14 +68,8 @@ def test_explain():
     root = "../data_validation/"
 
     #######
-    best_values = {'hidden_layer': 64, 'size of network, number of convs': 3, 'dropout': 0.0, 'lr': 0.01}
-    model_training = TrainModelNC(
-        data=data,
-        dataset_name=name,
-        device=device,
-        ssl_flag=ssl_flag,
-        loss_name=loss_name
-    )
+    best_values = {"hidden_layer": 64, "size of network, number of convs": 3, "dropout": 0.0, "lr": 0.01}
+    model_training = TrainModelNC(data=data, dataset_name=name, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
     model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
     torch.save(model, "model.pt")
@@ -98,7 +91,3 @@ def test_explain():
     assert len(pgm_explanation_star.nodes) > len(pgm_explanation.nodes)
     assert len(pgm_explanation_star.edges) > len(pgm_explanation.edges)
     print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
-
-
-
-test_explain()

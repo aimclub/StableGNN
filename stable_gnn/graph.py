@@ -216,6 +216,7 @@ class Graph(InMemoryDataset):
             )
 
         data = Data(x=x, edge_index=edge_index, y=y)
+        data.name = self.name
         data_list = [data]
         data, slices = self.collate(data_list)
         data = data if self.pre_transform is None else self.pre_transform(data)

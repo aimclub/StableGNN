@@ -17,7 +17,6 @@ class ModelName(torch.nn.Module):
     Model for Node Classification task with Layer, considering grph characteristics
 
     :param dataset: (Graph): Input Graph
-    :param data_name: (str): Name of the dataset
     :param device: (device): Device 'cuda' or 'cpu'
     :param hidden_layer: (int): The size of hidden layer (default: 64)
     :param dropout: (float): Dropout (defualt: 0.0)
@@ -29,7 +28,6 @@ class ModelName(torch.nn.Module):
     def __init__(
         self,
         dataset: Graph,
-        data_name: str,
         device: device,
         hidden_layer: int = 64,
         dropout: int = 0,
@@ -40,19 +38,18 @@ class ModelName(torch.nn.Module):
         super(ModelName, self).__init__()
         self.num_layers = num_layers
         self.data = dataset
-        self.data_name = data_name
-        self.num_features = dataset.x.shape[1]
+        self.num_features = dataset[0].x.shape[1]
         self.convs = torch.nn.ModuleList()
 
         self.hidden_layer = hidden_layer
         self.dropout = dropout
         self.device = device
-        self.num_classes = len(collections.Counter(self.data.y.tolist()))
+        self.num_classes = len(collections.Counter(self.data[0].y.tolist()))
         self.ssl_flag = ssl_flag
         if (
             self.ssl_flag
         ):  # TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
-            self.deg = degree(self.data.edge_index[0], self.data.num_nodes)
+            self.deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes)
 
         if self.num_layers == 1:
             self.convs.append(
@@ -60,23 +57,17 @@ class ModelName(torch.nn.Module):
                     self.num_features,
                     self.hidden_layer,
                     last_layer=True,
-                    data_name=data_name,
                     data=self.data,
                     loss_name=loss_name,
                 )
             )
         else:
-            self.convs.append(
-                GeomGCN(
-                    self.num_features * 8, self.hidden_layer, data_name=data_name, data=self.data, loss_name=loss_name
-                )
-            )
+            self.convs.append(GeomGCN(self.num_features * 8, self.hidden_layer, data=self.data, loss_name=loss_name))
             for i in range(1, self.num_layers - 1):
                 self.convs.append(
                     GeomGCN(
                         self.hidden_layer * 8,
                         self.hidden_layer,
-                        data_name=data_name,
                         data=self.data,
                         loss_name=loss_name,
                     )
@@ -86,7 +77,6 @@ class ModelName(torch.nn.Module):
                     self.hidden_layer,
                     self.hidden_layer,
                     last_layer=True,
-                    data_name=data_name,
                     data=self.data,
                     loss_name=loss_name,
                 )
@@ -133,6 +123,6 @@ class ModelName(torch.nn.Module):
         :return: (Tensor): Loss
         """
         # TODO пока нет расстояния до центра кластера - много дополнительный вычислений
-        true_deg = degree(self.data.edge_index[0], self.data.num_nodes).to(self.device)[dat]
+        true_deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes).to(self.device)[dat]
 
         return F.mse_loss(deg_pred.squeeze(-1), true_deg)
