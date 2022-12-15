@@ -183,7 +183,7 @@ To avoid any unnecessary commits please fix any linting and testing errors after
 - `pytest tests`
 
 ## Contacts
-- [Contact development team](mailto:admin@cloudhadoop.com)
+- [Contact development team](mailto:egorshikov@itmo.ru)
 - Natural System Simulation Team <https://itmo-nss-team.github.io/>
   
 ## Citing
