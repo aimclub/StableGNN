@@ -167,7 +167,6 @@ StableGNN is the framework of Graph Neural Network solutions that provide increa
 <p align="center">
   <img width="100%" src='docs/arch.png'>
 
-## Dependencies
 
 ## Contribution
 To contribute this library, the current [code and documentation convention](wiki/Development.md) should be followed.
