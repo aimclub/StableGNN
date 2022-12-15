@@ -158,11 +158,14 @@ print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
 ```
 
 ## Architecture Overview
-**Adjusting** 
+StableGNN is the framework of Graph Neural Network solutions that provide increase of stability to noise data and increase the accuracy for out-of-distribution data. It consists of three parts:
+ * graph - load and adjust data
+ * model - based of geom-gcn, with ability to include self-superised loss function and extrapolation component
+ * explain - explanations in the bayesian net form  
 
-**Predicting**
 
-**Explaining**
+<p align="center">
+  <img width="100%" src='docs/arch.png'>
 
 ## Dependencies
 
