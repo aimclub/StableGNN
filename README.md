@@ -183,9 +183,8 @@ To avoid any unnecessary commits please fix any linting and testing errors after
 - `pytest tests`
 
 ## Contacts
-========
-- `[Contact development team](mailto:admin@cloudhadoop.com)`_
-- `Natural System Simulation Team <https://itmo-nss-team.github.io/>`_
+- [Contact development team](mailto:admin@cloudhadoop.com)
+- Natural System Simulation Team <https://itmo-nss-team.github.io/>
   
 ## Citing
 Please cite our paper (and the respective papers of the methods used) if you use this code in your own work:
