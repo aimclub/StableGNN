@@ -107,13 +107,12 @@ class TrainModelGC(TrainModel):
     def __init__(
         self,
         data: Graph,
-        dataset_name: str,
         conv: str = "GAT",
         device: device = "cuda",
         ssl_flag: bool = False,
         extrapolate_flag: bool = True,
     ) -> None:
-        TrainModel.__init__(self, data, dataset_name, device, ssl_flag)
+        TrainModel.__init__(self, data, device, ssl_flag)
 
         self.Conv = conv
         self.extrapolate_flag = extrapolate_flag
@@ -154,10 +153,10 @@ class TrainModelGC(TrainModel):
             loss = model.loss_sup(out, y)
             total_loss += loss
             if self.ssl_flag:
-                loss_SSL = model.SelfSupervisedLoss(deg_pred, dat)
-                total_loss += loss_SSL
-                loss_SSL.backward(retain_graph=True)
+                loss_SSL = model.self_supervised_loss(deg_pred, dat)
+                loss += loss_SSL
             loss.backward()
+            total_loss += loss
             optimizer.step()
             optimizer.zero_grad()
         return total_loss / len(train_loader)
@@ -238,7 +237,6 @@ class TrainModelGC(TrainModel):
 
             loss = self.train(model, optimizer, train_loader)
             losses.append(loss.detach().cpu())
-            print(float(loss.detach().cpu()))
 
         test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
         train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
@@ -360,11 +358,11 @@ class TrainModelNC(TrainModel):
         y = self.y.type(torch.LongTensor)
         y = y.to(self.device)
         if self.ssl_flag:
-            loss_SSL = model.SelfSupervisedLoss(deg_pred, self.train_mask)
-            total_loss += loss_SSL
-            loss_SSL.backward(retain_graph=True)
+            loss_SSL = model.self_supervised_loss(deg_pred[self.train_mask], self.train_mask)
+            total_loss = loss_SSL
         loss = model.loss_sup(out[self.train_mask], y[self.train_mask])
-        loss.backward()
+        total_loss += loss
+        total_loss.backward()
         optimizer.step()
         optimizer.zero_grad()
         return loss

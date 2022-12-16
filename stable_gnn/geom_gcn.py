@@ -204,7 +204,7 @@ class GeomGCN(MessagePassing):
             optuna_training = OptunaTrainEmbeddings(
                 name=self.data_name, data=self.data, conv="SAGE", device=device, loss_function=loss
             )
-            best_values = optuna_training.run(number_of_trials=50)
+            best_values = optuna_training.run(number_of_trials=10)
 
             loss_trgt = dict()
             for par in loss:

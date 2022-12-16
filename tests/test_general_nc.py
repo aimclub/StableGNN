@@ -1,4 +1,5 @@
 import collections
+import os
 
 import numpy as np
 import torch
@@ -12,7 +13,7 @@ from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
 
 def test_general_nc():
 
-    name = "texas"
+    name = "wisconsin"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     adjust_flag = False
     loss_name = "APP"  # APP, LINE, HOPE_AA, VERSE_Adj
@@ -36,7 +37,7 @@ def test_general_nc():
         model_training = TrainModelNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
         model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
-        torch.save(model,root + str(name) + "/model.pt")
+        torch.save(model, root + str(name) + "/model.pt")
         print(train_acc_mi, test_acc_mi)
         assert train_acc_mi > test_acc_mi
         assert np.isclose(
@@ -48,14 +49,13 @@ def test_general_nc():
     explain_flag = True
     if explain_flag:
         features = np.load(root + name + "/X.npy")
-        try:
+        if os.path.exists(root + name + "/A.npy"):
             adj_matrix = np.load(root + name + "/A.npy")
-        except:
+        else:
             adj_matrix = torch.squeeze(to_dense_adj(data.edge_index.cpu())).numpy()
 
         explainer = Explain(model=model, adj_matrix=adj_matrix, features=features)
-
-        pgm_explanation = explainer.structure_learning(34)
+        pgm_explanation = explainer.structure_learning(2)
         assert len(pgm_explanation.nodes) >= 2
         assert len(pgm_explanation.edges) >= 1
-        print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
+    print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
