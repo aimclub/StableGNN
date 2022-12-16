@@ -3,6 +3,7 @@ from typing import Any, Dict, Tuple
 import optuna
 import torch
 import torch_geometric.transforms as T
+from optuna import Trial
 from torch import device
 from torch.optim import Optimizer
 from torch_geometric.loader import NeighborSampler
@@ -11,7 +12,6 @@ from torch_geometric.typing import Tensor
 from stable_gnn.embedding.model import Net
 from stable_gnn.embedding.sampling import Sampler
 from stable_gnn.graph import Graph
-from optuna import Trial
 
 
 class ModelTrainEmbeddings:
@@ -43,7 +43,16 @@ class ModelTrainEmbeddings:
         if epoch == 0:
             self.samples = sampler.sample(nodes)
 
-    def _train(self, model: Net, data: Graph, optimizer: Optimizer, sampler: Sampler, train_loader: NeighborSampler, dropout: float, epoch: int) -> Tuple[Tensor, Tensor]:
+    def _train(
+        self,
+        model: Net,
+        data: Graph,
+        optimizer: Optimizer,
+        sampler: Sampler,
+        train_loader: NeighborSampler,
+        dropout: float,
+        epoch: int,
+    ) -> Tuple[Tensor, Tensor]:
         model.train()
         total_loss = 0
         optimizer.zero_grad()
@@ -97,24 +106,8 @@ class ModelTrainEmbeddings:
 
         for epoch in range(99):
             print(epoch)
-            loss, _ = self._train(
-                model,
-                self.data,
-                optimizer,
-                loss_sampler,
-                train_loader,
-                dropout,
-                epoch
-            )
-        _, out = self._train(
-            model,
-            self.data,
-            optimizer,
-            loss_sampler,
-            train_loader,
-            dropout,
-            epoch
-        )
+            loss, _ = self._train(model, self.data, optimizer, loss_sampler, train_loader, dropout, epoch)
+        _, out = self._train(model, self.data, optimizer, loss_sampler, train_loader, dropout, epoch)
 
         return out
 

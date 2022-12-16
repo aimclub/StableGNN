@@ -40,7 +40,9 @@ def test_general_nc():
         torch.save(model, root + str(name) + "/model.pt")
         print(train_acc_mi, test_acc_mi)
         assert train_acc_mi > test_acc_mi
-        assert np.isclose(test_acc_mi, 0.4, atol=0.2)  # это для loss_name=APP, для остальных там другие значения, меньше
+        assert np.isclose(
+            test_acc_mi, 0.4, atol=0.2
+        )  # это для loss_name=APP, для остальных там другие значения, меньше
         assert np.isclose(train_acc_mi, 0.9, atol=0.2)
 
     model = torch.load(root + str(name) + "/model.pt")

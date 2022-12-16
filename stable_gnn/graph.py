@@ -1,16 +1,14 @@
 import os
 import warnings
 from os import listdir
-from typing import Callable, List, Optional,Tuple
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset, download_url
+from torch_geometric.typing import Tensor
 from torch_geometric.utils import coalesce, dense_to_sparse, negative_sampling
 from torch_geometric.utils.undirected import to_undirected
-from torch_geometric.typing import Tensor
-
-
 
 
 class Graph(InMemoryDataset):

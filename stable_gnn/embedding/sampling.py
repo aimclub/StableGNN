@@ -286,7 +286,9 @@ class SamplerContextMatrix(SamplerWithNegSamples):
 
         return torch.tensor(pos_batch)
 
-    def _find_sim_rank_for_batch_torch(self, batch: Batch, adj: SparseTensor, device: device, mask: Tensor, mask_new: Tensor, r: int):
+    def _find_sim_rank_for_batch_torch(
+        self, batch: Batch, adj: SparseTensor, device: device, mask: Tensor, mask_new: Tensor, r: int
+    ):
         t = 10
         # approx with SARW
         batch = batch.to(device)

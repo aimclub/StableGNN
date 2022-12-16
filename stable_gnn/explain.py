@@ -1,10 +1,10 @@
 import random
-from typing import List, Optional, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from numpy import array
 import pandas as pd
 import torch
+from numpy import array
 from pgmpy.estimators import BicScore, HillClimbSearch, K2Score
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.inference import VariableElimination
@@ -61,7 +61,7 @@ class Explain:
         sub_features = self.features[neighbors]
         return target_new, sub_adj_matrix, sub_features, neighbors
 
-    def _perturb_features_on_node(self, feature_matrix: array, target: int, random: int=0, mode: int=0) -> array:
+    def _perturb_features_on_node(self, feature_matrix: array, target: int, random: int = 0, mode: int = 0) -> array:
         features_perturb = feature_matrix
         if random == 0:
             perturb_array = features_perturb[target]
@@ -78,7 +78,7 @@ class Explain:
 
     def _data_generation(
         self, target: int, num_samples: int = 100, pred_threshold: float = 0.1
-    ) -> Tuple[pd.DataFrame,array]:
+    ) -> Tuple[pd.DataFrame, array]:
         print("Explaining node: " + str(target))
         nA = self._n_hops_A(self.n_hops)
         target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(nA, target)
@@ -147,7 +147,9 @@ class Explain:
         data = pd.DataFrame(Combine_Samples)
         return data, neighbors
 
-    def _variable_selection(self, target: int, top_node: Optional[int]=None, num_samples: int=100, pred_threshold: float=0.1) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
+    def _variable_selection(
+        self, target: int, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
+    ) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
         data, neighbors = self._data_generation(target=target, num_samples=num_samples, pred_threshold=pred_threshold)
         ind_sub_to_ori = dict(
             zip(list(data.columns), neighbors)
@@ -265,12 +267,15 @@ class Explain:
             if node not in list(pgm_infer.variables):
                 print("Not valid evidence list.")
                 return None
-        evidences = self.generate_evidence(evidence_list)
+        evidences = self._generate_evidence(evidence_list)
         elimination_order = [node for node in list(pgm_infer.variables) if node not in evidence_list]
         elimination_order = [node for node in elimination_order if node != target]
 
         q = pgm_infer.query([target], evidence=evidences, elimination_order=elimination_order, show_progress=False)
         return q.values[0]
+
+    def _generate_evidence(self, evidence_list: List[str]) -> Dict[str, int]:
+        return dict(zip(evidence_list, [1 for node in evidence_list]))
 
     def _generalize_target(self, x: int) -> int:
         if x > 10:

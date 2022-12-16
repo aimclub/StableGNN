@@ -193,7 +193,7 @@ class ModelName(torch.nn.Module):
             else:
                 test_dataset.append(dat)
 
-        return train_dataset, test_dataset, val_dataset, n_min
+        return train_dataset, test_dataset, val_dataset, int(n_min)
 
     def _func(self, x: List[str]) -> int:
         if x[1] == "y" and len(x[0]) > 1:

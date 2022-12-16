@@ -72,7 +72,7 @@ def test_explain():
     model_training = TrainModelNC(data=data, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
     model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
-    torch.save(model, "../data_validation/"+str(name)+"/model.pt")
+    torch.save(model, "../data_validation/" + str(name) + "/model.pt")
     print(train_acc_mi, test_acc_mi)
 
     features = np.load(root + name + "/X.npy")

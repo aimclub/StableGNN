@@ -45,4 +45,3 @@ def test_general_gc():
         print(test_acc_mi)
         assert np.isclose(train_acc_mi, 0.9, atol=0.1)
         assert np.isclose(test_acc_mi, 0.9, atol=0.1)
-
