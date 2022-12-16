@@ -136,7 +136,7 @@ class Net(torch.nn.Module):
                 x = F.dropout(x, p=dp, training=self.training)
         return x
 
-    def _loss_random_walks(self, out, pos_neg_samples):
+    def _loss_random_walks(self, out: Tensor, pos_neg_samples: Tensor) -> Tensor:
         (pos_rw, neg_rw) = pos_neg_samples
         pos_rw, neg_rw = pos_rw.type(torch.LongTensor).to(self.device), neg_rw.type(torch.LongTensor).to(self.device)
         # Positive loss.
@@ -157,7 +157,7 @@ class Net(torch.nn.Module):
 
         return pos_loss + neg_loss
 
-    def _loss_context_matrix(self, out, pos_neg_samples):
+    def _loss_context_matrix(self, out: Tensor, pos_neg_samples: Tensor) -> Tensor:
         (pos_rw, neg_rw) = pos_neg_samples
         pos_rw = pos_rw.to(self.device)
         neg_rw = neg_rw.to(self.device)
@@ -193,7 +193,7 @@ class Net(torch.nn.Module):
 
         return pos_loss + neg_loss
 
-    def _loss_factorization(self, out, context_matrix):
+    def _loss_factorization(self, out: Tensor, context_matrix: Tensor) -> Tensor:
         context_matrix = context_matrix.to(self.device)
         lmbda = self.loss_function["lmbda"]
         loss = 0.5 * sum(
@@ -201,7 +201,7 @@ class Net(torch.nn.Module):
         ) + 0.5 * lmbda * sum(sum(out * out))
         return loss
 
-    def _loss_laplacian_eigen_maps(self, out, adj_matrix):
+    def _loss_laplacian_eigen_maps(self, out: Tensor, adj_matrix: Tensor) -> Tensor:
         dd = torch.device("cuda", 0)
         # dd=torch.device('cpu')
         laplacian = (torch.diag(sum(adj_matrix)) - adj_matrix).type(torch.FloatTensor).to(dd)
@@ -214,7 +214,7 @@ class Net(torch.nn.Module):
         loss_2 = torch.sqrt(sum(sum(yDy * yDy)))
         return loss + loss_2
 
-    def _loss_t_distribution(self, out, pos_neg_samples):
+    def _loss_t_distribution(self, out: Tensor, pos_neg_samples: Tensor) -> Tensor:
         eps = 10e-6
         (pos_rw, neg_rw) = pos_neg_samples
         pos_rw = pos_rw.to(self.device)

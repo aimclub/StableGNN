@@ -34,7 +34,7 @@ class ModelName(torch.nn.Module):
         num_layers: int = 2,
         ssl_flag: bool = False,
         loss_name: str = "APP",
-    ):
+    ) -> None:
         super(ModelName, self).__init__()
         self.num_layers = num_layers
         self.data = dataset

@@ -1,10 +1,11 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import optuna
+from optuna import Trial
 import torch
 from sklearn.metrics import accuracy_score, f1_score
 from torch.cuda import device
@@ -51,7 +52,7 @@ class TrainModel(ABC):
 
     @abstractmethod
     @torch.no_grad()
-    def test(self, model: Module):
+    def test(self, model: Module) -> None:
         """
         Test trained model on the test data
 
@@ -59,7 +60,7 @@ class TrainModel(ABC):
         """
         raise NotImplementedError
 
-    def _train_test_split(self, N):
+    def _train_test_split(self, N: int) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
         indices = list(range(N))
         random.seed(0)
         train_indices = random.sample(indices, int(len(indices) * 0.7))
@@ -83,7 +84,7 @@ class TrainModel(ABC):
         return train_indices, val_indices, test_indices, train_mask, val_mask, test_mask
 
     @abstractmethod
-    def run(self, params: Dict):
+    def run(self, params: Dict[Any, Any]) -> None:
         """
         Run the training process
 
@@ -182,7 +183,7 @@ class TrainModelGC(TrainModel):
             accs_macro.append(f1_score(y_true.cpu().tolist(), y_pred.squeeze().tolist(), average="macro"))
         return np.mean(accs_micro), np.mean(accs_macro)
 
-    def run(self, params: Dict) -> Tuple[Module, float, float]:
+    def run(self, params: Dict[Any, Any]) -> Tuple[Module, float, float]:
         """
         Run the training process for Graph Classification task
 
@@ -253,7 +254,7 @@ class TrainModelGC(TrainModel):
 class TrainModelOptunaGC(TrainModelGC):
     """Class for optimizing hyperparameters of training pipeline for Node Classification task"""
 
-    def _objective(self, trial):
+    def _objective(self, trial: Trial) -> float:
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
@@ -300,7 +301,7 @@ class TrainModelOptunaGC(TrainModelGC):
         val_acc_mi, val_acc_ma = self.test(model, loader=val_loader)
         return np.sqrt(val_acc_mi * val_acc_ma)
 
-    def run(self, number_of_trials: int) -> Dict:
+    def run(self, number_of_trials: int) -> Dict[Any, Any]:
         """
         Optimize hyperparameters for graph classification task training pipeline
 
@@ -324,7 +325,7 @@ class TrainModelNC(TrainModel):
     :param loss_name: (str): Name of the loss for embedding learning in GeomGCN layer
     """
 
-    def __init__(self, data: Graph, device: device = "cuda", ssl_flag: bool = False, loss_name: str = "APP"):
+    def __init__(self, data: Graph, device: device = "cuda", ssl_flag: bool = False, loss_name: str = "APP") -> None:
         TrainModel.__init__(self, data, device, ssl_flag)
         self.Model = Model_NC
         self.loss_name = loss_name
@@ -385,7 +386,7 @@ class TrainModelNC(TrainModel):
 
         return accs_micro, accs_macro
 
-    def run(self, params: Dict) -> Tuple[Module, float, float, float]:
+    def run(self, params: Dict[Any, Any]) -> Tuple[Module, float, float, float]:
         """
         Run the training pipeline for node classification task
 
@@ -453,7 +454,7 @@ class TrainModelNC(TrainModel):
 class TrainModelOptunaNC(TrainModelNC):
     """Class for optimizing hyperparameters of training pipeline for Node Classification task"""
 
-    def _objective(self, trial):
+    def _objective(self, trial: Trial) -> float:
         random.seed(10)
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
@@ -479,7 +480,7 @@ class TrainModelOptunaNC(TrainModelNC):
 
         return val_acc_mi
 
-    def run(self, number_of_trials: int) -> Dict:
+    def run(self, number_of_trials: int) -> Dict[Any, Any]:
         """
         Optimize hyperparameters for graph classification task training pipeline
 

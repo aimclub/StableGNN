@@ -1,6 +1,8 @@
-from typing import List, Optional, Tuple
+import random
+from typing import List, Optional, Tuple, Dict
 
 import numpy as np
+from numpy import array
 import pandas as pd
 import torch
 from pgmpy.estimators import BicScore, HillClimbSearch, K2Score
@@ -29,7 +31,7 @@ class Explain:
     :param X: (Tensor): Feature matrix of input data.
     """
 
-    def __init__(self, model: Module, adj_matrix: Tensor, features: Tensor) -> None:
+    def __init__(self, model: Module, adj_matrix: array, features: array) -> None:
         self.model = model
         self.model.eval()
         self.adj_matrix = adj_matrix
@@ -40,7 +42,7 @@ class Explain:
         print("\\ A dim: ", self.adj_matrix.shape)
         print("\\ X dim: ", self.features.shape)
 
-    def _n_hops_A(self, n_hops):
+    def _n_hops_A(self, n_hops: int) -> array:
         # Compute the n-hops adjacency matrix
         adj = torch.tensor(self.adj_matrix, dtype=torch.float)
         hop_adj = power_adj = adj
@@ -50,7 +52,7 @@ class Explain:
         hop_adj = (hop_adj > 0).float()
         return hop_adj.numpy().astype(int)
 
-    def _extract_n_hops_neighbors(self, nA, target):
+    def _extract_n_hops_neighbors(self, nA: array, target: int) -> Tuple[int, array, array, array]:
         # Return the n-hops neighbors of a node
         node_nA_row = nA[target]
         neighbors = np.nonzero(node_nA_row)[0]
@@ -59,7 +61,7 @@ class Explain:
         sub_features = self.features[neighbors]
         return target_new, sub_adj_matrix, sub_features, neighbors
 
-    def _perturb_features_on_node(self, feature_matrix, target, random=0, mode=0):
+    def _perturb_features_on_node(self, feature_matrix: array, target: int, random: int=0, mode: int=0) -> array:
         features_perturb = feature_matrix
         if random == 0:
             perturb_array = features_perturb[target]
@@ -76,7 +78,7 @@ class Explain:
 
     def _data_generation(
         self, target: int, num_samples: int = 100, pred_threshold: float = 0.1
-    ) -> Tuple[pd.DataFrame,]:
+    ) -> Tuple[pd.DataFrame,array]:
         print("Explaining node: " + str(target))
         nA = self._n_hops_A(self.n_hops)
         target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(nA, target)
@@ -102,6 +104,7 @@ class Explain:
             features_perturb = self.features.copy()
             sample = []
             for node in neighbors:
+                random.seed(150)
                 seed = np.random.randint(2)
                 if seed == 1:
                     latent = 1
@@ -144,7 +147,7 @@ class Explain:
         data = pd.DataFrame(Combine_Samples)
         return data, neighbors
 
-    def _variable_selection(self, target, top_node=None, num_samples=100, pred_threshold=0.1):
+    def _variable_selection(self, target: int, top_node: Optional[int]=None, num_samples: int=100, pred_threshold: float=0.1) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
         data, neighbors = self._data_generation(target=target, num_samples=num_samples, pred_threshold=pred_threshold)
         ind_sub_to_ori = dict(
             zip(list(data.columns), neighbors)
@@ -267,16 +270,15 @@ class Explain:
         elimination_order = [node for node in elimination_order if node != target]
 
         q = pgm_infer.query([target], evidence=evidences, elimination_order=elimination_order, show_progress=False)
-
         return q.values[0]
 
-    def _generalize_target(self, x):
+    def _generalize_target(self, x: int) -> int:
         if x > 10:
             return x - 10
         else:
             return x
 
-    def _generalize_others(self, x):
+    def _generalize_others(self, x: int) -> int:
         if x == 2:
             return 1
         elif x == 12:
@@ -284,7 +286,7 @@ class Explain:
         else:
             return x
 
-    def _search_MK(self, data, target, nodes):
+    def _search_MK(self, data: pd.DataFrame, target: int, nodes: List[int]) -> List[int]:
 
         target = str(int(target))
 

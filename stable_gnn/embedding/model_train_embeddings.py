@@ -1,14 +1,17 @@
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import optuna
 import torch
 import torch_geometric.transforms as T
 from torch import device
+from torch.optim import Optimizer
 from torch_geometric.loader import NeighborSampler
 from torch_geometric.typing import Tensor
 
 from stable_gnn.embedding.model import Net
+from stable_gnn.embedding.sampling import Sampler
 from stable_gnn.graph import Graph
+from optuna import Trial
 
 
 class ModelTrainEmbeddings:
@@ -36,11 +39,11 @@ class ModelTrainEmbeddings:
         self.help_data = "stableGNN/data_help/"
         super(ModelTrainEmbeddings, self).__init__()
 
-    def _sampling(self, sampler, epoch, nodes, loss):
+    def _sampling(self, sampler: Sampler, epoch: int, nodes: Tensor) -> None:
         if epoch == 0:
             self.samples = sampler.sample(nodes)
 
-    def _train(self, model, data, optimizer, sampler, train_loader, dropout, epoch, loss):
+    def _train(self, model: Net, data: Graph, optimizer: Optimizer, sampler: Sampler, train_loader: NeighborSampler, dropout: float, epoch: int) -> Tuple[Tensor, Tensor]:
         model.train()
         total_loss = 0
         optimizer.zero_grad()
@@ -54,7 +57,7 @@ class ModelTrainEmbeddings:
                     adjs = [adjs]
                 adjs = [adj.to(self.device) for adj in adjs]
                 out = model.forward(data.x[n_id.to(self.device)].to(self.device), adjs)
-                self._sampling(sampler, epoch, n_id[:batch_size], loss)
+                self._sampling(sampler, epoch, n_id[:batch_size])
                 loss = model.loss(out, self.samples)
                 total_loss += loss
 
@@ -101,8 +104,7 @@ class ModelTrainEmbeddings:
                 loss_sampler,
                 train_loader,
                 dropout,
-                epoch,
-                self.loss,
+                epoch
             )
         _, out = self._train(
             model,
@@ -111,8 +113,7 @@ class ModelTrainEmbeddings:
             loss_sampler,
             train_loader,
             dropout,
-            epoch,
-            self.loss,
+            epoch
         )
 
         return out
@@ -128,7 +129,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
     :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
     """
 
-    def _objective(self, trial):
+    def _objective(self, trial: Trial) -> Tensor:
         # Integer parameter
         hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
         out_layer = 2
@@ -197,7 +198,6 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
                 train_loader,
                 dropout,
                 epoch,
-                loss_to_train,
             )
         return loss
 

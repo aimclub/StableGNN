@@ -42,7 +42,7 @@ class ModelName(torch.nn.Module):
         num_layers: int = 2,
         ssl_flag: bool = False,
         heads: int = 1,
-    ):
+    ) -> None:
 
         super(ModelName, self).__init__()
         self.conv = conv
@@ -195,7 +195,7 @@ class ModelName(torch.nn.Module):
 
         return train_dataset, test_dataset, val_dataset, n_min
 
-    def _func(self, x) -> int:
+    def _func(self, x: List[str]) -> int:
         if x[1] == "y" and len(x[0]) > 1:
             number = int(x[0][5:])
         elif x[0] == "y" and len(x[1]) > 1:

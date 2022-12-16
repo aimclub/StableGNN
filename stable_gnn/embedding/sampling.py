@@ -124,13 +124,13 @@ class SamplerRandomWalk(SamplerWithNegSamples):
             self.loss["context_size"] if self.walk_length >= self.loss["context_size"] else self.walk_length
         )
 
-    def _neg_sample(self, batch):
+    def _neg_sample(self, batch: Batch) -> Tensor:
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
         batch = batch.repeat(self.walks_per_node * self.num_negative_samples)
         neg_batch = self.negative_sampler.negative_sampling(batch, num_negative_samples=self.num_negative_samples)
         return neg_batch
 
-    def _pos_sample(self, batch):
+    def _pos_sample(self, batch: Batch) -> Tensor:
         name_of_samples = (
             self.dataset_name
             + "_"
@@ -189,7 +189,7 @@ class SamplerContextMatrix(SamplerWithNegSamples):
         if self.loss["C"] == "PPR":
             self.alpha = round(self.loss["alpha"], 1)
 
-    def _pos_sample(self, batch):
+    def _pos_sample(self, batch: Batch) -> Tensor:
         batch = batch
         pos_batch = []
         if self.loss["C"] == "Adj" and (self.loss["Name"] == "LINE" or self.loss["Name"] == "Force2Vec"):
@@ -276,17 +276,17 @@ class SamplerContextMatrix(SamplerWithNegSamples):
         return pos_batch
 
     @staticmethod
-    def _convert_to_samples(batch, A):
+    def _convert_to_samples(batch: Batch, adj: Tensor) -> Tensor:
         pos_batch = []
         batch_l = batch.tolist()
         for x in batch_l:
             for j in batch_l:
-                if A[x][j] != torch.tensor(0):
-                    pos_batch.append([int(x), int(j), A[x][j]])
+                if adj[x][j] != torch.tensor(0):
+                    pos_batch.append([int(x), int(j), adj[x][j]])
 
         return torch.tensor(pos_batch)
 
-    def _find_sim_rank_for_batch_torch(self, batch, adj, device, mask, mask_new, r):
+    def _find_sim_rank_for_batch_torch(self, batch: Batch, adj: SparseTensor, device: device, mask: Tensor, mask_new: Tensor, r: int):
         t = 10
         # approx with SARW
         batch = batch.to(device)

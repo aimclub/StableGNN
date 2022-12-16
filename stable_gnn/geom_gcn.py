@@ -1,5 +1,5 @@
 import os
-from typing import Any, Union
+from typing import Any, Union, List
 
 import numpy as np
 import torch
@@ -136,8 +136,8 @@ class GeomGCN(MessagePassing):
         """
         Count message from the neighbour
 
-        :param x_j: Representation of the node neighbour
-        :param norm: Normalization term
+        :param x_j (Tensor): Representation of the node neighbour
+        :param norm (Tensor): Normalization term
         :return: (Tensor): Message from the neighbor
         """
         return norm.view(-1, 1) * x_j
@@ -199,7 +199,6 @@ class GeomGCN(MessagePassing):
             emb = np.load(embeddings_name)
             return emb
         else:
-
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             optuna_training = OptunaTrainEmbeddings(
                 name=self.data_name, data=self.data, conv="SAGE", device=device, loss_function=loss
@@ -228,7 +227,7 @@ class GeomGCN(MessagePassing):
             )
             return out.detach().cpu().numpy()
 
-    def _relation(self, emb1, emb2):
+    def _relation(self, emb1: np.array, emb2: np.array) -> int:
         if (emb1[0] > emb2[0]) and (emb1[1] <= emb2[1]):
             return 1
         elif (emb1[0] <= emb2[0]) and (emb1[1] > emb2[1]):
@@ -238,7 +237,7 @@ class GeomGCN(MessagePassing):
         else:
             return 3
 
-    def _edge_indices_divider(self, emb, deg, edge_index):
+    def _edge_indices_divider(self, emb: np.array, deg: Tensor, edge_index: Tensor) -> List[Tensor]:
         edge_index_s = self._structural_neighbourhood(emb, deg)
 
         edge_index_s_ur = torch.stack(
@@ -285,8 +284,8 @@ class GeomGCN(MessagePassing):
         ]
 
     def _structural_neighbourhood(
-        self, emb, deg
-    ):  # для каждой связи добавляем третий инедекс вес который означает именно _Relation
+        self, emb: np.array, deg: Tensor
+    ) -> Tensor:  # для каждой связи добавляем третий инедекс вес который означает именно _Relation
         if os.path.exists(
             "../data_validation/"
             + self.data_name
@@ -330,7 +329,7 @@ class GeomGCN(MessagePassing):
 
         return new_edge_index
 
-    def _edge_index_conversion(self, edge_index, emb):
+    def _edge_index_conversion(self, edge_index: Tensor, emb: np.array) -> Tensor:
 
         list_of__Relations = []
         iterating = edge_index.T.tolist()

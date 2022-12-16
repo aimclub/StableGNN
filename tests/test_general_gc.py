@@ -19,7 +19,7 @@ def test_general_gc():
 
     data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures())
     print("i have read data")
-    assert len(data) == 500
+    assert len(data) == 50
 
     #######
     train_flag = True
@@ -43,9 +43,6 @@ def test_general_gc():
 
         model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
         print(test_acc_mi)
-        assert np.isclose(train_acc_mi, 0.7, atol=0.1)
-        assert np.isclose(test_acc_mi, 0.7, atol=0.1)
+        assert np.isclose(train_acc_mi, 0.9, atol=0.1)
+        assert np.isclose(test_acc_mi, 0.9, atol=0.1)
 
-        torch.save(model, "model.pt")
-    model = torch.load("model.pt")
-    print(model)

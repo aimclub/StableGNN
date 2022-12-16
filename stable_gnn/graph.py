@@ -1,18 +1,16 @@
 import os
 import warnings
 from os import listdir
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional,Tuple
 
 import numpy as np
 import torch
 from torch_geometric.data import Data, InMemoryDataset, download_url
 from torch_geometric.utils import coalesce, dense_to_sparse, negative_sampling
 from torch_geometric.utils.undirected import to_undirected
+from torch_geometric.typing import Tensor
 
-# TODO на данный момент не реализовано сохранение отдельно в папку processed_adjust графа после уточнения структуры и
-# TODO отдельно в папку processed графа без уточнения структуры. Приходится удалять содержимое папки processed если хочется посчитать другое
-# TODO именно поэтому в TrainModel number of negative samples for graph.adjust не влияет на результат - постоянно считывается один и тот же граф из папки
-# TODO перепроверить можно ли на куду все перенести, в первый раз не получилось - ноль ускорения
+
 
 
 class Graph(InMemoryDataset):
@@ -55,7 +53,7 @@ class Graph(InMemoryDataset):
         adjust_flag: bool = True,
         sigma_u: float = 0.7,
         sigma_e: Optional[float] = 0.4,
-    ):
+    ) -> None:
         # reading input files consisting of edges.txt, attrs.txt, y.txt
         self.root = root
         self.transform = transform
@@ -85,9 +83,9 @@ class Graph(InMemoryDataset):
             out = ["out1_node_feature_label.txt", "out1_graph_edges.txt"]
         elif self.name == "BACE":
             out = []
-            for i in range(500):
+            for i in range(50):
                 out.append("attrs_" + str(i) + ".txt")
-            for i in range(500):
+            for i in range(50):
                 out.append("edge_list_" + str(i) + ".txt")
         else:
             out = [
@@ -97,7 +95,7 @@ class Graph(InMemoryDataset):
             ]
         return out
 
-    def download(self):
+    def download(self) -> None:
         """Download the data from the link given"""
         if self.name in ["texas", "wisconsin"]:
             for f in self.raw_file_names:
@@ -114,7 +112,7 @@ class Graph(InMemoryDataset):
         """
         return [self.name + "_data.pt"]
 
-    def process(self):
+    def process(self) -> None:
         """Process the raw files of the input data"""
         if self.name == "texas" or self.name == "wisconsin":
             self._process_texas()
@@ -126,7 +124,7 @@ class Graph(InMemoryDataset):
             else:  # many graphs
                 self._process_many_graphs()
 
-    def _process_many_graphs(self):
+    def _process_many_graphs(self) -> None:
         if self.adjust_flag:
             warnings.warn(
                 "Warning! We can adjust only 1 graph, so use adjust_flag==True only for Node Classification tasks"
@@ -164,7 +162,7 @@ class Graph(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-    def _process_texas(self):
+    def _process_texas(self) -> None:
         with open(self.raw_paths[0], "r") as f:
             data = f.read().split("\n")[1:-1]
             x = [[float(v) for v in r.split("\t")[1].split(",")] for r in data]
@@ -189,7 +187,7 @@ class Graph(InMemoryDataset):
         data = data if self.pre_transform is None else self.pre_transform(data)
         torch.save((data, slices), self.processed_paths[0])
 
-    def _process_1graph(self):
+    def _process_1graph(self) -> None:
         edge_index = self._read_edges(self.raw_dir)
         edge_index = to_undirected(edge_index)
 
@@ -222,7 +220,7 @@ class Graph(InMemoryDataset):
         data = data if self.pre_transform is None else self.pre_transform(data)
         torch.save((data, slices), self.processed_paths[0])
 
-    def _read_edges(self, path_initial):
+    def _read_edges(self, path_initial: str) -> Tensor:
         edge_index = []
         for line in self._read_files("", path_initial, "edges.txt"):
             split_line = line.split(",")
@@ -232,14 +230,14 @@ class Graph(InMemoryDataset):
 
         return edge_index
 
-    def _read_labels(self, path_initial):
+    def _read_labels(self, path_initial: str) -> Tensor:
         y = []
         for line in self._read_files("", path_initial, "labels.txt"):
             y.append(int(line))
         y = torch.tensor(y)
         return y
 
-    def _read_attrs(self, path_initial):
+    def _read_attrs(self, path_initial: str) -> Tuple[Tensor, int]:
         d = 128  # случай если нет атрибутов добавляем случайные из норм распределения
         if os.path.exists(path_initial + "/" + "attrs.txt"):
             x = []
@@ -258,7 +256,7 @@ class Graph(InMemoryDataset):
             np.save(self.root + "/X.npy", x.numpy())
             return x, d
 
-    def _read_files(self, name, path_initial, txt_file_postfix):
+    def _read_files(self, name: str, path_initial: str, txt_file_postfix: str) -> List[str]:
         path_file = path_initial + "/" + name + txt_file_postfix
         if os.path.exists(path_file):
             with open(path_file, "r") as f:
@@ -268,7 +266,7 @@ class Graph(InMemoryDataset):
         return lines
 
     # Learn structure
-    def _adjust(self, edge_index):
+    def _adjust(self, edge_index: Tensor) -> Tensor:
         # generation of genuine graph structure
         m = 64  # TODO найти какой именной тут размер, или гиперпараметр?
         u = torch.normal(
@@ -323,7 +321,7 @@ class Graph(InMemoryDataset):
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
-    def _loss(self, u, e, a_approx, edge_index, negative_samples):
+    def _loss(self, u: Tensor, e: Tensor, a_approx: Tensor, edge_index: Tensor, negative_samples: Tensor) -> Tensor:
         alpha_u = 1
         alpha_e = 1
         positive_indices_flattened = torch.concat(
