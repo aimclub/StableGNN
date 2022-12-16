@@ -26,7 +26,6 @@ def test_general_gc():
     if train_flag:
         optuna_training = TrainModelOptunaGC(
             data=data,
-            dataset_name=name,
             conv=conv,
             device=device,
             ssl_flag=ssl_flag,
@@ -37,7 +36,6 @@ def test_general_gc():
         model_training = TrainModelGC(
             data=data,
             conv=conv,
-            dataset_name=name,
             device=device,
             ssl_flag=ssl_flag,
             extrapolate_flag=extrapolate_flag,

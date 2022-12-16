@@ -13,21 +13,17 @@ from stable_gnn.graph import Graph
 
 class ModelTrainEmbeddings:
     """
-    Model for training Net, wcich building embeddings for Geom-GCN layer
+    Model for training Net, which building embeddings for Geom-GCN layer
 
-    :param name: (str): Name of input Graph
+    :param name: (str): Name of the input Graph
+    :param data: (Graph): Input Graph
     :param loss_function: (dict): Dict of parameters of unsupervised loss function
     :param conv: (str): Name of convolution (default:'GCN')
     :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
     """
 
-    def __init__(self, name: str, loss_function: Dict, conv: str = "GCN", device: device = "cuda") -> None:
-        data = Graph(
-            name,
-            root="./data_validation/" + str(name),
-            transform=T.NormalizeFeatures(),
-            adjust_flag=False,
-        )[0]
+    def __init__(self, name: str, data: Graph, loss_function: Dict, conv: str = "GCN", device: device = "cuda") -> None:
+
         self.Conv = conv
         self.device = device
         self.x = data.x
@@ -61,6 +57,7 @@ class ModelTrainEmbeddings:
                 self._sampling(sampler, epoch, n_id[:batch_size], loss)
                 loss = model.loss(out, self.samples)
                 total_loss += loss
+
         total_loss.backward()
         optimizer.step()
         return total_loss / len(train_loader), out

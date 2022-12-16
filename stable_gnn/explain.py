@@ -1,6 +1,5 @@
 from typing import List, Optional, Tuple
 
-import bamt.Networks as Nets
 import numpy as np
 import pandas as pd
 import torch
@@ -249,72 +248,6 @@ class Explain:
             pgm_explanation.fit(data_ex)
         return pgm_explanation
 
-    def structure_learning_bamt(
-        self,
-        target: int,
-        top_node: Optional[int] = None,
-        num_samples: int = 20,
-        pred_threshold: float = 0.1,
-        child: Optional[bool] = None,
-    ) -> BayesianNetwork:
-        """Learn structure of Bayesian Net, but using bamt framework"""
-        subnodes, data, pgm_stats = self._variable_selection(target, top_node, num_samples, pred_threshold)
-        subnodes = [str(int(node)) for node in subnodes]
-        target = str(int(target))
-        subnodes_no_target = [node for node in subnodes if node != target]
-        data.columns = data.columns.astype(str)
-
-        if child is None:
-
-            data_ex = data[subnodes].copy()
-            data_ex[target] = data[target].apply(self._generalize_target)
-            for node in subnodes_no_target:
-                data_ex[node] = data[node].apply(self._generalize_others)
-
-            for col in data_ex.columns[: len(data_ex.columns)]:
-                data_ex[col] = data_ex[col].astype(int)
-            data_ex[target] = data_ex[target].astype(int)
-
-            pgm_explanation = Nets.DiscreteBN()
-            p_info = dict()
-
-            p_info["types"] = dict(list(zip(list(data_ex.columns), ["disc_num"] * len(data_ex.columns))))
-
-            print(p_info)
-            pgm_explanation.add_nodes(p_info)
-
-            pgm_explanation.add_edges(
-                data_ex,
-                scoring_function=("BIC",),
-                # params=params,
-            )
-
-            pgm_explanation.plot("BN1.html")
-
-        else:
-            data_ex = data[subnodes].copy()
-            data_ex[target] = data[target].apply(self._generalize_target)
-            for node in subnodes_no_target:
-                data_ex[node] = data[node].apply(self._generalize_others)
-
-            est = HillClimbSearch(data_ex)
-            pgm_w_target_explanation = est.estimate(scoring_method=BicScore(data_ex))
-
-            #   Create the pgm
-            pgm_explanation = BayesianNetwork()
-            for node in pgm_w_target_explanation.nodes():
-                pgm_explanation.add_node(node)
-            for edge in pgm_w_target_explanation.edges():
-                pgm_explanation.add_edge(edge[0], edge[1])
-
-            #   Fit the pgm
-            data_ex = data[subnodes].copy()
-            data_ex[target] = data[target].apply(self._generalize_target)
-            for node in subnodes_no_target:
-                data_ex[node] = data[node].apply(self._generalize_others)
-            pgm_explanation.fit(data_ex)
-        return pgm_explanation
-
     def pgm_conditional_prob(self, target: int, pgm_explanation: BayesianNetwork, evidence_list: List[str]) -> float:
         """
         Probability of target node, conditioned on the set of neighbours
@@ -360,17 +293,20 @@ class Explain:
         nodes = [str(int(node)) for node in nodes]
 
         MB = nodes
-        while True:
-            count = 0
-            for node in nodes:
+        if len(nodes) > 0:
+            while True:
+                count = 0
+                for node in nodes:
 
-                evidences = MB.copy()
-                evidences.remove(node)
-                _, p, _ = chi_square(target, node, evidences, data[nodes + [target]], boolean=False)
-                if p > 0.05:
-                    MB.remove(node)
-                    count = 0
-                else:
-                    count = count + 1
-                    if count == len(MB):
-                        return MB
+                    evidences = MB.copy()
+                    evidences.remove(node)
+                    _, p, _ = chi_square(target, node, evidences, data[nodes + [target]], boolean=False)
+                    if p > 0.05:
+                        MB.remove(node)
+                        count = 0
+                    else:
+                        count = count + 1
+                        if count == len(MB):
+                            return MB
+        else:
+            return MB

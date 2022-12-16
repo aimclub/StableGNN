@@ -12,6 +12,7 @@ from torch_geometric.utils import degree
 
 from stable_gnn.embedding.model_train_embeddings import ModelTrainEmbeddings, OptunaTrainEmbeddings
 from stable_gnn.embedding.sampling import SamplerAPP, SamplerContextMatrix, SamplerFactorization
+from stable_gnn.graph import Graph
 
 
 class GeomGCN(MessagePassing):
@@ -29,20 +30,27 @@ class GeomGCN(MessagePassing):
 
     :param in_channels: (int): Size of each input sample.
     :param out_channels: (int): Size of each output sample.
-    :param data_name: (str): Name of your dataset. this is needed for saving embedding.
+    :param data: (Graph): Input dataset
     :param last_layer: (bool): When true, the virtual vertices are summed, otherwise -- concatenated.
     :param loss_name: (str): Name of the loss function fo unsupervised representation learning
     """
 
     def __init__(
-        self, in_channels: int, out_channels: int, data_name: str, last_layer: bool = False, loss_name: str = "APP"
+        self,
+        in_channels: int,
+        out_channels: int,
+        data: Graph,
+        last_layer: bool = False,
+        loss_name: str = "APP",
     ) -> None:
         super().__init__(aggr="add")
+
         self.lin = Linear(in_channels, out_channels, bias=False)
-        self.reset_parameters()
-        self.data_name = data_name
+        self.data_name = data.name
+        self.data = data[0]
         self.last_layer = last_layer
         self.loss_name = loss_name
+        torch.manual_seed(0)
         self.reset_parameters()
 
         # TODO проверить можем ли мы пробрасывать девайс снаружи
@@ -193,8 +201,10 @@ class GeomGCN(MessagePassing):
         else:
 
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            optuna_training = OptunaTrainEmbeddings(name=self.data_name, conv="SAGE", device=device, loss_function=loss)
-            best_values = optuna_training.run(number_of_trials=50)
+            optuna_training = OptunaTrainEmbeddings(
+                name=self.data_name, data=self.data, conv="SAGE", device=device, loss_function=loss
+            )
+            best_values = optuna_training.run(number_of_trials=10)
 
             loss_trgt = dict()
             for par in loss:
@@ -208,7 +218,7 @@ class GeomGCN(MessagePassing):
                 loss_trgt["lmbda"] = best_values["num_negative_samples"]
 
             model_training = ModelTrainEmbeddings(
-                name=self.data_name, conv="SAGE", device=device, loss_function=loss_trgt
+                name=self.data_name, data=self.data, conv="SAGE", device=device, loss_function=loss_trgt
             )
             out = model_training.run(best_values)
             torch.cuda.empty_cache()
