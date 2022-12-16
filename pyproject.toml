@@ -55,3 +55,6 @@ addopts = "--capture=tee-sys -q"
 log_cli = 1
 
 testpaths = ["tests"]
+
+[tool.coverage.run]
+relative_files = true

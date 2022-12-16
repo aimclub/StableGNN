@@ -31,11 +31,4 @@ jobs:
           pip install .
       - name: Test with pytest
         run: |
-          pytest --cov=./stable_gnn --cov-report xml tests
-      - name: Codecov
-        uses: codecov/codecov-action@v1.0.13
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          file: ./coverage.xml # optional
-          name: codecov # optional
-          fail_ci_if_error: false # optional (default = false)
+          pytest tests --cov=./stable_gnn --cov-report xml
