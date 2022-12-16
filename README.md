@@ -164,7 +164,8 @@ StableGNN is the framework of Graph Neural Network solutions that provide increa
 
 
 <p align="center">
-  <img width="100%" src='docs/arch.png'>
+  <img src="https://github.com/anpolol/StableGNN/blob/main/docs/docs/arch.png?raw=true" width="300px"> 
+</p>
 
 
 ## Contribution
