@@ -3,11 +3,12 @@ from typing import Any, List, Union
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 from sklearn.neighbors import BallTree
-from torch import Tensor
+from torch import Tensor, device
 from torch.nn import Linear
 from torch_geometric.nn import MessagePassing
-from torch_geometric.typing import Adj, OptPairTensor
+from torch_geometric.typing import OptPairTensor
 from torch_geometric.utils import degree
 
 from stable_gnn.embedding.model_train_embeddings import ModelTrainEmbeddings, OptunaTrainEmbeddings
@@ -32,7 +33,8 @@ class GeomGCN(MessagePassing):
     :param out_channels: (int): Size of each output sample.
     :param data: (Graph): Input dataset
     :param last_layer: (bool): When true, the virtual vertices are summed, otherwise -- concatenated.
-    :param loss_name: (str): Name of the loss function fo unsupervised representation learning
+    :param loss_name: (str): Name of the loss function for unsupervised representation learning
+    :param emb_conv: (str): Name of convolutional layer for unsupervised representation learning
     """
 
     def __init__(
@@ -40,7 +42,9 @@ class GeomGCN(MessagePassing):
         in_channels: int,
         out_channels: int,
         data: Graph,
+        device: device,
         last_layer: bool = False,
+        emb_conv: str = "SAGE",
         loss_name: str = "APP",
     ) -> None:
         super().__init__(aggr="add")
@@ -50,17 +54,17 @@ class GeomGCN(MessagePassing):
         self.data = data[0]
         self.last_layer = last_layer
         self.loss_name = loss_name
+        self.emb_conv = emb_conv
         torch.manual_seed(0)
         self.reset_parameters()
 
-        # TODO проверить можем ли мы пробрасывать девайс снаружи
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device
 
     def reset_parameters(self) -> None:
         """Reset parameters"""
         self.lin.reset_parameters()
 
-    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+    def forward(self, x: Tensor, edge_index: Tensor) -> NDArray:
         """
         Modify representations, convolutional layer
 
@@ -80,16 +84,10 @@ class GeomGCN(MessagePassing):
         norm = deg_sqrt[row] * deg_sqrt[col]
         return norm
 
-    def _virtual_vertex(self, edge_index: Tensor, x: Union[Tensor, OptPairTensor], loss_name: str) -> np.array:
+    def _virtual_vertex(self, edge_index: Tensor, x: Union[Tensor, OptPairTensor], loss_name: str) -> NDArray:
         if isinstance(x, Tensor):
             x = (x, x)
-        graph_size = (
-            max(
-                edge_index[0].max(),
-                edge_index[1].max(),
-            )
-            + 1
-        )
+        graph_size = max(edge_index[0].max(), edge_index[1].max()) + 1
         deg = degree(edge_index[0], graph_size)
         emb = self._embedding(loss_name)
         (
@@ -126,7 +124,6 @@ class GeomGCN(MessagePassing):
             x = (e_s_ur + e_s_ul + e_s_lr + e_s_ll + e_g_ur + e_g_ul + e_g_lr + e_g_ll) / 8
 
         else:
-
             x = torch.concat([e_s_ur, e_s_ul, e_s_lr, e_s_ll, e_g_ur, e_g_ul, e_g_lr, e_g_ll], axis=1)
 
         # не уверена можно ли использовать propogate на разные соседства, нет ли там какого-то пересечения, сохранения инфы в ходе дела?
@@ -142,16 +139,16 @@ class GeomGCN(MessagePassing):
         """
         return norm.view(-1, 1) * x_j
 
-    def _embedding(self, loss_name: str) -> np.array:
+    def _embedding(self, loss_name: str) -> NDArray:
         if loss_name == "APP":
             loss = {
                 "Name": "APP",
                 "C": "PPR",
                 "num_negative_samples": [1, 6, 11, 16, 21],
                 "loss var": "Context Matrix",
-                "flag_tosave": True,
+                "flat_tosave": False,
                 "alpha": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-                "Sampler": SamplerAPP,
+                "sampler": SamplerAPP,
             }  # APP
         elif loss_name == "LINE":
             loss = {
@@ -159,8 +156,8 @@ class GeomGCN(MessagePassing):
                 "C": "Adj",
                 "num_negative_samples": [1, 6, 11, 16, 21],
                 "loss var": "Context Matrix",
-                "flag_tosave": False,
-                "Sampler": SamplerContextMatrix,
+                "sampler": SamplerContextMatrix,
+                "flat_tosave": False,
                 "lmbda": [0.0, 1.0],
             }
         elif loss_name == "HOPE_AA":
@@ -168,8 +165,8 @@ class GeomGCN(MessagePassing):
                 "Name": "HOPE_AA",
                 "C": "AA",
                 "loss var": "Factorization",
-                "flag_tosave": True,
-                "Sampler": SamplerFactorization,
+                "sampler": SamplerFactorization,
+                "flat_tosave": False,
                 "lmbda": [0.0, 1.0],
             }
         elif loss_name == "VERSE_Adj":
@@ -178,8 +175,8 @@ class GeomGCN(MessagePassing):
                 "C": "Adj",
                 "num_negative_samples": [1, 6, 11, 16, 21],
                 "loss var": "Context Matrix",
-                "flag_tosave": False,
-                "Sampler": SamplerContextMatrix,
+                "flat_tosave": False,
+                "sampler": SamplerContextMatrix,
                 "lmbda": [0.0, 1.0],
             }
         else:
@@ -199,9 +196,8 @@ class GeomGCN(MessagePassing):
             emb = np.load(embeddings_name)
             return emb
         else:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             optuna_training = OptunaTrainEmbeddings(
-                name=self.data_name, data=self.data, conv="SAGE", device=device, loss_function=loss
+                name=self.data_name, data=self.data, conv=self.emb_conv, device=self.device, loss_function=loss
             )
             best_values = optuna_training.run(number_of_trials=10)
 
@@ -214,10 +210,10 @@ class GeomGCN(MessagePassing):
             if "num_negative_samples" in loss_trgt:
                 loss_trgt["num_negative_samples"] = best_values["num_negative_samples"]
             if "lmbda" in loss_trgt:
-                loss_trgt["lmbda"] = best_values["num_negative_samples"]
+                loss_trgt["lmbda"] = best_values["lmbda"]
 
             model_training = ModelTrainEmbeddings(
-                name=self.data_name, data=self.data, conv="SAGE", device=device, loss_function=loss_trgt
+                name=self.data_name, data=self.data, conv=self.emb_conv, device=self.device, loss_function=loss_trgt
             )
             out = model_training.run(best_values)
             torch.cuda.empty_cache()
@@ -227,7 +223,8 @@ class GeomGCN(MessagePassing):
             )
             return out.detach().cpu().numpy()
 
-    def _relation(self, emb1: np.array, emb2: np.array) -> int:
+    @staticmethod
+    def _relation(emb1: NDArray, emb2: NDArray) -> int:
         if (emb1[0] > emb2[0]) and (emb1[1] <= emb2[1]):
             return 1
         elif (emb1[0] <= emb2[0]) and (emb1[1] > emb2[1]):
@@ -237,7 +234,7 @@ class GeomGCN(MessagePassing):
         else:
             return 3
 
-    def _edge_indices_divider(self, emb: np.array, deg: Tensor, edge_index: Tensor) -> List[Tensor]:
+    def _edge_indices_divider(self, emb: NDArray, deg: Tensor, edge_index: Tensor) -> List[Tensor]:
         edge_index_s = self._structural_neighbourhood(emb, deg)
 
         edge_index_s_ur = torch.stack(
@@ -266,7 +263,7 @@ class GeomGCN(MessagePassing):
         )
 
         edge_index = self._edge_index_conversion(edge_index.cpu(), emb)
-        ei = edge_index.to("cuda" if torch.cuda.is_available() else "cpu")
+        ei = edge_index.to(self.device)
         edge_index_g_ur = torch.stack([ei[0][torch.where(ei[2] == 0)], ei[1][torch.where(ei[2] == 0)]])
         edge_index_g_ul = torch.stack([ei[0][torch.where(ei[2] == 1)], ei[1][torch.where(ei[2] == 1)]])
         edge_index_g_lr = torch.stack([ei[0][torch.where(ei[2] == 2)], ei[1][torch.where(ei[2] == 2)]])
@@ -284,7 +281,7 @@ class GeomGCN(MessagePassing):
         ]
 
     def _structural_neighbourhood(
-        self, emb: np.array, deg: Tensor
+        self, emb: NDArray, deg: Tensor
     ) -> Tensor:  # для каждой связи добавляем третий инедекс вес который означает именно _Relation
         if os.path.exists(
             "../data_validation/"
@@ -303,12 +300,12 @@ class GeomGCN(MessagePassing):
                 + ".npy"
             )
         else:
-            deg = deg.tolist()
+            deg_list = deg.tolist()
             new_edge_index = []
             tree = BallTree(emb, leaf_size=2)
             for i in range(len(emb)):
 
-                dist, ind = tree.query(emb[i : i + 1], k=int(deg[i]))
+                dist, ind = tree.query(emb[i : i + 1], k=int(deg_list[i]))
                 for nei in ind[0]:  # indices of 3 closest neighbors
                     _Relation = self._relation(emb[i], emb[nei])
                     new_edge_index.append([i, nei, _Relation])
@@ -329,16 +326,16 @@ class GeomGCN(MessagePassing):
 
         return new_edge_index
 
-    def _edge_index_conversion(self, edge_index: Tensor, emb: np.array) -> Tensor:
+    def _edge_index_conversion(self, edge_index: Tensor, emb: NDArray) -> Tensor:
 
-        list_of__Relations = []
+        list_of_relations = []
         iterating = edge_index.T.tolist()
         for e in iterating:
-            list_of__Relations.append(self._relation(emb[e[0]], emb[e[1]]))
+            list_of_relations.append(self._relation(emb[e[0]], emb[e[1]]))
 
         return torch.concat(
             [
                 edge_index,
-                (torch.tensor(list_of__Relations)).reshape(1, len(list_of__Relations)),
+                (torch.tensor(list_of_relations)).reshape(1, len(list_of_relations)),
             ]
         )

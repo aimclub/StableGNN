@@ -8,7 +8,7 @@ from torch_geometric.utils import to_dense_adj
 
 from stable_gnn.explain import Explain
 from stable_gnn.graph import Graph
-from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
+from stable_gnn.pipelines.node_classification_pipeline import TrainModelNC, TrainModelOptunaNC
 
 
 def test_general_nc():
@@ -18,7 +18,7 @@ def test_general_nc():
     adjust_flag = False
     loss_name = "APP"  # APP, LINE, HOPE_AA, VERSE_Adj
 
-    ssl_flag = False
+    ssl_flag = True
     root = "../data_validation/"
     ####
 
@@ -29,11 +29,11 @@ def test_general_nc():
     assert data.x.shape[1] == 1703
 
     #######
-    train_flag = True
+    train_flag = False
     if train_flag:
         optuna_training = TrainModelOptunaNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
-        best_values = optuna_training.run(number_of_trials=10)
+        best_values = optuna_training.run(number_of_trials=20)
         model_training = TrainModelNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
         model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
@@ -43,7 +43,7 @@ def test_general_nc():
         assert np.isclose(
             test_acc_mi, 0.4, atol=0.2
         )  # это для loss_name=APP, для остальных там другие значения, меньше
-        assert np.isclose(train_acc_mi, 0.9, atol=0.2)
+        assert train_acc_mi > 0.65
 
     model = torch.load(root + str(name) + "/model.pt")
     explain_flag = True

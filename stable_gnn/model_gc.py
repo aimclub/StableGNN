@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import bamt.Networks as Nets
 import numpy as np
@@ -18,7 +18,7 @@ from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
 from stable_gnn.graph import Graph
 
 
-class ModelName(torch.nn.Module):
+class ModelGraphClassification(torch.nn.Module):
     """
     Model for Graph Classification task
 
@@ -44,7 +44,7 @@ class ModelName(torch.nn.Module):
         heads: int = 1,
     ) -> None:
 
-        super(ModelName, self).__init__()
+        super(ModelGraphClassification, self).__init__()
         self.conv = conv
         self.num_layers = num_layers
         self.data = dataset
@@ -75,7 +75,7 @@ class ModelName(torch.nn.Module):
         self.linear_classifier = Linear(int(self.hidden_layer / 2), num_classes)
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
-    def forward(self, x: Tensor, edge_index: Adj, batch: Batch) -> Tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor, edge_index: Adj, batch: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Count the representation of node on the next layer of the model
 
@@ -97,14 +97,15 @@ class ModelName(torch.nn.Module):
         x = self.linear(x)
         x = F.relu(x)
 
-        deg_pred = 0
+        deg_pred = Tensor(0)
         if self.ssl_flag:
             deg_pred = F.relu(self.linear_degree_predictor(x))
 
         x = self.linear_classifier(x)
         return x.log_softmax(dim=1), deg_pred
 
-    def loss_sup(self, pred: Tensor, label: Tensor) -> Tensor:
+    @staticmethod
+    def loss_sup(pred: Tensor, label: Tensor) -> Tensor:
         """Negative log likelihood loss
 
         :param pred: (Tensor): Predicted labels
@@ -113,10 +114,10 @@ class ModelName(torch.nn.Module):
         """
         return F.nll_loss(pred, label)
 
-    def Extrapolate(
+    def extrapolate(
         self,
-        train_indices: List[int],
-        val_indices: List[int],
+        train_indices: Tensor,
+        val_indices: Tensor,
         init_edges: bool = False,
         remove_init_edges: bool = False,
         white_list: bool = False,
@@ -152,7 +153,7 @@ class ModelName(torch.nn.Module):
         lis = list(
             map(lambda x: self._func(x), bn.edges)
         )  # мы берем только те веришны, которые исходят из y или входят в у
-        left_vertices = sorted(list(filter(lambda x: not np.isnan(x), lis)))
+        left_vertices = sorted([x for x in lis if x is not None])
         left_edges = list(filter(lambda x: x[0] == "y" or x[1] == "y", bn.edges))
         left_edges = sorted(left_edges, key=lambda x: int(x[0][5:] if x[1] == "y" else int(x[1][5:])))
         ll = list(map(lambda x: bn.weights[tuple(x)], left_edges))
@@ -195,14 +196,13 @@ class ModelName(torch.nn.Module):
 
         return train_dataset, test_dataset, val_dataset, int(n_min)
 
-    def _func(self, x: List[str]) -> int:
+    @staticmethod
+    def _func(x: List[str]) -> Optional[int]:
         if x[1] == "y" and len(x[0]) > 1:
-            number = int(x[0][5:])
+            return int(x[0][5:])
         elif x[0] == "y" and len(x[1]) > 1:
-            number = int(x[1][5:])
-        else:
-            number = np.nan
-        return number
+            return int(x[1][5:])
+        return None
 
     def _data_eigen_exctractor(self, dataset: List[Graph]) -> pd.DataFrame:
 
@@ -233,15 +233,16 @@ class ModelName(torch.nn.Module):
 
         params = dict()
         params["remove_init_edges"] = self.remove_init_edges
+
         if self.init_edges:
 
-            params["init_edges"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(
+            params["init_edges"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(  # type: ignore
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 
         if self.white_list:
 
-            params["white_list"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(
+            params["white_list"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(  # type: ignore
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 
@@ -259,8 +260,8 @@ class ModelName(torch.nn.Module):
     def _convolve(dataset: List[Graph], weights: List[float], left_vertices: List[int]) -> List[Graph]:
         new_data = []
         for graph in dataset:
-            A = to_dense_adj(graph.edge_index)
-            eigs = torch.eig(A.reshape(A.shape[1], A.shape[2]), True)
+            adj = to_dense_adj(graph.edge_index)
+            eigs = torch.eig(adj.reshape(adj.shape[1], adj.shape[2]), True)
             eigenvectors = eigs[1]
             eig = eigs[0].T[0].T
             ordered, indices = torch.sort(eig[: graph.num_nodes], descending=True)

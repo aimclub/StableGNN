@@ -3,7 +3,6 @@ from typing import Dict, List
 
 import torch
 from torch import device
-from torch_geometric.data import Batch
 from torch_geometric.typing import Tensor
 from torch_geometric.utils import subgraph
 
@@ -18,10 +17,9 @@ class NegativeSampler:
     :param device: (device): Either 'cuda' or 'cpu'
     """
 
-    def __init__(self, data: Graph, device: device = "cpu") -> None:
+    def __init__(self, data: Graph, device: device) -> None:
         self.data = data
         self.device = device
-        super(NegativeSampler, self).__init__()
 
     @staticmethod
     def _not_less_than(num_negative_samples: int, all_negative_samples: List[int]) -> List[int]:  # type: ignore
@@ -49,7 +47,7 @@ class NegativeSampler:
             other_line += neighbors
         return torch.transpose((torch.tensor([line, other_line])), 0, 1)
 
-    def negative_sampling(self, batch: Batch, num_negative_samples: int) -> Tensor:
+    def negative_sampling(self, batch: Tensor, num_negative_samples: int) -> Tensor:
         """
         Sample negative edges for batch of nodes
 

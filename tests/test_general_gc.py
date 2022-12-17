@@ -3,7 +3,7 @@ import torch
 import torch_geometric.transforms as T
 
 from stable_gnn.graph import Graph
-from stable_gnn.train_model_pipeline import TrainModelGC, TrainModelOptunaGC
+from stable_gnn.pipelines.graph_classification_pipeline import TrainModelGC, TrainModelOptunaGC
 
 
 def test_general_gc():

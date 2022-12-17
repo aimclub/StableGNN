@@ -30,14 +30,15 @@ exclude=".git,*tests*,./venv,./build"
 docstring_style = "sphinx"
 
 [tool.mypy]
-exclude=".git,*tests*,./venv,./build,.tests/"
-
-ignore_missing_imports = true
+exclude=".git,*tests*,./venv,./build,.tests/,.mypy*,.pytest*,*.egg*"
 
 # Disallow dynamic typing
 disallow_any_unimported = false
 disallow_subclassing_any = false
-
+ignore_missing_imports = true
+check_untyped_defs = true
+strict_optional = true
+no_implicit_reexport = false
 # Disallow untyped definitions and calls
 
 disallow_untyped_calls = true
@@ -45,10 +46,11 @@ disallow_incomplete_defs = true
 
 # Configuring warnings
 warn_unused_ignores = true
-warn_redundant_casts = true
-
+warn_redundant_casts = false
+no_site_packages = true
 # Misc things
-strict_equality = true
+strict_equality = false
+allow_redefinition = true
 
 [tool.pytest.ini_options]
 addopts = "--capture=tee-sys -q"

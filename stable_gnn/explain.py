@@ -4,15 +4,14 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import torch
-from numpy import array
-from pgmpy.estimators import BicScore, HillClimbSearch, K2Score
+from numpy.typing import NDArray
+from pgmpy.estimators import BicScore, HillClimbSearch
 from pgmpy.estimators.CITests import chi_square
 from pgmpy.inference import VariableElimination
 from pgmpy.models import BayesianNetwork
 from scipy.special import softmax
 from torch.nn import Module
 from torch_geometric.data import Data
-from torch_geometric.typing import Tensor
 
 
 class Explain:
@@ -27,11 +26,11 @@ class Explain:
         pgm_explanation = explainer.structure_learning(28)
 
     :param model: (Module): The model to explain.
-    :param A: (Tensor): Adjacency matrix of input data.
-    :param X: (Tensor): Feature matrix of input data.
+    :param adj_matrix: (NDArray): Adjacency matrix of input data.
+    :param features: (NDArray): Feature matrix of input data.
     """
 
-    def __init__(self, model: Module, adj_matrix: array, features: array) -> None:
+    def __init__(self, model: Module, adj_matrix: NDArray, features: NDArray) -> None:
         self.model = model
         self.model.eval()
         self.adj_matrix = adj_matrix
@@ -42,7 +41,7 @@ class Explain:
         print("\\ A dim: ", self.adj_matrix.shape)
         print("\\ X dim: ", self.features.shape)
 
-    def _n_hops_A(self, n_hops: int) -> array:
+    def _n_hops_adjacency(self, n_hops: int) -> NDArray:
         # Compute the n-hops adjacency matrix
         adj = torch.tensor(self.adj_matrix, dtype=torch.float)
         hop_adj = power_adj = adj
@@ -52,18 +51,19 @@ class Explain:
         hop_adj = (hop_adj > 0).float()
         return hop_adj.numpy().astype(int)
 
-    def _extract_n_hops_neighbors(self, nA: array, target: int) -> Tuple[int, array, array, array]:
+    def _extract_n_hops_neighbors(self, n_a: NDArray, target: int) -> Tuple[int, NDArray, NDArray, NDArray]:
         # Return the n-hops neighbors of a node
-        node_nA_row = nA[target]
-        neighbors = np.nonzero(node_nA_row)[0]
-        target_new = sum(node_nA_row[:target])
+        node_n_a_row = n_a[target]
+        neighbors = np.nonzero(node_n_a_row)[0]
+        target_new = sum(node_n_a_row[:target])
         sub_adj_matrix = self.adj_matrix[neighbors][:, neighbors]
         sub_features = self.features[neighbors]
         return target_new, sub_adj_matrix, sub_features, neighbors
 
-    def _perturb_features_on_node(self, feature_matrix: array, target: int, random: int = 0, mode: int = 0) -> array:
+    @staticmethod
+    def _perturb_features_on_node(feature_matrix: NDArray, target: int, use_random: int = 0, mode: int = 0) -> NDArray:
         features_perturb = feature_matrix
-        if random == 0:
+        if use_random == 0:
             perturb_array = features_perturb[target]
         else:
             if mode == 0:
@@ -78,10 +78,10 @@ class Explain:
 
     def _data_generation(
         self, target: int, num_samples: int = 100, pred_threshold: float = 0.1
-    ) -> Tuple[pd.DataFrame, array]:
+    ) -> Tuple[pd.DataFrame, NDArray]:
         print("Explaining node: " + str(target))
-        nA = self._n_hops_A(self.n_hops)
-        target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(nA, target)
+        n_hops_adj = self._n_hops_adjacency(self.n_hops)
+        target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(n_hops_adj, target)
 
         if target not in neighbors:
             neighbors = np.append(neighbors, target)
@@ -108,14 +108,14 @@ class Explain:
                 seed = np.random.randint(2)
                 if seed == 1:
                     latent = 1
-                    features_perturb = self._perturb_features_on_node(features_perturb, node, random=seed)
+                    features_perturb = self._perturb_features_on_node(features_perturb, node, use_random=seed)
                 else:
                     latent = 0
                 sample.append(latent)
 
             features_perturb_torch = torch.tensor([features_perturb], dtype=torch.float).squeeze()
-            A_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
-            data_perturb = Data(x=features_perturb_torch, edge_index=A_torch.nonzero().t().contiguous())
+            a_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
+            data_perturb = Data(x=features_perturb_torch, edge_index=a_torch.nonzero().t().contiguous())
 
             pred_perturb_torch = self.model.inference(data_perturb.to(self.device))
 
@@ -136,15 +136,15 @@ class Explain:
             samples.append(sample)
             pred_samples.append(sample_bool)
 
-        samples = np.asarray(samples)
-        pred_samples = np.asarray(pred_samples)
-        Combine_Samples = samples - samples
-        for s in range(samples.shape[0]):
-            Combine_Samples[s] = np.asarray(
-                [samples[s, i] * 10 + pred_samples[s, i] + 1 for i in range(samples.shape[1])]
+        samples_arr = np.asarray(samples)
+        pred_samples_arr = np.asarray(pred_samples)
+        combine_samples = samples_arr - samples
+        for s in range(samples_arr.shape[0]):
+            combine_samples[s] = np.asarray(
+                [samples_arr[s, i] * 10 + pred_samples_arr[s, i] + 1 for i in range(samples_arr.shape[1])]
             )
 
-        data = pd.DataFrame(Combine_Samples)
+        data = pd.DataFrame(combine_samples)
         return data, neighbors
 
     def _variable_selection(
@@ -173,9 +173,9 @@ class Explain:
         if top_node is None:
             pgm_nodes = dependent_neighbors
         else:
-            top_p = np.min((top_node, len(neighbors) - 1))
+            top_p: int = np.min((top_node, len(neighbors) - 1))
             ind_top_p = np.argpartition(p_values, top_p)[0:top_p]
-            pgm_nodes = [ind_sub_to_ori[node] for node in ind_top_p]
+            pgm_nodes = [str(int(ind_sub_to_ori[node])) for node in ind_top_p]
 
         data = data.rename(columns={"A": 0, "B": 1})
         data = data.rename(columns=ind_sub_to_ori)
@@ -193,7 +193,7 @@ class Explain:
         """
         Learn structure of Bayesian Net, which represents pgm explanation of target node.
 
-        :param target: (int): Index of the node to be explained
+        :param target: (str): Index of the node to be explained
         :param top_node: (int, optional): The number of top the most probable nodes for Bayesian Net. If None, all nodes would be used (default: 'None')
         :param num_samples: (int): The number of samples for data generation, which is used for structure learning, more number of samples -- better learning.
         :param pred_threshold: (float): Probability that the features in each node is perturbed (default: 0.1)
@@ -201,17 +201,19 @@ class Explain:
         :return: (BayesianNetwork): Pgm explanation in Bayesian Net form
         """
         subnodes, data, pgm_stats = self._variable_selection(target, top_node, num_samples, pred_threshold)
-        subnodes = [str(int(node)) for node in subnodes]
-        target = str(int(target))
-        subnodes_no_target = [node for node in subnodes if node != target]
-        data.columns = data.columns.astype(str)
-        MK_blanket = self._search_MK(data, target, subnodes_no_target.copy())
 
+        # единственное место, где кастуем к строкам!
+        data.columns = data.columns.astype(str)
+        target = str(target)
+        subnodes = [str(x) for x in subnodes]
+        subnodes_no_target = [str(node) for node in subnodes if node != target]
+
+        mk_blanket = self._search_m_k(data, target, subnodes_no_target.copy())
         if child is None:
             est = HillClimbSearch(data[subnodes_no_target])
             pgm_no_target = est.estimate(scoring_method=BicScore(data))
             print("estimation", pgm_no_target.nodes(), pgm_no_target.edges())
-            for node in MK_blanket:
+            for node in mk_blanket:
                 if node != target:
                     pgm_no_target.add_edge(node, target)
 
@@ -223,7 +225,6 @@ class Explain:
                 pgm_explanation.add_edge(edge[0], edge[1])
 
             #   Fit the pgm
-
             data_ex = data[subnodes].copy()
             data_ex[target] = data[target].apply(self._generalize_target)
             for node in subnodes_no_target:
@@ -249,17 +250,18 @@ class Explain:
                 pgm_explanation.add_edge(edge[0], edge[1])
 
             #   Fit the pgm
-
             pgm_explanation.fit(data_ex)
         return pgm_explanation
 
-    def pgm_conditional_prob(self, target: int, pgm_explanation: BayesianNetwork, evidence_list: List[str]) -> float:
+    def pgm_conditional_prob(
+        self, target: int, pgm_explanation: BayesianNetwork, evidence_list: List[str]
+    ) -> Optional[float]:
         """
         Probability of target node, conditioned on the set of neighbours
 
-        :param target (int): Index of node explained
-        :param pgm_explanation (Bayesian Net): The Bayesian Net explaining the target
-        :param evidence_list ([str]]): List of neighbours to condition on
+        :param target: (int) Index of node explained
+        :param pgm_explanation: (Bayesian Net) The Bayesian Net explaining the target
+        :param evidence_list: ([str]]) List of neighbours to condition on
         :return: (float): The probability of the target node conditioned on 'evidence_list'
         """
         pgm_infer = VariableElimination(pgm_explanation)
@@ -274,16 +276,19 @@ class Explain:
         q = pgm_infer.query([target], evidence=evidences, elimination_order=elimination_order, show_progress=False)
         return q.values[0]
 
-    def _generate_evidence(self, evidence_list: List[str]) -> Dict[str, int]:
-        return dict(zip(evidence_list, [1 for node in evidence_list]))
+    @staticmethod
+    def _generate_evidence(evidence_list: List[str]) -> Dict[str, int]:
+        return dict(zip(evidence_list, [1 for _ in evidence_list]))
 
-    def _generalize_target(self, x: int) -> int:
+    @staticmethod
+    def _generalize_target(x: int) -> int:
         if x > 10:
             return x - 10
         else:
             return x
 
-    def _generalize_others(self, x: int) -> int:
+    @staticmethod
+    def _generalize_others(x: int) -> int:
         if x == 2:
             return 1
         elif x == 12:
@@ -291,29 +296,25 @@ class Explain:
         else:
             return x
 
-    def _search_MK(self, data: pd.DataFrame, target: int, nodes: List[int]) -> List[int]:
-
-        target = str(int(target))
-
-        data.columns = data.columns.astype(str)
-
-        nodes = [str(int(node)) for node in nodes]
-
-        MB = nodes
+    @staticmethod
+    def _search_m_k(data: pd.DataFrame, target: str, nodes: List[str]) -> List[str]:
+        m_b = nodes.copy()
         if len(nodes) > 0:
             while True:
                 count = 0
                 for node in nodes:
-
-                    evidences = MB.copy()
-                    evidences.remove(node)
+                    evidences = m_b.copy()
+                    if (
+                        node in evidences
+                    ):  # часто, удаляемого узла нет в массиве, проверка не оч эффективная, но код работает
+                        evidences.remove(node)
                     _, p, _ = chi_square(target, node, evidences, data[nodes + [target]], boolean=False)
-                    if p > 0.05:
-                        MB.remove(node)
+                    if p > 0.05 and node in m_b:
+                        m_b.remove(node)
                         count = 0
                     else:
                         count = count + 1
-                        if count == len(MB):
-                            return MB
+                        if count == len(m_b):
+                            return m_b
         else:
-            return MB
+            return m_b

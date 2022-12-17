@@ -162,16 +162,16 @@ class Graph(InMemoryDataset):
 
     def _process_texas(self) -> None:
         with open(self.raw_paths[0], "r") as f:
-            data = f.read().split("\n")[1:-1]
-            x = [[float(v) for v in r.split("\t")[1].split(",")] for r in data]
-            x = torch.tensor(x, dtype=torch.float)
+            data_raw = f.read().split("\n")[1:-1]
+            pre_x = [[float(v) for v in r.split("\t")[1].split(",")] for r in data_raw]
+            x = torch.tensor(pre_x, dtype=torch.float)
 
-            y = [int(r.split("\t")[2]) for r in data]
-            y = torch.tensor(y, dtype=torch.long)
+            pre_y = [int(r.split("\t")[2]) for r in data_raw]
+            y = torch.tensor(pre_y, dtype=torch.long)
 
         with open(self.raw_paths[1], "r") as f:
-            data = f.read().split("\n")[1:-1]
-            data = [[int(v) for v in r.split("\t")] for r in data]
+            data_raw = f.read().split("\n")[1:-1]
+            data = [[int(v) for v in r.split("\t")] for r in data_raw]
             edge_index = torch.tensor(data, dtype=torch.long).t().contiguous()
             edge_index = coalesce(edge_index, num_nodes=x.size(0))
         self.num_nodes = len(y)
@@ -179,7 +179,8 @@ class Graph(InMemoryDataset):
         if self.adjust_flag:
             edge_index = self._adjust(edge_index=edge_index)
         data = Data(x=x, y=y, edge_index=edge_index)
-        np.save(self.root + "/X.npy", x.numpy())
+        if self.root is not None:
+            np.save(self.root + "/X.npy", x.numpy())
         data_list = [data]
         data, slices = self.collate(data_list)
         data = data if self.pre_transform is None else self.pre_transform(data)
@@ -219,42 +220,45 @@ class Graph(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
 
     def _read_edges(self, path_initial: str) -> Tensor:
-        edge_index = []
+        edge_index_list = []
         for line in self._read_files("", path_initial, "edges.txt"):
             split_line = line.split(",")
-            edge_index.append([int(split_line[0]), int(split_line[1])])
-        edge_index = torch.tensor(edge_index)
+            edge_index_list.append([int(split_line[0]), int(split_line[1])])
+        edge_index = torch.tensor(edge_index_list)
         edge_index = edge_index.T
 
         return edge_index
 
     def _read_labels(self, path_initial: str) -> Tensor:
-        y = []
+        y_list = []
         for line in self._read_files("", path_initial, "labels.txt"):
-            y.append(int(line))
-        y = torch.tensor(y)
+            y_list.append(int(line))
+        y = torch.tensor(y_list)
         return y
 
     def _read_attrs(self, path_initial: str) -> Tuple[Tensor, int]:
         d = 128  # случай если нет атрибутов добавляем случайные из норм распределения
         if os.path.exists(path_initial + "/" + "attrs.txt"):
-            x = []
+            x_list = []
             for line in self._read_files("", path_initial, "attrs.txt"):
                 split_line = line.split(",")
                 x_attr = []
                 for attr in split_line:
                     x_attr.append(float(attr))
-                x.append(x_attr)
-            x = torch.tensor(x)
+                x_list.append(x_attr)
+            x = torch.tensor(x_list)
             d = x.shape[1]
-            np.save(self.root + "/X.npy", x.numpy())
+            if self.root is not None:
+                np.save(self.root + "/X.npy", x.numpy())
             return x, d
         else:
             x = torch.rand(self.num_nodes, d)
-            np.save(self.root + "/X.npy", x.numpy())
+            if self.root is not None:
+                np.save(self.root + "/X.npy", x.numpy())
             return x, d
 
-    def _read_files(self, name: str, path_initial: str, txt_file_postfix: str) -> List[str]:
+    @staticmethod
+    def _read_files(name: str, path_initial: str, txt_file_postfix: str) -> List[str]:
         path_file = path_initial + "/" + name + txt_file_postfix
         if os.path.exists(path_file):
             with open(path_file, "r") as f:
@@ -273,7 +277,8 @@ class Graph(InMemoryDataset):
         )
         u.requires_grad = True
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
-        a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
+        # high assortativity assumption
+        a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))
         # a_approx = torch.bernoulli(torch.clamp(a_approx_prob, min=0, max=1)) #TODO в статье есть эта строчка однако я не понимаю зачем, если в ф.п. только log(prob)
         # generation of noise
         e = torch.normal(
@@ -314,8 +319,8 @@ class Graph(InMemoryDataset):
 
         # TODO: в этом я тоже не уверена (то что ниже)
         a_genuine = torch.bernoulli(torch.clamp(a_genuine, min=0, max=1))
-
-        np.save(self.root + "/A.npy", a_genuine.detach().numpy())
+        if self.root is not None:
+            np.save(self.root + "/A.npy", a_genuine.detach().numpy())
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
