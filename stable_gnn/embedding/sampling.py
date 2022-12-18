@@ -1,7 +1,5 @@
 import collections
 import math
-import os
-import pickle
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 
@@ -131,44 +129,24 @@ class SamplerRandomWalk(SamplerWithNegSamples):
         return neg_batch
 
     def _pos_sample(self, batch: Tensor) -> Tensor:
-        name_of_samples = (
-            self.dataset_name
-            + "_"
-            + str(self.walk_length)
-            + "_"
-            + str(self.walks_per_node)
-            + "_"
-            + str(self.context_size)
-            + "_"
-            + str(self.p)
-            + "_"
-            + str(self.q)
-            + ".pickle"
-        )
-        if os.path.exists(name_of_samples):
-            with open(name_of_samples, "rb") as f:
-                pos_samples = pickle.load(f)
-        else:
-            len_batch = len(batch)
-            a, _ = subgraph(batch, self.data.edge_index)
-            row, col = a
-            row = row
-            col = col
-            adj = SparseTensor(row=row, col=col, sparse_sizes=(len_batch, len_batch))
+        len_batch = len(batch)
+        a, _ = subgraph(batch, self.data.edge_index)
+        row, col = a
+        row = row
+        col = col
+        adj = SparseTensor(row=row, col=col, sparse_sizes=(len_batch, len_batch))
 
-            rowptr, col, _ = adj.csr()
-            start = batch.repeat(self.walks_per_node).to(self.device)
-            rw = random_walk(rowptr, col, start, self.walk_length, self.p, self.q)
+        rowptr, col, _ = adj.csr()
+        start = batch.repeat(self.walks_per_node).to(self.device)
+        rw = random_walk(rowptr, col, start, self.walk_length, self.p, self.q)
 
-            if not isinstance(rw, torch.Tensor):
-                rw = rw[0]
-            walks = []
-            num_walks_per_rw = 1 + self.walk_length + 1 - self.context_size
-            for j in range(num_walks_per_rw):
-                walks.append(
-                    rw[:, j : j + self.context_size]
-                )  # теперь у нас внутри walks лежат 12 матриц размерам 10*1
-            pos_samples = torch.cat(walks, dim=0)  # .to(self.device)
+        if not isinstance(rw, torch.Tensor):
+            rw = rw[0]
+        walks = []
+        num_walks_per_rw = 1 + self.walk_length + 1 - self.context_size
+        for j in range(num_walks_per_rw):
+            walks.append(rw[:, j : j + self.context_size])  # теперь у нас внутри walks лежат 12 матриц размерам 10*1
+        pos_samples = torch.cat(walks, dim=0)  # .to(self.device)
         return pos_samples
 
 
@@ -223,9 +201,11 @@ class SamplerContextMatrix(SamplerWithNegSamples):
         elif self.loss["C"] == "PPR":
             alpha = self.alpha
             adj = self._edge_index_to_adj_train(batch).type(torch.FloatTensor)
-            invD = torch.diag(1 / sum(adj.t()))
-            invD[torch.isinf(invD)] = 0
-            adj_matrix = (1 - alpha) * torch.inverse(torch.diag(torch.ones(len(adj))) - alpha * torch.matmul(invD, adj))
+            inv_d = torch.diag(1 / sum(adj.t()))
+            inv_d[torch.isinf(inv_d)] = 0
+            adj_matrix = (1 - alpha) * torch.inverse(
+                torch.diag(torch.ones(len(adj))) - alpha * torch.matmul(inv_d, adj)
+            )
             pos_batch = self._convert_to_samples(batch, adj_matrix)
         return pos_batch
 
