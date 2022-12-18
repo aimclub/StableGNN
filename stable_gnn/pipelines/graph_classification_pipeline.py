@@ -1,8 +1,8 @@
 from typing import Any, Dict, Tuple
 
 import numpy as np
-import torch
 import optuna
+import torch
 from optuna import Trial
 from sklearn.metrics import accuracy_score, f1_score
 from torch.cuda import device
