@@ -13,7 +13,7 @@ from stable_gnn.pipelines.node_classification_pipeline import TrainModelNC
 
 
 def test_explain():
-    root = str(pathlib.Path(__file__).parent.resolve().joinpath("../data_validation/"))+"/"
+    root = str(pathlib.Path(__file__).parent.resolve().joinpath("../data_validation/")) + "/"
     name = "stars"
 
     if not os.path.exists(root + str(name)):
@@ -39,7 +39,7 @@ def test_explain():
                 if node > node2:
                     graph.add_edge(node, node2)
 
-        path_to_dir = root+f"/{name}/"
+        path_to_dir = root + f"/{name}/"
         if not os.path.exists(root):
             os.mkdir(root)
         if not os.path.exists(path_to_dir):

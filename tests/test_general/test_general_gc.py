@@ -1,7 +1,9 @@
+import pathlib
+
 import numpy as np
 import torch
 import torch_geometric.transforms as T
-import pathlib
+
 from stable_gnn.graph import Graph
 from stable_gnn.pipelines.graph_classification_pipeline import TrainModelGC, TrainModelOptunaGC
 
