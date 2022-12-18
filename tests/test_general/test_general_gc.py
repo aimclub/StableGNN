@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch_geometric.transforms as T
-
+import pathlib
 from stable_gnn.graph import Graph
 from stable_gnn.pipelines.graph_classification_pipeline import TrainModelGC, TrainModelOptunaGC
 
@@ -14,7 +14,7 @@ def test_general_gc():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ssl_flag = False
     extrapolate_flag = False
-    root = "../data_validation/"
+    root = str(pathlib.Path(__file__).parent.resolve().joinpath("data_validation/")) + "/"
     ####
 
     data = Graph(name, root=root + str(name), transform=T.NormalizeFeatures())

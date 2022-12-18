@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import networkx as nx
 import networkx.generators as gen
@@ -12,7 +13,7 @@ from stable_gnn.pipelines.node_classification_pipeline import TrainModelNC
 
 
 def test_explain():
-    root = "../data_validation/"
+    root = str(pathlib.Path(__file__).parent.resolve().joinpath("../data_validation/"))+"/"
     name = "stars"
 
     if not os.path.exists(root + str(name)):
@@ -38,9 +39,9 @@ def test_explain():
                 if node > node2:
                     graph.add_edge(node, node2)
 
-        path_to_dir = "../data_validation/stars/"
-        if not os.path.exists("../data_validation/"):
-            os.mkdir("../data_validation/")
+        path_to_dir = root+f"/{name}/"
+        if not os.path.exists(root):
+            os.mkdir(root)
         if not os.path.exists(path_to_dir):
             os.mkdir(path_to_dir)
         if not os.path.exists(path_to_dir + "raw"):
@@ -58,10 +59,9 @@ def test_explain():
                 f.write(str(i[0]) + "," + str(i[1]) + "\n")
 
     adjust_flag = False
-    data = Graph(root="../data_validation/" + str(name), name=name, adjust_flag=adjust_flag)
+    data = Graph(root=root + str(name), name=name, adjust_flag=adjust_flag)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    root = "../data_validation/"
     for ssl_flag in [False, True]:
         for conv in ["SAGE", "GAT", "GCN"]:
             for loss_name in ["APP", "LINE", "HOPE_AA", "VERSE_Adj"]:
@@ -73,7 +73,7 @@ def test_explain():
                 )
 
                 model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
-                torch.save(model, "../data_validation/" + str(name) + "/model.pt")
+                torch.save(model, root + str(name) + "/model.pt")
                 print(train_acc_mi, test_acc_mi)
 
                 features = np.load(root + name + "/X.npy")

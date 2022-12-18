@@ -1,5 +1,5 @@
-import collections
 import os
+import pathlib
 
 import numpy as np
 import torch
@@ -19,17 +19,13 @@ def test_general_nc():
     loss_name = "APP"  # APP, LINE, HOPE_AA, VERSE_Adj
 
     ssl_flag = True
-    root = "../data_validation/"
-    ####
+    root = str(pathlib.Path(__file__).parent.resolve().joinpath("data_validation/")) + "/"
 
     dataset = Graph(name, root=root + str(name), transform=T.NormalizeFeatures(), adjust_flag=adjust_flag)
     data = dataset[0]
-    assert (max(float(data.edge_index[0].max()), float(data.edge_index[1].max())) + 1) == len(data.x) == data.num_nodes
-    assert len(collections.Counter((data.y).tolist())) == 5
-    assert data.x.shape[1] == 1703
 
     #######
-    train_flag = False
+    train_flag = True
     if train_flag:
         optuna_training = TrainModelOptunaNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
