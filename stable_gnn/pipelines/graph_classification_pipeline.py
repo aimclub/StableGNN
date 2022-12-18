@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
+import optuna
 from optuna import Trial
 from sklearn.metrics import accuracy_score, f1_score
 from torch.cuda import device
@@ -222,3 +223,16 @@ class TrainModelOptunaGC(TrainModelGC):
             _ = self.train(model, optimizer, train_loader)
         val_acc_mi, val_acc_ma = self.test(model, loader=val_loader)
         return np.sqrt(val_acc_mi * val_acc_ma)
+
+    # TODO нужно поправить сигнатуру наследуемого класса, для семейства классов оптюн, возможно нужны вообще другие методы
+    def run(self, number_of_trials: int) -> Dict[Any, Any]:  # type: ignore
+        """
+        Optimize hyperparameters for graph classification task training pipelines
+
+        :param number_of_trials: (int): Number of trials for Optuna
+        :return: (dict): Dictionary of input parameters for Model: size of hidden layer, dropout, number of layers in the model and learning rate
+        """
+        study = optuna.create_study(direction="maximize")
+        study.optimize(self._objective, n_trials=number_of_trials)
+        trial = study.best_trial
+        return trial.params
