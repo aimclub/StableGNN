@@ -10,21 +10,20 @@ from torch_geometric.typing import Tensor
 
 from stable_gnn.embedding.models import ModelFactory
 from stable_gnn.embedding.models.abstract_model import BaseNet
-from stable_gnn.embedding.sampling import Sampler
+from stable_gnn.embedding.sampling.abstract_samplers import BaseSampler
 from stable_gnn.graph import Graph
 
 
 class ModelTrainEmbeddings:
     """Model for training Net, which building embeddings for Geom-GCN layer
 
-    :param name: (str): Name of the input Graph
     :param data: (Graph): Input Graph
     :param loss_function: (dict): Dict of parameters of unsupervised loss function
     :param conv: (str): Name of convolution (default:'GCN')
     :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
     """
 
-    def __init__(self, name: str, data: Graph, loss_function: Dict, device: device, conv: str = "GCN") -> None:
+    def __init__(self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN") -> None:
 
         self.conv = conv
         self.device = device
@@ -33,10 +32,9 @@ class ModelTrainEmbeddings:
         self.data = data.to(device)
         self.train_mask = torch.Tensor([True] * data.num_nodes)
         self.loss = loss_function
-        self.dataset_name = name
         super(ModelTrainEmbeddings, self).__init__()
 
-    def _sampling(self, sampler: Sampler, epoch: int, nodes: Tensor) -> None:
+    def _sampling(self, sampler: BaseSampler, epoch: int, nodes: Tensor) -> None:
         if epoch == 0:
             self.samples = sampler.sample(nodes)
 
@@ -45,7 +43,7 @@ class ModelTrainEmbeddings:
         model: BaseNet,
         data: Graph,
         optimizer: Optimizer,
-        sampler: Sampler,
+        sampler: BaseSampler,
         train_loader: NeighborSampler,
         dropout: float,
         epoch: int,
@@ -86,7 +84,7 @@ class ModelTrainEmbeddings:
 
         sampler = self.loss["sampler"]
 
-        loss_sampler = sampler(self.dataset_name, self.data, device=self.device, loss_info=self.loss)
+        loss_sampler = sampler(data=self.data, device=self.device, loss_info=self.loss)
         model = ModelFactory().build_model(
             num_features=self.data.x.shape[1],
             conv=self.conv,
@@ -113,7 +111,6 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
     """
     Model for training Net, wcich building embeddings for Geom-GCN layer
 
-    :param name: (str): Name of input Graph
     :param loss_function: (dict): Dict of parameters of unsupervised loss function
     :param conv: (str): Name of convolution (default:'GCN')
     :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
@@ -170,8 +167,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
         train_loader = NeighborSampler(self.data.edge_index, batch_size=int(self.data.num_nodes), sizes=[-1] * size)
 
         loss_sampler = sampler(
-            self.dataset_name,
-            self.data,
+            data=self.data,
             device=self.device,
             loss_info=loss_to_train,
         )

@@ -1,6 +1,5 @@
 import collections
 import math
-from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 
 import torch
@@ -9,7 +8,6 @@ from torch_geometric.data import Batch
 from torch_geometric.typing import Tensor
 from torch_sparse import SparseTensor
 
-from stable_gnn.embedding.negative_sampling import NegativeSampler
 from stable_gnn.graph import Graph
 
 try:
@@ -21,99 +19,20 @@ except ImportError:
 
 from torch_geometric.utils import subgraph
 
-
-class Sampler(ABC):
-    """
-    Base class for sampling of positive and negative edges for unsupervised loss function
-
-    :param dataset_name: (str): Name of the inout dataset
-    :param data: (Graph): Input dataset
-    :param device: (device): Either 'cuda' or 'cpu'
-    :param loss_info: (dict): Dict of parameters of unsupervised loss function
-    """
-
-    def __init__(self, dataset_name: str, data: Graph, device: str, loss_info: Dict) -> None:
-        self.device = device
-        self.dataset_name = dataset_name
-        self.data = data.to(self.device)
-
-        self.negative_sampler = NegativeSampler(self.data, self.device)
-        self.loss = loss_info
-        super(Sampler, self).__init__()
-
-    def _edge_index_to_adj_train(self, batch: Batch) -> Tensor:
-        x_new = torch.sort(batch).values
-
-        x_new = x_new.tolist()
-
-        adj_matrix = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
-        edge_index_0 = self.data.edge_index[0].tolist()
-        edge_index_1 = self.data.edge_index[1].tolist()
-        for j, i in enumerate(edge_index_0):
-            if i in x_new:
-                if edge_index_1[j] in x_new:
-                    adj_matrix[i][edge_index_1[j]] = 1
-
-        return adj_matrix
-
-    @abstractmethod
-    def sample(self, batch: Tensor) -> Tensor:
-        """
-        Sample positive edges. Must be implemented
-
-        :param batch: (Batch): Nodes for sampling positive edges for them
-        """
-        raise NotImplementedError
+from stable_gnn.embedding.sampling.abstract_samplers import BaseSampler, BaseSamplerWithNegative
 
 
-class SamplerWithNegSamples(Sampler):
+class SamplerRandomWalk(BaseSamplerWithNegative):
     """
     Sampler for positive and negative edges using random walk based methods
 
-    :param dataset_name: (str): Name of the inout dataset
     :param data: (Graph): Input dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        Sampler.__init__(self, dataset_name, data, device, loss_info)
-        self.num_negative_samples = self.loss["num_negative_samples"]
-
-    def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
-        """
-        Sample positive and negative edges for batch nodes
-
-        :param batch: (Batch): Nodes for positive and negative sampling from them
-        :return: (Tensor, Tensor): positive and negative samples
-        """
-        if not isinstance(batch, torch.Tensor):
-            batch = torch.tensor(batch, dtype=torch.long).to(self.device)
-        return self._pos_sample(batch), self._neg_sample(batch)
-
-    @abstractmethod
-    def _pos_sample(self, batch: Batch) -> Tensor:
-        pass
-
-    def _neg_sample(self, batch: Tensor) -> Tensor:
-        a, _ = subgraph(batch.tolist(), self.data.edge_index)
-        neg_batch = self.negative_sampler.negative_sampling(batch, num_negative_samples=self.num_negative_samples)
-        return neg_batch
-
-
-class SamplerRandomWalk(SamplerWithNegSamples):
-    """
-    Sampler for positive and negative edges using random walk based methods
-
-    :param dataset_name: (str): Name of the inout dataset
-    :param data: (Graph): Input dataset
-    :param device: (device): Either 'cuda' or 'cpu'
-    :param loss_info: (dict): Dict of parameters of unsupervised loss function
-    """
-
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
-
+    def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        super().__init__(data, device, loss_info)
         self.p = self.loss["p"]
         self.q = self.loss["q"]
         self.walk_length = self.loss["walk_length"]
@@ -125,7 +44,7 @@ class SamplerRandomWalk(SamplerWithNegSamples):
     def _neg_sample(self, batch: Tensor) -> Tensor:
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
         batch = batch.repeat(self.walks_per_node * self.num_negative_samples)
-        neg_batch = self.negative_sampler.negative_sampling(batch, num_negative_samples=self.num_negative_samples)
+        neg_batch = self._sample_negative(batch, num_negative_samples=self.num_negative_samples)
         return neg_batch
 
     def _pos_sample(self, batch: Tensor) -> Tensor:
@@ -150,18 +69,17 @@ class SamplerRandomWalk(SamplerWithNegSamples):
         return pos_samples
 
 
-class SamplerContextMatrix(SamplerWithNegSamples):
+class SamplerContextMatrix(BaseSamplerWithNegative):
     """
     Sample positive and negative edges for context matrix based unsupervised loss function
 
-    :param dataset_name: (str): Name of the inout dataset
     :param data: (Graph): Input dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
+    def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        super().__init__(data, device, loss_info)
         if self.loss["C"] == "PPR":
             self.alpha = round(self.loss["alpha"], 1)
 
@@ -250,18 +168,20 @@ class SamplerContextMatrix(SamplerWithNegSamples):
         return sim_rank
 
 
-class SamplerFactorization(Sampler):
+class SamplerFactorization(BaseSampler):
     """
     Sample positive and negative edges for context matrix based unsupervised loss function
 
-    :param dataset_name: (str): Name of the inout dataset
     :param data: (Graph): Input dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        super().__init__(dataset_name=dataset_name, data=data, device=device, loss_info=loss_info)
+    def _pos_sample(self, batch: Tensor) -> Tensor:
+        pass
+
+    def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        super().__init__(data, device, loss_info)
 
     def sample(self, batch: Tensor) -> Tensor:
         """
@@ -313,18 +233,17 @@ class SamplerFactorization(Sampler):
             return adj_matrix
 
 
-class SamplerAPP(SamplerWithNegSamples):
+class SamplerAPP(BaseSamplerWithNegative):
     """
     Sample positive and negative edges for APP unsupervised loss function
 
-    :param dataset_name: (str): Name of the inout dataset
     :param data: (Graph): Input dataset
     :param device: (device): Either 'cuda' or 'cpu'
     :param loss_info: (dict): Dict of parameters of unsupervised loss function
     """
 
-    def __init__(self, dataset_name: str, data: Graph, device: device, loss_info: Dict) -> None:
-        SamplerWithNegSamples.__init__(self, dataset_name, data, device, loss_info)
+    def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        super().__init__(data, device, loss_info)
         self.alpha = self.loss["alpha"]
         self.r = 200
         self.num_negative_samples *= 10
@@ -350,7 +269,7 @@ class SamplerAPP(SamplerWithNegSamples):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
         return self._pos_sample(batch), self._neg_sample(batch)
 
-    def _pos_sample(self, batch: Batch) -> Tensor:
+    def _pos_sample(self, batch: Tensor) -> Tensor:
         batch = batch.to(self.device)
         len_batch = len(batch)
         mask = torch.tensor([False] * len(self.data.x))

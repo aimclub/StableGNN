@@ -8,6 +8,7 @@ from torch.nn import Linear
 from torch_geometric.typing import Tensor
 from torch_geometric.utils import degree
 
+from stable_gnn.embedding import EmbeddingFactory
 from stable_gnn.geom_gcn import GeomGCN
 from stable_gnn.graph import Graph
 
@@ -34,6 +35,7 @@ class ModelNodeClassification(torch.nn.Module):
         num_layers: int = 2,
         ssl_flag: bool = False,
         loss_name: str = "APP",
+        emb_conv_name: str = "SAGE",
     ) -> None:
         super().__init__()
         self.num_layers = num_layers
@@ -49,6 +51,10 @@ class ModelNodeClassification(torch.nn.Module):
         if self.ssl_flag:
             self.deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes)
 
+        embeddings = EmbeddingFactory().build_embeddings(
+            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device
+        )
+
         if self.num_layers == 1:
             self.convs.append(
                 GeomGCN(
@@ -57,13 +63,13 @@ class ModelNodeClassification(torch.nn.Module):
                     last_layer=True,
                     data=self.data,
                     device=self.device,
-                    loss_name=loss_name,
+                    embeddings=embeddings,
                 )
             )
         else:
             self.convs.append(
                 GeomGCN(
-                    self.num_features * 8, self.hidden_layer, device=self.device, data=self.data, loss_name=loss_name
+                    self.num_features * 8, self.hidden_layer, device=self.device, data=self.data, embeddings=embeddings
                 )
             )
             for _ in range(1, self.num_layers - 1):
@@ -73,7 +79,7 @@ class ModelNodeClassification(torch.nn.Module):
                         self.hidden_layer,
                         device=self.device,
                         data=self.data,
-                        loss_name=loss_name,
+                        embeddings=embeddings,
                     )
                 )
             self.convs.append(
@@ -83,7 +89,7 @@ class ModelNodeClassification(torch.nn.Module):
                     last_layer=True,
                     data=self.data,
                     device=self.device,
-                    loss_name=loss_name,
+                    embeddings=embeddings,
                 )
             )
 
@@ -92,8 +98,7 @@ class ModelNodeClassification(torch.nn.Module):
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
     def inference(self, data: Graph) -> Tuple[Tensor, Tensor]:
-        """
-        Count the representation of the node on the next layer of the model
+        """Count the representation of the node on the next layer of the model
 
         :param data: (Graph): Input Graph
         :return: (Tensor, Tensor):  Predicted probabilities of labels and predicted degrees of nodes
