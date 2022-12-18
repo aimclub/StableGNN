@@ -8,11 +8,12 @@ from torch.nn import Linear
 from torch_geometric.typing import Tensor
 from torch_geometric.utils import degree
 
+from stable_gnn.embedding import EmbeddingFactory
 from stable_gnn.geom_gcn import GeomGCN
 from stable_gnn.graph import Graph
 
 
-class ModelName(torch.nn.Module):
+class ModelNodeClassification(torch.nn.Module):
     """
     Model for Node Classification task with Layer, considering grph characteristics
 
@@ -30,26 +31,29 @@ class ModelName(torch.nn.Module):
         dataset: Graph,
         device: device,
         hidden_layer: int = 64,
-        dropout: int = 0,
+        dropout: float = 0.0,
         num_layers: int = 2,
         ssl_flag: bool = False,
         loss_name: str = "APP",
-    ):
-        super(ModelName, self).__init__()
+        emb_conv_name: str = "SAGE",
+    ) -> None:
+        super().__init__()
         self.num_layers = num_layers
         self.data = dataset
         self.num_features = dataset[0].x.shape[1]
         self.convs = torch.nn.ModuleList()
-
         self.hidden_layer = hidden_layer
         self.dropout = dropout
         self.device = device
         self.num_classes = len(collections.Counter(self.data[0].y.tolist()))
         self.ssl_flag = ssl_flag
-        if (
-            self.ssl_flag
-        ):  # TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
+        # TODO: разобраться с SSL сейчас он считает true deg на изначальной матрице смежности а не модифицированной
+        if self.ssl_flag:
             self.deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes)
+
+        embeddings = EmbeddingFactory().build_embeddings(
+            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device
+        )
 
         if self.num_layers == 1:
             self.convs.append(
@@ -58,18 +62,24 @@ class ModelName(torch.nn.Module):
                     self.hidden_layer,
                     last_layer=True,
                     data=self.data,
-                    loss_name=loss_name,
+                    device=self.device,
+                    embeddings=embeddings,
                 )
             )
         else:
-            self.convs.append(GeomGCN(self.num_features * 8, self.hidden_layer, data=self.data, loss_name=loss_name))
-            for i in range(1, self.num_layers - 1):
+            self.convs.append(
+                GeomGCN(
+                    self.num_features * 8, self.hidden_layer, device=self.device, data=self.data, embeddings=embeddings
+                )
+            )
+            for _ in range(1, self.num_layers - 1):
                 self.convs.append(
                     GeomGCN(
                         self.hidden_layer * 8,
                         self.hidden_layer,
+                        device=self.device,
                         data=self.data,
-                        loss_name=loss_name,
+                        embeddings=embeddings,
                     )
                 )
             self.convs.append(
@@ -78,7 +88,8 @@ class ModelName(torch.nn.Module):
                     self.hidden_layer,
                     last_layer=True,
                     data=self.data,
-                    loss_name=loss_name,
+                    device=self.device,
+                    embeddings=embeddings,
                 )
             )
 
@@ -87,8 +98,7 @@ class ModelName(torch.nn.Module):
         self.linear_degree_predictor = Linear(int(self.hidden_layer / 2), 1)
 
     def inference(self, data: Graph) -> Tuple[Tensor, Tensor]:
-        """
-        Count the representation of the node on the next layer of the model
+        """Count the representation of the node on the next layer of the model
 
         :param data: (Graph): Input Graph
         :return: (Tensor, Tensor):  Predicted probabilities of labels and predicted degrees of nodes
@@ -104,7 +114,8 @@ class ModelName(torch.nn.Module):
             deg_pred = F.relu(self.linear_degree_predictor(x))
         return x.log_softmax(dim=-1), deg_pred
 
-    def loss_sup(self, pred: Tensor, label: Tensor) -> Tensor:
+    @staticmethod
+    def loss_sup(pred: Tensor, label: Tensor) -> Tensor:
         """
         Count negative log likelihood loss function
 

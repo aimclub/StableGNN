@@ -100,15 +100,14 @@ data = Graph(name, root=root + str(dataset_name), transform=T.NormalizeFeatures(
 
 For classification task, the pipeline for training is presented in the library in the module ```train_model_pipeline.py```. You can build your own pipeline inheriting from the Base ```TrainModel``` class or use classes from the same module for NodeClassification (```TrainModelNC```) and Graph Classification (```TrainModelGC```) tasks. Here ```loss_name``` is the name of loss function for unsupervised learning embeddings for the Geom-GCN layer, ```ssl_flag``` is the flag for using self-supervised loss function or not.
 
-
 ```python
 import torch
-from stable_gnn.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
+from stable_gnn.pipelines.train_model_pipeline import TrainModelNC, TrainModelOptunaNC
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-loss_name = 'APP' #'VERSE_Adj', 'LINE', 'HOPE_AA'
-ssl_flag = True 
+loss_name = 'APP'  # 'VERSE_Adj', 'LINE', 'HOPE_AA'
+ssl_flag = True
 
 optuna_training = TrainModelOptunaNC(data=data, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 best_values = optuna_training.run(number_of_trials=100)
@@ -120,16 +119,16 @@ The similar is for Graph Classification task except of several parameters: ```ex
 
 ```python
 import torch
-from stable_gnn.train_model_pipeline import TrainModelGC, TrainModelOptunaGC
+from stable_gnn.pipelines.train_model_pipeline import TrainModelGC, TrainModelOptunaGC
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ssl_flag = True
 extrapolate_flag = True
 
-optuna_training = TrainModelOptunaGC(data=data, device=device, ssl_flag=ssl_flag,extrapolate_flag=extrapolate_flag)
-best_values = optuna_training.run(number_of_trials=100)  
-model_training = TrainModelGC(data=data,device=device,ssl_flag=ssl_flag,extrapolate_flag=extrapolate_flag)
+optuna_training = TrainModelOptunaGC(data=data, device=device, ssl_flag=ssl_flag, extrapolate_flag=extrapolate_flag)
+best_values = optuna_training.run(number_of_trials=100)
+model_training = TrainModelGC(data=data, device=device, ssl_flag=ssl_flag, extrapolate_flag=extrapolate_flag)
 _, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
 ```
 
