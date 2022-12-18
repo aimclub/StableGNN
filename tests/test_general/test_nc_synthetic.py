@@ -11,7 +11,8 @@ from stable_gnn.graph import Graph
 from stable_gnn.pipelines.node_classification_pipeline import TrainModelNC
 from tests.data_generators import generate_star_graphs
 
-generate_star_graphs(3)
+root = str(pathlib.Path(__file__).parent.resolve().joinpath("data_validation/")) + "/"
+generate_star_graphs(root, 5)
 
 
 @pytest.mark.parametrize("ssl_flag", [False, True])
@@ -19,9 +20,10 @@ generate_star_graphs(3)
 @pytest.mark.parametrize("loss_name", ["APP", "LINE", "HOPE_AA", "VERSE_Adj"])
 @pytest.mark.parametrize("adjust_flag", [False, True])
 def test_explain(ssl_flag: bool, conv: str, loss_name: str, adjust_flag: bool) -> None:
-    root = str(pathlib.Path(__file__).parent.resolve().joinpath("../data_validation/")) + "/"
+
     name = "stars"
-    data = Graph(root=root + str(name), name=name, adjust_flag=adjust_flag)
+    data = Graph(root=root + name + "/", name=name, adjust_flag=True)
+    print(data.num_nodes)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     #######
@@ -29,8 +31,6 @@ def test_explain(ssl_flag: bool, conv: str, loss_name: str, adjust_flag: bool) -
     model_training = TrainModelNC(data=data, device=device, ssl_flag=ssl_flag, loss_name=loss_name, emb_conv=conv)
 
     model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
-    torch.save(model, root + str(name) + "/model.pt")
-    print(train_acc_mi, test_acc_mi)
 
     features = np.load(root + name + "/X.npy")
     if os.path.exists(root + name + "/A.npy"):

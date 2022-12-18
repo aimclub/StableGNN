@@ -1,15 +1,13 @@
 import os
-import pathlib
 
 import networkx as nx
 import networkx.generators as gen
 
 
-def generate_star_graphs(size_of_star=5, num_of_stars=20):
-    root = str(pathlib.Path(__file__).parent.resolve().joinpath("../data_validation/")) + "/"
+def generate_star_graphs(root_dir, size_of_star=5, num_of_stars=20):
     name = "stars"
 
-    if not os.path.exists(root + str(name)):
+    if not os.path.exists(root_dir + str(name)):
         graph = nx.DiGraph()
         prev_nodes = 0
         central_nodes = []
@@ -29,9 +27,9 @@ def generate_star_graphs(size_of_star=5, num_of_stars=20):
                 if node > node2:
                     graph.add_edge(node, node2)
 
-        path_to_dir = root + f"/{name}/"
-        if not os.path.exists(root):
-            os.mkdir(root)
+        path_to_dir = root_dir + f"/{name}/"
+        if not os.path.exists(root_dir):
+            os.mkdir(root_dir)
         if not os.path.exists(path_to_dir):
             os.mkdir(path_to_dir)
         if not os.path.exists(path_to_dir + "raw"):
