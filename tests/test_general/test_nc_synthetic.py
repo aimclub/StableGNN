@@ -23,7 +23,6 @@ def test_explain(ssl_flag: bool, conv: str, loss_name: str, adjust_flag: bool) -
 
     name = "stars"
     data = Graph(root=root + name + "/", name=name, adjust_flag=True)
-    print(data.num_nodes)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     #######
