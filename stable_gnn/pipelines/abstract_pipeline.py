@@ -38,7 +38,7 @@ class TrainModel(ABC):
         :param loader: (torch_geometric.loader.DataLoader): Data loader for input data
         :returns: (torch.nn.Module, float, float, float, float): Trained Model, Micro and macro averaged f1-scores for the train data
         """
-        raise NotImplementedError
+        raise NotImplementedError("implement train function")
 
     @abstractmethod
     @torch.no_grad()
@@ -54,7 +54,7 @@ class TrainModel(ABC):
         :param loader: (torch_geometric.loader.DataLoader): Data loader for input data
         :returns: (torch.nn.Module, float, float, float, float): Trained Model, Micro and macro averaged f1-scores for the test data
         """
-        raise NotImplementedError
+        raise NotImplementedError("implement test function")
 
     @staticmethod
     def _train_test_split(n: int) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
@@ -87,4 +87,4 @@ class TrainModel(ABC):
         :param params: (Dict): Dictionary of input parameters for the model
         :returns: (torch.nn.Module, float, float, float, float): Trained Model, Micro and macro averaged f1-scores for the test data
         """
-        raise NotImplementedError
+        raise NotImplementedError("implement run function")

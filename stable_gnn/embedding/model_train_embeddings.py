@@ -100,7 +100,6 @@ class ModelTrainEmbeddings:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         for epoch in range(99):
-            print(epoch)
             loss, _ = self._train(model, self.data, optimizer, loss_sampler, train_loader, dropout, epoch)
         _, out = self._train(model, self.data, optimizer, loss_sampler, train_loader, dropout, epoch)
 

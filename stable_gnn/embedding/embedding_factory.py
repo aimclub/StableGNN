@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+import numpy as np
 import torch
 from numpy.typing import NDArray
 from torch import device
@@ -15,7 +16,7 @@ class EmbeddingFactory:
     @staticmethod
     def _build_embeddings(loss: Dict[str, Any], data: Graph, conv: str, device: device) -> NDArray:
         optuna_training = OptunaTrainEmbeddings(data=data, conv=conv, device=device, loss_function=loss)
-        best_values = optuna_training.run(number_of_trials=10)
+        best_values = optuna_training.run(number_of_trials=50)
 
         loss_trgt = dict()
         for par in loss:
@@ -87,4 +88,7 @@ class EmbeddingFactory:
         :returns: (NDArray) embeddings NumPy array of (N_nodes) x (N_emb_dim)
         """
         loss_params = self._get_emb_settings(loss_name)
-        return self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device)
+        emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device)
+
+        np.save("../data_validation/emb.npy", np.array(emb.tolist()))
+        return emb

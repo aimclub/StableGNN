@@ -51,7 +51,7 @@ class BaseSampler(ABC):
 
         :param batch: (Batch): Nodes for sampling positive edges for them
         """
-        raise NotImplementedError
+        raise NotImplementedError("Define sample function")
 
 
 class BaseSamplerWithNegative(BaseSampler):

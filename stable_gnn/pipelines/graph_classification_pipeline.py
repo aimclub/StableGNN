@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 import torch
@@ -53,7 +54,7 @@ class TrainModelGC(TrainModel):
             self.test_mask,
         ) = self._train_test_split(N)
 
-    def train(self, model: Module, optimizer: Optimizer, loader: DataLoader) -> Tensor:
+    def train(self, model: Module, optimizer: Optimizer, loader: DataLoader, coef: int) -> Tensor:
         """
         Train model with optimizer
 
@@ -64,8 +65,10 @@ class TrainModelGC(TrainModel):
         """
         model.train()
         optimizer.zero_grad()
-        total_loss = Tensor(0)
-        for dat in loader.dataset:
+        total_loss = 0
+        len_loader = 0
+        for dat in loader:
+            len_loader += 1
             dat = dat.to(self.device)
             batch_edge_list = dat.edge_index
             batch_x = dat.x
@@ -75,15 +78,15 @@ class TrainModelGC(TrainModel):
             out, deg_pred = model.forward(batch_x, batch_edge_list, batch)
 
             loss = model.loss_sup(out, y)
-            total_loss += loss
             if self.ssl_flag:
                 loss_SSL = model.self_supervised_loss(deg_pred, dat)
-                loss += loss_SSL
+                loss += coef * loss_SSL
             loss.backward()
             total_loss += loss
             optimizer.step()
             optimizer.zero_grad()
-        return total_loss / len(loader)
+
+        return total_loss / len_loader
 
     @torch.no_grad()
     def test(self, model: Module, loader: DataLoader) -> Tuple[float, float]:
@@ -117,6 +120,7 @@ class TrainModelGC(TrainModel):
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
+        coef = params["coef"]
 
         model = self.model(
             dataset=self.data,
@@ -134,7 +138,7 @@ class TrainModelGC(TrainModel):
             init_edges = False
             remove_init_edges = False
             white_list = False
-            score_func = "MI"  # TODO придумать как их задавать пользователю
+            score_func = "MI"
             (self.train_dataset, self.test_dataset, self.val_dataset,) = model.extrapolate(
                 self.train_indices,
                 self.val_indices,
@@ -156,20 +160,34 @@ class TrainModelGC(TrainModel):
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         losses = []
-
+        train_accs_mi = []
+        test_accs_mi = []
         for epoch in range(100):
-
-            loss = self.train(model, optimizer, train_loader)
+            print(epoch)
+            loss = self.train(model, optimizer, train_loader, coef)
             losses.append(loss.detach().cpu())
+            test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
+            train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
+            train_accs_mi.append(train_acc_mi)
+            test_accs_mi.append(test_acc_mi)
 
-        test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
-        train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
+        plt.plot(losses)
+        plt.title(" loss")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
+        plt.show()
 
-        print(
-            "Loss: {:.4f}, Epoch: {:03d}, train acc micro: {:.4f}, train acc macro: {:.4f}, test acc micro: {:.4f}, test acc macro: {:.4f}".format(
-                loss, epoch, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
-            )
-        )
+        plt.plot(train_accs_mi)
+        plt.title("micro-averaged f1 score on train data")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
+        plt.show()
+
+        plt.plot(test_accs_mi)
+        plt.title("micro-averaged f1 score on test data")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
+        plt.show()
 
         return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 
@@ -183,6 +201,7 @@ class TrainModelOptunaGC(TrainModelGC):
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         conv = self.conv
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
+        coef = trial.suggest_categorical("coef", [1, 2, 5, 10, 20])
 
         model = self.model(
             dataset=self.data,
@@ -220,7 +239,7 @@ class TrainModelOptunaGC(TrainModelGC):
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         for epoch in range(50):
-            _ = self.train(model, optimizer, train_loader)
+            _ = self.train(model, optimizer, train_loader, coef)
         val_acc_mi, val_acc_ma = self.test(model, loader=val_loader)
         return np.sqrt(val_acc_mi * val_acc_ma)
 

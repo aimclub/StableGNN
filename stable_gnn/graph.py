@@ -66,6 +66,9 @@ class Graph(InMemoryDataset):
             self.url = "https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master/new_data/" + self.name
         elif self.name == "BACE":
             self.url = "https://raw.githubusercontent.com/anpolol/data_validation/main/BACE/"
+        if self.name == "usa" or self.name == "brazil" or self.name == "europe":
+            self.edge_url = "https://github.com/leoribeiro/struc2vec/raw/master/graph/{}-airports.edgelist"
+            self.label_url = "https://github.com/leoribeiro/struc2vec/raw/master/graph/labels-{}-airports.txt"
 
         super().__init__(self.root, self.transform, self.pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
@@ -81,10 +84,15 @@ class Graph(InMemoryDataset):
             out = ["out1_node_feature_label.txt", "out1_graph_edges.txt"]
         elif self.name == "BACE":
             out = []
-            for i in range(50):
+            for i in range(500):
                 out.append("attrs_" + str(i) + ".txt")
-            for i in range(50):
-                out.append("edge_list_" + str(i) + ".txt")
+            for i in range(500):
+                out.append("edges_" + str(i) + ".txt")
+        elif self.name == "usa" or self.name == "europe" or self.name == "brazil":
+            return [
+                f"{self.name}-airports.edgelist",
+                f"labels-{self.name}-airports.txt",
+            ]
         else:
             out = [
                 self.name + "_attrs.txt",
@@ -101,6 +109,9 @@ class Graph(InMemoryDataset):
         if self.name == "BACE":
             for f in self.raw_file_names:
                 download_url(f"{self.url}/{f}", self.raw_dir)
+        if self.name == "usa" or self.name == "brazil" or self.name == "europe":
+            download_url(self.edge_url.format(self.name), self.raw_dir)
+            download_url(self.label_url.format(self.name), self.raw_dir)
 
     @property
     def processed_file_names(self) -> List[str]:
@@ -114,6 +125,8 @@ class Graph(InMemoryDataset):
         """Process the raw files of the input data"""
         if self.name == "texas" or self.name == "wisconsin":
             self._process_texas()
+        elif self.name == "usa" or self.name == "brazil" or self.name == "europe":
+            self._process_airport()
         else:
             names_datasets = listdir(self.raw_dir)
 
@@ -121,6 +134,34 @@ class Graph(InMemoryDataset):
                 self._process_1graph()
             else:  # many graphs
                 self._process_many_graphs()
+
+    def _process_airport(self):
+        index_map, ys = {}, []
+        with open(self.raw_paths[1], "r") as f:
+            data = f.read().split("\n")[1:-1]
+            for i, row in enumerate(data):
+                idx, y = row.split()
+                index_map[int(idx)] = i
+                ys.append(int(y))
+        y = torch.tensor(ys, dtype=torch.long)
+        x = torch.eye(y.size(0))
+
+        edge_indices = []
+        with open(self.raw_paths[0], "r") as f:
+            data = f.read().split("\n")[:-1]
+            for row in data:
+                src, dst = row.split()
+                edge_indices.append([index_map[int(src)], index_map[int(dst)]])
+        edge_index = torch.tensor(edge_indices).t().contiguous()
+        edge_index = coalesce(edge_index, num_nodes=y.size(0))
+        if self.adjust_flag:
+            self.num_nodes = len(x)
+            edge_index = self._adjust(edge_index=edge_index)
+        if self.root is not None:
+            np.save(self.root + "/X.npy", x.numpy())
+        data = Data(x=x, edge_index=edge_index, y=y)
+        data = data if self.pre_transform is None else self.pre_transform(data)
+        torch.save(self.collate([data]), self.processed_paths[0])
 
     def _process_many_graphs(self) -> None:
         if self.adjust_flag:
@@ -131,7 +172,7 @@ class Graph(InMemoryDataset):
         data_list = []
 
         for i in range(number_of_graphs):
-            lines = self._read_files("", self.raw_dir, "edge_list_" + str(i) + ".txt")
+            lines = self._read_files("", self.raw_dir, "edges_" + str(i) + ".txt")
 
             edge_list = []
             for line in lines:
@@ -268,7 +309,7 @@ class Graph(InMemoryDataset):
         return lines
 
     # Learn structure
-    def _adjust(self, edge_index: Tensor) -> Tensor:
+    def _adjust(self, edge_index):
         # generation of genuine graph structure
         m = 64  # TODO найти какой именной тут размер, или гиперпараметр?
         u = torch.normal(
@@ -276,9 +317,6 @@ class Graph(InMemoryDataset):
             std=torch.ones((self.num_nodes, m)) * self.sigma_u,
         )
         u.requires_grad = True
-        u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
-        # high assortativity assumption
-        a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))
         # a_approx = torch.bernoulli(torch.clamp(a_approx_prob, min=0, max=1)) #TODO в статье есть эта строчка однако я не понимаю зачем, если в ф.п. только log(prob)
         # generation of noise
         e = torch.normal(
@@ -286,45 +324,43 @@ class Graph(InMemoryDataset):
             std=torch.ones((self.num_nodes, self.num_nodes)) * self.sigma_e,
         )
         e.requires_grad = True
-        # approximating input graph structure
-        a_approx_prob = a_genuine + e
-        # a_approx_prob = a_approx_prob.to(self.device)
-
-        e = e  # .to(self.device)
-        u = u  # .to(self.device)
-        u_diff = u_diff  # .to(self.device)
 
         optimizer = torch.optim.Adam([u, e], lr=0.01, weight_decay=1e-5)
         optimizer.zero_grad()
         # TODO ниже негатив семлинг для каждого позитивного ищет негативный пример. Если отдать num_negative_sample то он вернет num_negative_sample ребер ВСЕГо на весь граф. В стаье для каждой вершины строятся негативные примеры. Стоит ли этот момент тут исправить?
-        # сли пережать в функцию negative_sampling num_negative_samples , то у нас будет всего num_negative_samples негативных примеров, хотя хотелось бы для каждой вершины сколько-то негативных примеров
+        # если пережать в функцию negative_sampling num_negative_samples , то у нас будет всего num_negative_samples негативных примеров, хотя хотелось бы для каждой вершины сколько-то негативных примеров
 
-        negative_samples = negative_sampling(edge_index, self.num_nodes, method="dense")
+        negative_samples = negative_sampling(
+            edge_index, self.num_nodes, num_neg_samples=len(edge_index[0]) * 5, method="dense"
+        )
 
-        for i in range(100):
-            print(i)
-            loss = self._loss(
-                u,
-                e,
-                torch.clamp(a_approx_prob, min=1e-5, max=1),
-                edge_index,
-                negative_samples,
-            )
+        for i in range(89):
+            optimizer.zero_grad()
+            loss = self._loss(u, e, edge_index, negative_samples, m)
+
             loss.backward(retain_graph=True)
             optimizer.step()
-
         # approximating genuine graph
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
         a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))
 
         # TODO: в этом я тоже не уверена (то что ниже)
+        # print(a_genuine)
+
         a_genuine = torch.bernoulli(torch.clamp(a_genuine, min=0, max=1))
-        if self.root is not None:
-            np.save(self.root + "/A.npy", a_genuine.detach().numpy())
+
+        np.save(self.root + "/A.npy", a_genuine.detach().numpy())
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
-    def _loss(self, u: Tensor, e: Tensor, a_approx: Tensor, edge_index: Tensor, negative_samples: Tensor) -> Tensor:
+    def _loss(self, u, e, edge_index, negative_samples, m):
+        u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
+        a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
+
+        # approximating input graph structure
+        a_approx_prob = a_genuine + e
+        a_approx = torch.clamp(a_approx_prob, min=1e-5, max=1)
+
         alpha_u = 1
         alpha_e = 1
         positive_indices_flattened = torch.concat(
