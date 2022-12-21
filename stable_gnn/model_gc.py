@@ -292,7 +292,6 @@ class ModelGraphClassification(torch.nn.Module):
         :return: (Tensor): Loss
         """
         deg_pred = deg_pred.reshape(deg_pred.shape[0])
-
         batch_ptr = (batch.ptr.type(torch.LongTensor)).cpu()
         indices = batch_ptr[: len(batch_ptr) - 1]
         ratio = np.mean(

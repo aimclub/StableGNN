@@ -1,7 +1,7 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
-
+from typing import Any, Dict, Tuple, List
+import matplotlib.pyplot as plt
 import torch
 from torch.cuda import device
 from torch.nn import Module
@@ -79,8 +79,34 @@ class TrainModel(ABC):
         val_mask[val_indices] = True
         return train_indices, val_indices, test_indices, train_mask, val_mask, test_mask
 
+    @staticmethod
+    def plot(losses: List[float], losses_sl: List[float], train_accs_mi: List[float], test_accs_mi: List[float]) -> None:
+
+        plt.plot(losses)
+        plt.title("semi-supervised loss")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
+        plt.show()
+        if sum(losses_sl)>0:
+            plt.plot(losses)
+            plt.title("self-supervised loss")
+            plt.xlabel("epoch")
+            plt.ylabel("loss")
+            plt.show()
+        plt.plot(train_accs_mi)
+        plt.title("micro-averaged f1 score on train data")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
+        plt.show()
+
+        plt.plot(test_accs_mi)
+        plt.title("micro-averaged f1 score on test data")
+        plt.xlabel("epoch")
+        plt.ylabel("loss")
+        plt.show()
+
     @abstractmethod
-    def run(self, params: Dict[Any, Any]) -> Tuple[Module, float, float, float, float]:
+    def run(self, params: Dict[Any, Any], plot_training_process: bool = False) -> Tuple[Module, float, float, float, float]:
         """
         Run the training process
 

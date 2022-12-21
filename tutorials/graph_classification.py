@@ -31,7 +31,7 @@ if __name__ == "__main__":
             extrapolate_flag=extrapolate_flag,
         )
 
-        best_values = optuna_training.run(number_of_trials=10)  # считается достаточно долго
+        best_values = optuna_training.run(number_of_trials=10)
         model_training = TrainModelGC(
             data=data,
             conv=conv,
@@ -40,5 +40,5 @@ if __name__ == "__main__":
             extrapolate_flag=extrapolate_flag,
         )
 
-        model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
+        model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values, plot_training_procces=True)
         print(test_acc_mi)

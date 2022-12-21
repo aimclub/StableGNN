@@ -88,7 +88,7 @@ class TrainModelNC(TrainModel):
 
         return accs_micro, accs_macro
 
-    def run(self, params: Dict[Any, Any]) -> Tuple[Module, float, float, float, float]:
+    def run(self, params: Dict[Any, Any], plot_training_procces: bool=False) -> Tuple[Module, float, float, float, float]:
         """
         Run the training pipelines for node classification task
 
@@ -113,46 +113,27 @@ class TrainModelNC(TrainModel):
 
         model.to(self.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-
-        losses = []
-        losses_ssl = []
-        train_accs_mi = []
-        test_accs_mi = []
+        if plot_training_procces:
+            losses = []
+            losses_ssl = []
+            train_accs_mi = []
+            test_accs_mi = []
 
         for epoch in range(100):
             loss, loss_ssl = self.train(model, optimizer, coef)
-            losses.append(loss.detach().cpu())
-            losses_ssl.append(loss_ssl.detach().cpu())
-            train_acc_mi, train_acc_ma = self.test(model, mask=self.train_mask)
-            test_acc_mi, _ = self.test(model, mask=self.test_mask)
-            train_accs_mi.append(train_acc_mi)
-            test_accs_mi.append(test_acc_mi)
+            if plot_training_procces:
+                losses.append(loss.detach().cpu())
+                losses_ssl.append(loss_ssl.detach().cpu())
+                train_acc_mi, train_acc_ma = self.test(model, mask=self.train_mask)
+                test_acc_mi, _ = self.test(model, mask=self.test_mask)
+                train_accs_mi.append(train_acc_mi)
+                test_accs_mi.append(test_acc_mi)
             # print(log.format(loss, epoch, train_acc_mi, train_acc_ma))
-
+        train_acc_mi, train_acc_ma = self.test(model, mask=self.train_mask)
         test_acc_mi, test_acc_ma = self.test(model, mask=self.test_mask)
 
-        plt.plot(losses)
-        plt.title(" loss")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
-        if self.ssl_flag:
-            plt.plot(losses_ssl)
-            plt.title(" Self-Supervised loss")
-            plt.xlabel("epoch")
-            plt.ylabel("loss")
-            plt.show()
-        plt.plot(train_accs_mi)
-        plt.title("micro-averaged f1 score on train data")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
-
-        plt.plot(test_accs_mi)
-        plt.title("micro-averaged f1 score on test data")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
+        if plot_training_procces:
+            self.plot(losses,losses_ssl,train_accs_mi,test_accs_mi)
 
         return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 

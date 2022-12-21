@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-import numpy as np
 import torch
 from numpy.typing import NDArray
 from torch import device
@@ -90,5 +89,4 @@ class EmbeddingFactory:
         loss_params = self._get_emb_settings(loss_name)
         emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device)
 
-        np.save("../data_validation/emb.npy", np.array(emb.tolist()))
         return emb

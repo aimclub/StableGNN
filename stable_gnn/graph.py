@@ -51,6 +51,8 @@ class Graph(InMemoryDataset):
         adjust_flag: bool = True,
         sigma_u: float = 0.7,
         sigma_e: Optional[float] = 0.4,
+        m: int = 64,
+        number_of_trainig_epochs: int = 89
     ) -> None:
         # reading input files consisting of edges.txt, attrs.txt, y.txt
         self.root = root
@@ -61,6 +63,8 @@ class Graph(InMemoryDataset):
         self.sigma_e = sigma_e
         self.adjust_flag = adjust_flag
         self.num_negative_samples = 5
+        self.number_of_training_epochs = number_of_trainig_epochs
+        self.m = m
 
         if self.name == "texas" or self.name == "wisconsin":
             self.url = "https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master/new_data/" + self.name
@@ -156,7 +160,7 @@ class Graph(InMemoryDataset):
         edge_index = coalesce(edge_index, num_nodes=y.size(0))
         if self.adjust_flag:
             self.num_nodes = len(x)
-            edge_index = self._adjust(edge_index=edge_index)
+            edge_index = self._adjust(edge_index=edge_index,m=self.m,number_of_training_epochs=self.number_of_training_epochs)
         if self.root is not None:
             np.save(self.root + "/X.npy", x.numpy())
         data = Data(x=x, edge_index=edge_index, y=y)
@@ -218,7 +222,7 @@ class Graph(InMemoryDataset):
         self.num_nodes = len(y)
         print(self.num_nodes)
         if self.adjust_flag:
-            edge_index = self._adjust(edge_index=edge_index)
+            edge_index = self._adjust(edge_index=edge_index,m=self.m,number_of_training_epochs=self.number_of_training_epochs)
         data = Data(x=x, y=y, edge_index=edge_index)
         if self.root is not None:
             np.save(self.root + "/X.npy", x.numpy())
@@ -250,7 +254,7 @@ class Graph(InMemoryDataset):
 
         if self.adjust_flag:
             edge_index = self._adjust(
-                edge_index=edge_index,
+                edge_index=edge_index,m=self.m,number_of_training_epochs=self.number_of_training_epochs
             )
 
         data = Data(x=x, edge_index=edge_index, y=y)
@@ -309,9 +313,8 @@ class Graph(InMemoryDataset):
         return lines
 
     # Learn structure
-    def _adjust(self, edge_index):
+    def _adjust(self, edge_index: Tensor, m: int=64, number_of_training_epochs: int=89) -> Tensor:
         # generation of genuine graph structure
-        m = 64  # TODO найти какой именной тут размер, или гиперпараметр?
         u = torch.normal(
             mean=torch.zeros((self.num_nodes, m)),
             std=torch.ones((self.num_nodes, m)) * self.sigma_u,
@@ -334,7 +337,7 @@ class Graph(InMemoryDataset):
             edge_index, self.num_nodes, num_neg_samples=len(edge_index[0]) * 5, method="dense"
         )
 
-        for i in range(89):
+        for i in range(number_of_training_epochs):
             optimizer.zero_grad()
             loss = self._loss(u, e, edge_index, negative_samples, m)
 
@@ -353,7 +356,7 @@ class Graph(InMemoryDataset):
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
-    def _loss(self, u, e, edge_index, negative_samples, m):
+    def _loss(self, u: Tensor, e: Tensor, edge_index: Tensor, negative_samples: Tensor, m: int) -> Tensor:
         u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
         a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
 

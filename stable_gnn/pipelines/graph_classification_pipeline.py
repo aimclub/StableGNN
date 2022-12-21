@@ -66,6 +66,7 @@ class TrainModelGC(TrainModel):
         model.train()
         optimizer.zero_grad()
         total_loss = 0
+        total_loss_ssl = 0
         len_loader = 0
         for dat in loader:
             len_loader += 1
@@ -78,15 +79,18 @@ class TrainModelGC(TrainModel):
             out, deg_pred = model.forward(batch_x, batch_edge_list, batch)
 
             loss = model.loss_sup(out, y)
+            total_loss += loss
+
             if self.ssl_flag:
                 loss_SSL = model.self_supervised_loss(deg_pred, dat)
                 loss += coef * loss_SSL
+                total_loss_ssl += coef*loss_SSL
             loss.backward()
-            total_loss += loss
+
             optimizer.step()
             optimizer.zero_grad()
 
-        return total_loss / len_loader
+        return total_loss / len_loader, total_loss_ssl / len_loader
 
     @torch.no_grad()
     def test(self, model: Module, loader: DataLoader) -> Tuple[float, float]:
@@ -109,7 +113,7 @@ class TrainModelGC(TrainModel):
             accs_macro.append(f1_score(y_true.cpu().tolist(), y_pred.squeeze().tolist(), average="macro"))
         return float(np.mean(accs_micro)), float(np.mean(accs_macro))
 
-    def run(self, params: Dict[Any, Any]) -> Tuple[Module, float, float, float, float]:
+    def run(self, params: Dict[Any, Any], plot_training_procces: bool=False) -> Tuple[Module, float, float, float, float]:
         """
         Run the training process for Graph Classification task
 
@@ -158,36 +162,26 @@ class TrainModelGC(TrainModel):
         test_loader = DataLoader(self.test_dataset, batch_size=20, shuffle=False)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-
-        losses = []
-        train_accs_mi = []
-        test_accs_mi = []
+        if plot_training_procces:
+            losses = []
+            losses_sl =[]
+            train_accs_mi = []
+            test_accs_mi = []
         for epoch in range(100):
             print(epoch)
-            loss = self.train(model, optimizer, train_loader, coef)
-            losses.append(loss.detach().cpu())
-            test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
-            train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
-            train_accs_mi.append(train_acc_mi)
-            test_accs_mi.append(test_acc_mi)
+            loss,loss_sl = self.train(model, optimizer, train_loader, coef)
+            if plot_training_procces:
+                losses.append(loss.detach().cpu())
+                losses_sl.append(loss_sl)
+                test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
+                train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
+                train_accs_mi.append(train_acc_mi)
+                test_accs_mi.append(test_acc_mi)
+        test_acc_mi, test_acc_ma = self.test(model, loader=test_loader)
+        train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
 
-        plt.plot(losses)
-        plt.title(" loss")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
-
-        plt.plot(train_accs_mi)
-        plt.title("micro-averaged f1 score on train data")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
-
-        plt.plot(test_accs_mi)
-        plt.title("micro-averaged f1 score on test data")
-        plt.xlabel("epoch")
-        plt.ylabel("loss")
-        plt.show()
+        if plot_training_procces:
+            self.plot(losses=losses,losses_sl=losses_sl,train_accs_mi=train_accs_mi,test_accs_mi=test_accs_mi)
 
         return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 
