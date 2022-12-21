@@ -51,7 +51,7 @@ class Graph(InMemoryDataset):
         adjust_flag: bool = True,
         sigma_u: float = 0.7,
         sigma_e: Optional[float] = 0.4,
-        m: int = 64,
+        dim_of_latent_representation: int = 64,
         number_of_trainig_epochs: int = 89,
     ) -> None:
         # reading input files consisting of edges.txt, attrs.txt, y.txt
@@ -64,7 +64,7 @@ class Graph(InMemoryDataset):
         self.adjust_flag = adjust_flag
         self.num_negative_samples = 5
         self.number_of_training_epochs = number_of_trainig_epochs
-        self.m = m
+        self.dim_of_latent_representation = dim_of_latent_representation
 
         if self.name == "texas" or self.name == "wisconsin":
             self.url = "https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master/new_data/" + self.name
@@ -161,7 +161,7 @@ class Graph(InMemoryDataset):
         if self.adjust_flag:
             self.num_nodes = len(x)
             edge_index = self._adjust(
-                edge_index=edge_index, m=self.m, number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index, dim_of_latent_representation=self.dim_of_latent_representation, number_of_training_epochs=self.number_of_training_epochs
             )
         if self.root is not None:
             np.save(self.root + "/X.npy", x.numpy())
@@ -225,7 +225,7 @@ class Graph(InMemoryDataset):
         print(self.num_nodes)
         if self.adjust_flag:
             edge_index = self._adjust(
-                edge_index=edge_index, m=self.m, number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index, dim_of_latent_representation=self.dim_of_latent_representation, number_of_training_epochs=self.number_of_training_epochs
             )
         data = Data(x=x, y=y, edge_index=edge_index)
         if self.root is not None:
@@ -258,7 +258,7 @@ class Graph(InMemoryDataset):
 
         if self.adjust_flag:
             edge_index = self._adjust(
-                edge_index=edge_index, m=self.m, number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index, dim_of_latent_representation=self.dim_of_latent_representation, number_of_training_epochs=self.number_of_training_epochs
             )
 
         data = Data(x=x, edge_index=edge_index, y=y)
@@ -317,11 +317,11 @@ class Graph(InMemoryDataset):
         return lines
 
     # Learn structure
-    def _adjust(self, edge_index: Tensor, m: int = 64, number_of_training_epochs: int = 89) -> Tensor:
+    def _adjust(self, edge_index: Tensor, dim_of_latent_representation: int = 64, number_of_training_epochs: int = 89) -> Tensor:
         # generation of genuine graph structure
         u = torch.normal(
-            mean=torch.zeros((self.num_nodes, m)),
-            std=torch.ones((self.num_nodes, m)) * self.sigma_u,
+            mean=torch.zeros((self.num_nodes, dim_of_latent_representation)),
+            std=torch.ones((self.num_nodes, dim_of_latent_representation)) * self.sigma_u,
         )
         u.requires_grad = True
         # a_approx = torch.bernoulli(torch.clamp(a_approx_prob, min=0, max=1)) #TODO в статье есть эта строчка однако я не понимаю зачем, если в ф.п. только log(prob)
@@ -343,12 +343,12 @@ class Graph(InMemoryDataset):
 
         for i in range(number_of_training_epochs):
             optimizer.zero_grad()
-            loss = self._loss(u, e, edge_index, negative_samples, m)
+            loss = self._loss(u, e, edge_index, negative_samples, dim_of_latent_representation)
 
             loss.backward(retain_graph=True)
             optimizer.step()
         # approximating genuine graph
-        u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
+        u_diff = u.view(1, self.num_nodes, dim_of_latent_representation) - u.view(self.num_nodes, 1, dim_of_latent_representation)
         a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))
 
         # TODO: в этом я тоже не уверена (то что ниже)
@@ -360,8 +360,8 @@ class Graph(InMemoryDataset):
         edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
-    def _loss(self, u: Tensor, e: Tensor, edge_index: Tensor, negative_samples: Tensor, m: int) -> Tensor:
-        u_diff = u.view(1, self.num_nodes, m) - u.view(self.num_nodes, 1, m)
+    def _loss(self, u: Tensor, e: Tensor, edge_index: Tensor, negative_samples: Tensor, dim_of_latent_representation: int) -> Tensor:
+        u_diff = u.view(1, self.num_nodes, dim_of_latent_representation) - u.view(self.num_nodes, 1, dim_of_latent_representation)
         a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
 
         # approximating input graph structure
