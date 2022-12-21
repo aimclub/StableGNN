@@ -88,7 +88,9 @@ class TrainModelNC(TrainModel):
 
         return accs_micro, accs_macro
 
-    def run(self, params: Dict[Any, Any], plot_training_procces: bool=False) -> Tuple[Module, float, float, float, float]:
+    def run(
+        self, params: Dict[Any, Any], plot_training_procces: bool = False
+    ) -> Tuple[Module, float, float, float, float]:
         """
         Run the training pipelines for node classification task
 
@@ -133,7 +135,7 @@ class TrainModelNC(TrainModel):
         test_acc_mi, test_acc_ma = self.test(model, mask=self.test_mask)
 
         if plot_training_procces:
-            self.plot(losses,losses_ssl,train_accs_mi,test_accs_mi)
+            self.plot(losses, losses_ssl, train_accs_mi, test_accs_mi)
 
         return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 

@@ -53,7 +53,7 @@ class ModelNodeClassification(torch.nn.Module):
             self.deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes)
 
         embeddings = EmbeddingFactory().build_embeddings(
-                loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device
+            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device
         )
 
         if self.num_layers == 1:

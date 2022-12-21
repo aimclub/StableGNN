@@ -52,7 +52,7 @@ class Graph(InMemoryDataset):
         sigma_u: float = 0.7,
         sigma_e: Optional[float] = 0.4,
         m: int = 64,
-        number_of_trainig_epochs: int = 89
+        number_of_trainig_epochs: int = 89,
     ) -> None:
         # reading input files consisting of edges.txt, attrs.txt, y.txt
         self.root = root
@@ -160,7 +160,9 @@ class Graph(InMemoryDataset):
         edge_index = coalesce(edge_index, num_nodes=y.size(0))
         if self.adjust_flag:
             self.num_nodes = len(x)
-            edge_index = self._adjust(edge_index=edge_index,m=self.m,number_of_training_epochs=self.number_of_training_epochs)
+            edge_index = self._adjust(
+                edge_index=edge_index, m=self.m, number_of_training_epochs=self.number_of_training_epochs
+            )
         if self.root is not None:
             np.save(self.root + "/X.npy", x.numpy())
         data = Data(x=x, edge_index=edge_index, y=y)
@@ -222,7 +224,9 @@ class Graph(InMemoryDataset):
         self.num_nodes = len(y)
         print(self.num_nodes)
         if self.adjust_flag:
-            edge_index = self._adjust(edge_index=edge_index,m=self.m,number_of_training_epochs=self.number_of_training_epochs)
+            edge_index = self._adjust(
+                edge_index=edge_index, m=self.m, number_of_training_epochs=self.number_of_training_epochs
+            )
         data = Data(x=x, y=y, edge_index=edge_index)
         if self.root is not None:
             np.save(self.root + "/X.npy", x.numpy())
@@ -254,7 +258,7 @@ class Graph(InMemoryDataset):
 
         if self.adjust_flag:
             edge_index = self._adjust(
-                edge_index=edge_index,m=self.m,number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index, m=self.m, number_of_training_epochs=self.number_of_training_epochs
             )
 
         data = Data(x=x, edge_index=edge_index, y=y)
@@ -313,7 +317,7 @@ class Graph(InMemoryDataset):
         return lines
 
     # Learn structure
-    def _adjust(self, edge_index: Tensor, m: int=64, number_of_training_epochs: int=89) -> Tensor:
+    def _adjust(self, edge_index: Tensor, m: int = 64, number_of_training_epochs: int = 89) -> Tensor:
         # generation of genuine graph structure
         u = torch.normal(
             mean=torch.zeros((self.num_nodes, m)),

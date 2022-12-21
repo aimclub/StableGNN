@@ -84,7 +84,7 @@ class TrainModelGC(TrainModel):
             if self.ssl_flag:
                 loss_SSL = model.self_supervised_loss(deg_pred, dat)
                 loss += coef * loss_SSL
-                total_loss_ssl += coef*loss_SSL
+                total_loss_ssl += coef * loss_SSL
             loss.backward()
 
             optimizer.step()
@@ -113,7 +113,9 @@ class TrainModelGC(TrainModel):
             accs_macro.append(f1_score(y_true.cpu().tolist(), y_pred.squeeze().tolist(), average="macro"))
         return float(np.mean(accs_micro)), float(np.mean(accs_macro))
 
-    def run(self, params: Dict[Any, Any], plot_training_procces: bool=False) -> Tuple[Module, float, float, float, float]:
+    def run(
+        self, params: Dict[Any, Any], plot_training_procces: bool = False
+    ) -> Tuple[Module, float, float, float, float]:
         """
         Run the training process for Graph Classification task
 
@@ -164,12 +166,12 @@ class TrainModelGC(TrainModel):
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
         if plot_training_procces:
             losses = []
-            losses_sl =[]
+            losses_sl = []
             train_accs_mi = []
             test_accs_mi = []
         for epoch in range(100):
             print(epoch)
-            loss,loss_sl = self.train(model, optimizer, train_loader, coef)
+            loss, loss_sl = self.train(model, optimizer, train_loader, coef)
             if plot_training_procces:
                 losses.append(loss.detach().cpu())
                 losses_sl.append(loss_sl)
@@ -181,7 +183,7 @@ class TrainModelGC(TrainModel):
         train_acc_mi, train_acc_ma = self.test(model, loader=train_loader)
 
         if plot_training_procces:
-            self.plot(losses=losses,losses_sl=losses_sl,train_accs_mi=train_accs_mi,test_accs_mi=test_accs_mi)
+            self.plot(losses=losses, losses_sl=losses_sl, train_accs_mi=train_accs_mi, test_accs_mi=test_accs_mi)
 
         return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 

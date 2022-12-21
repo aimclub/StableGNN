@@ -1,6 +1,7 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict, List, Tuple
+
 import matplotlib.pyplot as plt
 import torch
 from torch.cuda import device
@@ -80,14 +81,23 @@ class TrainModel(ABC):
         return train_indices, val_indices, test_indices, train_mask, val_mask, test_mask
 
     @staticmethod
-    def plot(losses: List[float], losses_sl: List[float], train_accs_mi: List[float], test_accs_mi: List[float]) -> None:
+    def plot(
+        losses: List[float], losses_sl: List[float], train_accs_mi: List[float], test_accs_mi: List[float]
+    ) -> None:
+        """
+        Plot training process
 
+        :param losses: List of losses during training
+        :param losses_sl: List of self-supervised losses during training
+        :param train_accs_mi: List of accuracy on training data during training
+        :param test_accs_mi:  List of accuracy on testing data during training
+        """
         plt.plot(losses)
         plt.title("semi-supervised loss")
         plt.xlabel("epoch")
         plt.ylabel("loss")
         plt.show()
-        if sum(losses_sl)>0:
+        if sum(losses_sl) > 0:
             plt.plot(losses)
             plt.title("self-supervised loss")
             plt.xlabel("epoch")
@@ -106,7 +116,9 @@ class TrainModel(ABC):
         plt.show()
 
     @abstractmethod
-    def run(self, params: Dict[Any, Any], plot_training_process: bool = False) -> Tuple[Module, float, float, float, float]:
+    def run(
+        self, params: Dict[Any, Any], plot_training_process: bool = False
+    ) -> Tuple[Module, float, float, float, float]:
         """
         Run the training process
 
