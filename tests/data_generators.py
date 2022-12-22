@@ -49,18 +49,10 @@ def generate_star_graphs(root_dir, size_of_star=5, num_of_stars=20):
                 f.write(str(i[0]) + "," + str(i[1]) + "\n")
 
 
-def generate_gc_graphs(root, num_graphs=50):
+def generate_gc_graphs(root_dir, num_graphs=50):
     name = "ba_gc"
 
-    if not os.path.exists(root + str(name)):
-
-        path_to_dir = root + name + "/"
-        if not os.path.exists(root):
-            os.mkdir(root)
-        if not os.path.exists(path_to_dir):
-            os.mkdir(path_to_dir)
-        if not os.path.exists(path_to_dir + "raw"):
-            os.mkdir(path_to_dir + "raw")
+    if not os.path.exists(root_dir + str(name)):
 
         types_of_graphs = ["wheel", "circ ladder", "star", "ba"]
 
@@ -94,11 +86,19 @@ def generate_gc_graphs(root, num_graphs=50):
 
             x = np.random.rand(n, 32)
 
-            with open(root + name + "/" + "raw/" + "edge_list_" + str(k) + ".txt", "a") as f:
+            path_to_dir = root_dir + f"/{name}/"
+            if not os.path.exists(root_dir):
+                os.mkdir(root_dir)
+            if not os.path.exists(path_to_dir):
+                os.mkdir(path_to_dir)
+            if not os.path.exists(path_to_dir + "raw"):
+                os.mkdir(path_to_dir + "raw")
+
+            with open(path_to_dir + "raw/" + "edges_" + str(k) + ".txt", "a") as f:
                 for edge in g.edges():
                     f.write(str(edge[0]) + "," + str(edge[1]) + "\n")
 
-            with open(root + name + "/" + "raw/" + "attrs_" + str(k) + ".txt", "a") as f:
+            with open(path_to_dir + "raw/" + "attrs_" + str(k) + ".txt", "a") as f:
                 for line in x:
                     for i in line:
                         f.write(str(i) + ",")

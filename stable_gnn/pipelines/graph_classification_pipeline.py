@@ -108,8 +108,13 @@ class TrainModelGC(TrainModel):
             out, _ = model.forward(dat.x, dat.edge_index, dat.batch)
             y_pred = out.cpu().argmax(dim=1, keepdim=True)
             y_true = dat.y
-            accs_micro.append(accuracy_score(y_true.cpu().tolist(), y_pred.squeeze().tolist()))
-            accs_macro.append(f1_score(y_true.cpu().tolist(), y_pred.squeeze().tolist(), average="macro"))
+
+            y_true_list = y_true.cpu().tolist()
+            y_pred_list = y_pred.squeeze().tolist()
+            if type(y_pred_list) != list:
+                y_pred_list = [y_pred_list]
+            accs_micro.append(f1_score(y_true_list, y_pred_list, average="micro"))
+            accs_macro.append(f1_score(y_true_list, y_pred_list, average="macro"))
         return float(np.mean(accs_micro)), float(np.mean(accs_macro))
 
     def run(
