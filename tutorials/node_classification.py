@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     optuna_training = TrainModelOptunaNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
-    best_values = optuna_training.run(number_of_trials=20)
+    best_values = optuna_training.run(number_of_trials=10)
     model_training = TrainModelNC(data=dataset, device=device, ssl_flag=ssl_flag, loss_name=loss_name)
 
     model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)

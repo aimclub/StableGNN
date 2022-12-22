@@ -52,12 +52,6 @@ When Torch and Torch Geometric are installed clone this repo and run inside repo
 pip install . 
 ```
 
-To test the installation is sucessfull, run: 
-
-```
-python ./tests/test_install.py
-```
-
 ## Library Highlights
 It consists of three modules:
 * Graph: reading input data and learning graph structure

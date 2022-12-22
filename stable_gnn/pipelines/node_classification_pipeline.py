@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 import optuna
 import torch
+from matplotlib import pyplot as plt
 from optuna import Trial
 from sklearn.metrics import accuracy_score, f1_score
 from torch import device
@@ -44,7 +45,7 @@ class TrainModelNC(TrainModel):
             self.test_mask,
         ) = self._train_test_split(N)
 
-    def train(self, model: Module, optimizer: Optimizer) -> Tensor:  # type: ignore
+    def train(self, model: Module, optimizer: Optimizer, coef: int) -> Tensor:
         """Train input model with optimizer
 
         :param model: (torch.nn.Module): Model to train
@@ -54,20 +55,20 @@ class TrainModelNC(TrainModel):
         model.train()
         optimizer.zero_grad()
         total_loss = 0
-
         out, deg_pred = model.inference(self.data[0].to(self.device))
 
         y = self.y.type(torch.LongTensor)
         y = y.to(self.device)
+        loss_ssl = torch.tensor(0)
         if self.ssl_flag:
             loss_ssl = model.self_supervised_loss(deg_pred[self.train_mask], self.train_mask)
-            total_loss = loss_ssl
+            total_loss = loss_ssl * coef
         loss = model.loss_sup(out[self.train_mask], y[self.train_mask])
         total_loss += loss
         total_loss.backward()  # type: ignore
         optimizer.step()
         optimizer.zero_grad()
-        return loss
+        return loss, loss_ssl
 
     @torch.no_grad()
     def test(self, model: Module, mask: Tensor) -> Tuple[float, float]:
@@ -87,7 +88,9 @@ class TrainModelNC(TrainModel):
 
         return accs_micro, accs_macro
 
-    def run(self, params: Dict[Any, Any]) -> Tuple[Module, float, float, float, float]:
+    def run(
+        self, params: Dict[Any, Any], plot_training_procces: bool = False
+    ) -> Tuple[Module, float, float, float, float]:
         """
         Run the training pipelines for node classification task
 
@@ -98,6 +101,7 @@ class TrainModelNC(TrainModel):
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
+        coef = params["coef"]
 
         model = self.model(
             dataset=self.data,
@@ -111,27 +115,28 @@ class TrainModelNC(TrainModel):
 
         model.to(self.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-
-        losses = []
-        train_accs_mi = []
-        train_accs_ma = []
-        log = "Loss: {:.4f}, Epoch: {:03d}, Train acc micro: {:.4f}, Train acc macro: {:.4f}"
+        if plot_training_procces:
+            losses = []
+            losses_ssl = []
+            train_accs_mi = []
+            test_accs_mi = []
 
         for epoch in range(100):
-            loss = self.train(model, optimizer)
-            losses.append(loss.detach().cpu())
-            train_acc_mi, train_acc_ma = self.test(model, mask=self.train_mask)
-            train_accs_mi.append(train_acc_mi)
-            train_accs_ma.append(train_acc_ma)
-            print(log.format(loss, epoch, train_acc_mi, train_acc_ma))
-
+            loss, loss_ssl = self.train(model, optimizer, coef)
+            if plot_training_procces:
+                losses.append(loss.detach().cpu())
+                losses_ssl.append(loss_ssl.detach().cpu())
+                train_acc_mi, train_acc_ma = self.test(model, mask=self.train_mask)
+                test_acc_mi, _ = self.test(model, mask=self.test_mask)
+                train_accs_mi.append(train_acc_mi)
+                test_accs_mi.append(test_acc_mi)
+            # print(log.format(loss, epoch, train_acc_mi, train_acc_ma))
+        train_acc_mi, train_acc_ma = self.test(model, mask=self.train_mask)
         test_acc_mi, test_acc_ma = self.test(model, mask=self.test_mask)
 
-        print(
-            "Loss: {:.4f}, Epoch: {:03d}, test acc micro: {:.4f}, test acc macro: {:.4f}".format(
-                loss, epoch, test_acc_mi, test_acc_ma
-            )
-        )
+        if plot_training_procces:
+            self.plot(losses, losses_ssl, train_accs_mi, test_accs_mi)
+
         return model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma
 
 
@@ -143,7 +148,7 @@ class TrainModelOptunaNC(TrainModelNC):
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         num_layers = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
-
+        coef = trial.suggest_categorical("coef", [0, 2, 5, 10, 20])
         model = self.model(
             dataset=self.data,
             device=self.device,
@@ -158,7 +163,7 @@ class TrainModelOptunaNC(TrainModelNC):
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         for epoch in range(50):
-            _ = self.train(model, optimizer)
+            _ = self.train(model, optimizer, coef)
         val_acc_mi, val_acc_ma = self.test(model, mask=self.val_mask)
 
         return val_acc_mi

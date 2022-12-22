@@ -87,4 +87,4 @@ class BaseNet(torch.nn.Module, ABC):
         :param pos_neg_samples: Tensor
         :returns: (Tensor) Loss
         """
-        raise NotImplementedError
+        raise NotImplementedError("Define loss in %s." % (self.__class__.__name__))

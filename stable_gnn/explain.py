@@ -86,8 +86,8 @@ class Explain:
         if target not in neighbors:
             neighbors = np.append(neighbors, target)
 
-        features_torch = torch.tensor([self.features], dtype=torch.float).squeeze()
-        adj_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
+        features_torch = torch.tensor(self.features.tolist(), dtype=torch.float).squeeze()
+        adj_torch = torch.tensor(self.adj_matrix.tolist(), dtype=torch.float).squeeze()
 
         data = Data(x=features_torch, edge_index=adj_torch.nonzero().t().contiguous())
 
@@ -113,8 +113,8 @@ class Explain:
                     latent = 0
                 sample.append(latent)
 
-            features_perturb_torch = torch.tensor([features_perturb], dtype=torch.float).squeeze()
-            a_torch = torch.tensor([self.adj_matrix], dtype=torch.float).squeeze()
+            features_perturb_torch = torch.tensor(features_perturb.tolist(), dtype=torch.float).squeeze()
+            a_torch = torch.tensor([self.adj_matrix.tolist()], dtype=torch.float).squeeze()
             data_perturb = Data(x=features_perturb_torch, edge_index=a_torch.nonzero().t().contiguous())
 
             pred_perturb_torch = self.model.inference(data_perturb.to(self.device))

@@ -1,6 +1,7 @@
 import collections
 from typing import Tuple
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import device

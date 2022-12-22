@@ -1,4 +1,5 @@
 data_validation
+.DS_Store
 venv
 .idea
 .git

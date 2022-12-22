@@ -26,7 +26,7 @@ def test_explain(ssl_flag: bool, conv: str, loss_name: str, adjust_flag: bool) -
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     #######
-    best_values = {"hidden_layer": 64, "size of network, number of convs": 3, "dropout": 0.0, "lr": 0.01}
+    best_values = {"hidden_layer": 64, "size of network, number of convs": 3, "dropout": 0.0, "lr": 0.01, "coef": 10}
     model_training = TrainModelNC(data=data, device=device, ssl_flag=ssl_flag, loss_name=loss_name, emb_conv=conv)
 
     model, train_acc_mi, train_acc_ma, test_acc_mi, test_acc_ma = model_training.run(best_values)
