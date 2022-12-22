@@ -45,7 +45,7 @@ class TrainModelNC(TrainModel):
             self.test_mask,
         ) = self._train_test_split(N)
 
-    def train(self, model: Module, optimizer: Optimizer, coef: int) -> Tensor:  # type: ignore
+    def train(self, model: Module, optimizer: Optimizer, coef: int) -> Tensor:
         """Train input model with optimizer
 
         :param model: (torch.nn.Module): Model to train

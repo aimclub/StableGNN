@@ -1,6 +1,5 @@
 from typing import Any, Dict, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 import torch
@@ -54,7 +53,7 @@ class TrainModelGC(TrainModel):
             self.test_mask,
         ) = self._train_test_split(N)
 
-    def train(self, model: Module, optimizer: Optimizer, loader: DataLoader, coef: int) -> Tensor:
+    def train(self, model: Module, optimizer: Optimizer, loader: DataLoader, coef: int) -> Tensor:  # type: ignore
         """
         Train model with optimizer
 

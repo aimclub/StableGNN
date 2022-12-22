@@ -139,14 +139,14 @@ class Graph(InMemoryDataset):
             else:  # many graphs
                 self._process_many_graphs()
 
-    def _process_airport(self):
+    def _process_airport(self) -> None:
         index_map, ys = {}, []
         with open(self.raw_paths[1], "r") as f:
             data = f.read().split("\n")[1:-1]
             for i, row in enumerate(data):
-                idx, y = row.split()
+                idx, y_str = row.split()
                 index_map[int(idx)] = i
-                ys.append(int(y))
+                ys.append(int(y_str))
         y = torch.tensor(ys, dtype=torch.long)
         x = torch.eye(y.size(0))
 
@@ -161,7 +161,9 @@ class Graph(InMemoryDataset):
         if self.adjust_flag:
             self.num_nodes = len(x)
             edge_index = self._adjust(
-                edge_index=edge_index, dim_of_latent_representation=self.dim_of_latent_representation, number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index,
+                dim_of_latent_representation=self.dim_of_latent_representation,
+                number_of_training_epochs=self.number_of_training_epochs,
             )
         if self.root is not None:
             np.save(self.root + "/X.npy", x.numpy())
@@ -225,7 +227,9 @@ class Graph(InMemoryDataset):
         print(self.num_nodes)
         if self.adjust_flag:
             edge_index = self._adjust(
-                edge_index=edge_index, dim_of_latent_representation=self.dim_of_latent_representation, number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index,
+                dim_of_latent_representation=self.dim_of_latent_representation,
+                number_of_training_epochs=self.number_of_training_epochs,
             )
         data = Data(x=x, y=y, edge_index=edge_index)
         if self.root is not None:
@@ -258,7 +262,9 @@ class Graph(InMemoryDataset):
 
         if self.adjust_flag:
             edge_index = self._adjust(
-                edge_index=edge_index, dim_of_latent_representation=self.dim_of_latent_representation, number_of_training_epochs=self.number_of_training_epochs
+                edge_index=edge_index,
+                dim_of_latent_representation=self.dim_of_latent_representation,
+                number_of_training_epochs=self.number_of_training_epochs,
             )
 
         data = Data(x=x, edge_index=edge_index, y=y)
@@ -317,7 +323,9 @@ class Graph(InMemoryDataset):
         return lines
 
     # Learn structure
-    def _adjust(self, edge_index: Tensor, dim_of_latent_representation: int = 64, number_of_training_epochs: int = 89) -> Tensor:
+    def _adjust(
+        self, edge_index: Tensor, dim_of_latent_representation: int = 64, number_of_training_epochs: int = 89
+    ) -> Tensor:
         # generation of genuine graph structure
         u = torch.normal(
             mean=torch.zeros((self.num_nodes, dim_of_latent_representation)),
@@ -348,20 +356,26 @@ class Graph(InMemoryDataset):
             loss.backward(retain_graph=True)
             optimizer.step()
         # approximating genuine graph
-        u_diff = u.view(1, self.num_nodes, dim_of_latent_representation) - u.view(self.num_nodes, 1, dim_of_latent_representation)
+        u_diff = u.view(1, self.num_nodes, dim_of_latent_representation) - u.view(
+            self.num_nodes, 1, dim_of_latent_representation
+        )
         a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))
 
         # TODO: в этом я тоже не уверена (то что ниже)
         # print(a_genuine)
 
         a_genuine = torch.bernoulli(torch.clamp(a_genuine, min=0, max=1))
-
-        np.save(self.root + "/A.npy", a_genuine.detach().numpy())
-        edge_index, _ = dense_to_sparse(a_genuine)
+        if self.root is not None:
+            np.save(self.root + "/A.npy", a_genuine.detach().numpy())
+            edge_index, _ = dense_to_sparse(a_genuine)
         return edge_index
 
-    def _loss(self, u: Tensor, e: Tensor, edge_index: Tensor, negative_samples: Tensor, dim_of_latent_representation: int) -> Tensor:
-        u_diff = u.view(1, self.num_nodes, dim_of_latent_representation) - u.view(self.num_nodes, 1, dim_of_latent_representation)
+    def _loss(
+        self, u: Tensor, e: Tensor, edge_index: Tensor, negative_samples: Tensor, dim_of_latent_representation: int
+    ) -> Tensor:
+        u_diff = u.view(1, self.num_nodes, dim_of_latent_representation) - u.view(
+            self.num_nodes, 1, dim_of_latent_representation
+        )
         a_genuine = torch.nn.Sigmoid()(-(u_diff * u_diff).sum(axis=2))  # high assortativity assumption
 
         # approximating input graph structure
