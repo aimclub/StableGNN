@@ -1,9 +1,10 @@
+import os.path
 from typing import Any, Dict
 
 import torch
 from numpy.typing import NDArray
 from torch import device
-
+import numpy as np
 from stable_gnn.embedding.model_train_embeddings import ModelTrainEmbeddings, OptunaTrainEmbeddings
 from stable_gnn.embedding.sampling.samplers import SamplerAPP, SamplerContextMatrix, SamplerFactorization
 from stable_gnn.graph import Graph
@@ -86,7 +87,12 @@ class EmbeddingFactory:
         :param device: (device): Device 'cuda' or 'cpu'
         :returns: (NDArray) embeddings NumPy array of (N_nodes) x (N_emb_dim)
         """
-        loss_params = self._get_emb_settings(loss_name)
-        emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device)
+        if os.path.exists('emb.npy'):
+            emb = np.load('emb.npy')
+
+        else:
+            loss_params = self._get_emb_settings(loss_name)
+            emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device)
+            np.save('emb.npy', emb)
 
         return emb
