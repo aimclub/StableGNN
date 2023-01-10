@@ -180,7 +180,7 @@ To avoid any unnecessary commits please fix any linting and testing errors after
 - Natural System Simulation Team <https://itmo-nss-team.github.io/>
   
 ## Citing
-Please cite our paper (and the respective papers of the methods used) if you use this code in your own work:
+Please cite [our paper](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (and the respective papers of the methods used) if you use this code in your own work:
 ```
 @inproceedings{mlg2022_5068,
 title={Attributed Labeled BTER-Based Generative Model for Benchmarking of Graph Neural Networks},
