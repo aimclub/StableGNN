@@ -1,7 +1,5 @@
-import os.path
 from typing import Any, Dict
 
-import numpy as np
 import torch
 from numpy.typing import NDArray
 from torch import device
