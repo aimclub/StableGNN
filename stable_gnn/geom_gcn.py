@@ -73,7 +73,8 @@ class GeomGCN(MessagePassing):
     @staticmethod
     def _normalization_term(edge_index: Tensor, x: Any) -> float:
         row, col = edge_index
-        deg = degree(col, 600, dtype=x[0].dtype)
+        n_nodes = len(x[0])
+        deg = degree(col, n_nodes, dtype=x[0].dtype)
         deg_sqrt = deg.pow(0.5)
         norm = deg_sqrt[row] * deg_sqrt[col]
         return norm
