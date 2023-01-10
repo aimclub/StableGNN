@@ -88,5 +88,4 @@ class EmbeddingFactory:
         """
         loss_params = self._get_emb_settings(loss_name)
         emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device)
-
         return emb

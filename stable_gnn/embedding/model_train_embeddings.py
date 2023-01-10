@@ -117,7 +117,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
 
     def _objective(self, trial: Trial) -> Tensor:
         # Integer parameter
-        hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128, 256])
+        hidden_layer = trial.suggest_categorical("hidden_layer", [32, 64, 128])
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
