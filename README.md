@@ -6,7 +6,7 @@
 
 [![Linters](https://github.com/aimclub/StableGNN/actions/workflows/linters.yml/badge.svg)](https://github.com/aimclub/StableGNN/actions/workflows/linters.yml)
 [![Tests](https://github.com/aimclub/StableGNN/actions/workflows/tests.yml/badge.svg)](https://github.com/aimclub/StableGNN/actions/workflows/tests.yml)
-[![Documentation](https://github.com/aimclub/StableGNN/actions/workflows/pages/pages-build-deployment/badge.svg)](https://aimclub.github.io/StableGNN/index.html)
+[![Documentation](https://github.com/aimclub/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://aimclub.github.io/StableGNN/index.html)
 
 This is a component for autonomous learning of explainable graph neural networks.
 
