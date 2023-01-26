@@ -156,7 +156,7 @@ StableGNN это фреймворк для улучшения стабильно
 
 
 <p align="center">
-  <img src="https://github.com/anpolol/StableGNN/blob/main/docs/arch.png?raw=true" width="800px"> 
+  <img src="https://github.com/anpolol/StableGNN/blob/main/docs/arch_ru.png?raw=true" width="800px"> 
 </p>
 
 
