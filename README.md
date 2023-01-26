@@ -4,9 +4,9 @@
   <img src="https://github.com/anpolol/StableGNN/blob/main/docs/stable_gnn.png?raw=true" width="300px"> 
 </p>
 
-[![Tests](https://github.com/anpolol/StableGNN/actions/workflows/tests.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/tests.yml)
-[![Linters](https://github.com/anpolol/StableGNN/actions/workflows/linters.yml/badge.svg)](https://github.com/anpolol/StableGNN/actions/workflows/testing.yml)
-[![Documentation](https://github.com/anpolol/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://anpolol.github.io/StableGNN/index.html)
+[![Linters](https://github.com/aimclub/StableGNN/actions/workflows/linters.yml/badge.svg)](https://github.com/aimclub/StableGNN/actions/workflows/linters.yml)
+[![Tests](https://github.com/aimclub/StableGNN/actions/workflows/tests.yml/badge.svg)](https://github.com/aimclub/StableGNN/actions/workflows/tests.yml)
+[![Documentation](https://github.com/aimclub/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://aimclub.github.io/StableGNN/index.html)
 
 StableGNN это фреймворк для автономного обучения объяснимых графовых нейронных сетей.
 
@@ -161,7 +161,7 @@ StableGNN это фреймворк для улучшения стабильно
 
 
 ## Сотрудничество
-Чтобы внести вклад в библиотеку, необходимо следовать текущему [соглашению о коде и документации] (wiki/Development.md).
+Чтобы внести вклад в библиотеку, необходимо следовать текущему [соглашению о коде и документации](wiki/Development.md).
 Проект запускает линтеры и тесты для каждого pull request, чтобы установить линтеры и тестовые пакеты локально, запустите:
 
 ```
@@ -177,9 +177,16 @@ pip install -r requirements-dev.txt
 ## Контакты
 - [Связаться с командой разработчиков](mailto:egorshikov@itmo.ru)
 - Natural System Simulation Team <https://itmo-nss-team.github.io/>
-  
+
+## Поддержка
+Исследование выполнено при поддержке [Исследовательского центра сильного искусственного интеллекта в промышленности](https://sai.itmo.ru/) [Университета ИТМО](https://itmo.ru/) (Санкт-Петербург, Россия)
+
 ## Цитирование
 Если используете библиотеку в ваших работах, пожалуйста, процитируйте [статью](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (и другие соответствующие статьи используемых методов):
+
+## Citing
+Please cite [our paper](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (and the respective papers of the methods used) if you use this code in your own work:
+
 ```
 @inproceedings{mlg2022_5068,
 title={Attributed Labeled BTER-Based Generative Model for Benchmarking of Graph Neural Networks},

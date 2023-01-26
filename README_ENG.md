@@ -178,7 +178,10 @@ To avoid any unnecessary commits please fix any linting and testing errors after
 ## Contacts
 - [Contact development team](mailto:egorshikov@itmo.ru)
 - Natural System Simulation Team <https://itmo-nss-team.github.io/>
-  
+
+## Suported by
+The study is supported by [Research Center Strong Artificial Intelligence in Industry](https://sai.itmo.ru/) of [ITMO University](https://itmo.ru/) (Saint Petersburg, Russia)
+
 ## Citing
 Please cite [our paper](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (and the respective papers of the methods used) if you use this code in your own work:
 ```
