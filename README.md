@@ -181,6 +181,10 @@ pip install -r requirements-dev.txt
 ## Поддержка
 Исследование выполнено при поддержке [Исследовательского центра сильного искусственного интеллекта в промышленности](https://sai.itmo.ru/) [Университета ИТМО](https://itmo.ru/) (Санкт-Петербург, Россия)
 
+<p align="center">
+  <img src="https://github.com/anpolol/StableGNN/blob/main/docs/AIM-logo.svg?raw=true" width="300px"> 
+</p>
+
 ## Цитирование
 Если используете библиотеку в ваших работах, пожалуйста, процитируйте [статью](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (и другие соответствующие статьи используемых методов):
 
