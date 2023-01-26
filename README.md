@@ -188,9 +188,6 @@ pip install -r requirements-dev.txt
 ## Цитирование
 Если используете библиотеку в ваших работах, пожалуйста, процитируйте [статью](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (и другие соответствующие статьи используемых методов):
 
-## Citing
-Please cite [our paper](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (and the respective papers of the methods used) if you use this code in your own work:
-
 ```
 @inproceedings{mlg2022_5068,
 title={Attributed Labeled BTER-Based Generative Model for Benchmarking of Graph Neural Networks},
