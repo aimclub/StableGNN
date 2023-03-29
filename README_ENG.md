@@ -186,7 +186,8 @@ To avoid any unnecessary commits please fix any linting and testing errors after
 - Natural System Simulation Team <https://itmo-nss-team.github.io/>
 
 ## Suported by
-The study is supported by [Research Center Strong Artificial Intelligence in Industry](https://sai.itmo.ru/) of [ITMO University](https://itmo.ru/) (Saint Petersburg, Russia)
+The study is supported by the [Research Center Strong Artificial Intelligence in Industry](<https://sai.itmo.ru/>) 
+of [ITMO University](https://en.itmo.ru/) as part of the plan of the center's program: Development and testing of an experimental prototype of a library of strong AI algorithms in terms of autonomous learning of explainable graph neural networks
 
 ## Citing
 Please cite [our paper](http://www.mlgworkshop.org/2022/papers/MLG22_paper_5068.pdf) (and the respective papers of the methods used) if you use this code in your own work:
