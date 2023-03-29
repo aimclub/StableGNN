@@ -4,9 +4,15 @@
   <img src="https://github.com/anpolol/StableGNN/blob/main/docs/stable_gnn.png?raw=true" width="300px"> 
 </p>
 
+[![SAI](https://github.com/ITMO-NSS-team/open-source-ops/blob/master/badges/SAI_badge_flat.svg)](https://sai.itmo.ru/)
+[![ITMO](https://github.com/ITMO-NSS-team/open-source-ops/blob/master/badges/ITMO_badge_flat_rus.svg)](https://en.itmo.ru/en/)
+
 [![Linters](https://github.com/aimclub/StableGNN/actions/workflows/linters.yml/badge.svg)](https://github.com/aimclub/StableGNN/actions/workflows/linters.yml)
 [![Tests](https://github.com/aimclub/StableGNN/actions/workflows/tests.yml/badge.svg)](https://github.com/aimclub/StableGNN/actions/workflows/tests.yml)
 [![Documentation](https://github.com/aimclub/StableGNN/actions/workflows/gh_pages.yml/badge.svg)](https://aimclub.github.io/StableGNN/index.html)
+[![license](https://img.shields.io/github/license/aimclub/rostok)](https://github.com/aimclub/StableGNN/blob/main/LICENSE.md)
+[![Eng](https://img.shields.io/badge/lang-en-red.svg)](/README_ENG.md)
+[![Mirror](https://camo.githubusercontent.com/9bd7b8c5b418f1364e72110a83629772729b29e8f3393b6c86bff237a6b784f6/68747470733a2f2f62616467656e2e6e65742f62616467652f6769746c61622f6d6972726f722f6f72616e67653f69636f6e3d6769746c6162)](https://gitlab.actcognitive.org/itmo-sai-code/StableGNN)
 
 StableGNN это фреймворк для автономного обучения объяснимых графовых нейронных сетей.
 
