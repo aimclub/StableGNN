@@ -115,7 +115,6 @@ class GeomGCN(MessagePassing):
 
         # здесь конкат для всех кроме последнего слоя, для последнего должно быть mean
         if self.last_layer:
-
             x = (e_s_ur + e_s_ul + e_s_lr + e_s_ll + e_g_ur + e_g_ul + e_g_lr + e_g_ll) / 8
 
         else:
@@ -194,12 +193,10 @@ class GeomGCN(MessagePassing):
     def _structural_neighbourhood(
         self, emb: NDArray, deg: Tensor
     ) -> Tensor:  # для каждой связи добавляем третий инедекс вес который означает именно _Relation
-
         deg_list = deg.tolist()
         new_edge_index = []
         tree = BallTree(emb, leaf_size=2)
         for i in range(len(emb)):
-
             dist, ind = tree.query(emb[i : i + 1], k=int(deg_list[i]))
             for nei in ind[0]:  # indices of 3 closest neighbors
                 _Relation = self._relation(emb[i], emb[nei])
@@ -212,7 +209,6 @@ class GeomGCN(MessagePassing):
         return new_edge_index
 
     def _edge_index_conversion(self, edge_index: Tensor, emb: NDArray) -> Tensor:
-
         list_of_relations = []
         iterating = edge_index.T.tolist()
         for e in iterating:

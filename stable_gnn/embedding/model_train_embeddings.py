@@ -24,7 +24,6 @@ class ModelTrainEmbeddings:
     """
 
     def __init__(self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN") -> None:
-
         self.conv = conv
         self.device = device
         self.x = data.x

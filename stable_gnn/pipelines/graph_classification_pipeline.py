@@ -149,7 +149,11 @@ class TrainModelGC(TrainModel):
             remove_init_edges = False
             white_list = False
             score_func = "MI"
-            (self.train_dataset, self.test_dataset, self.val_dataset,) = model.extrapolate(
+            (
+                self.train_dataset,
+                self.test_dataset,
+                self.val_dataset,
+            ) = model.extrapolate(
                 self.train_indices,
                 self.val_indices,
                 init_edges,
@@ -218,7 +222,11 @@ class TrainModelOptunaGC(TrainModelGC):
             remove_init_edges = False
             white_list = False
             score_func = "MI"  # TODO придумать как их задавать пользователю
-            (self.train_dataset, self.test_dataset, self.val_dataset,) = model.extrapolate(
+            (
+                self.train_dataset,
+                self.test_dataset,
+                self.val_dataset,
+            ) = model.extrapolate(
                 self.train_indices,
                 self.val_indices,
                 init_edges,
