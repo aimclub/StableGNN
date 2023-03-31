@@ -12,7 +12,6 @@ generate_gc_graphs(root, 30)
 
 
 def test_extrapolate():
-
     name = "ba_gc"
     data = Graph(root=root + name + "/", name=name, adjust_flag=False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

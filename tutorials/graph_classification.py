@@ -7,7 +7,6 @@ from stable_gnn.graph import Graph
 from stable_gnn.pipelines.graph_classification_pipeline import TrainModelGC, TrainModelOptunaGC
 
 if __name__ == "__main__":
-
     name = "BACE"  # всего там 1000 файлов, но они маленькие, качается довольно долго
     conv = "GAT"
 

@@ -43,7 +43,6 @@ class ModelGraphClassification(torch.nn.Module):
         ssl_flag: bool = False,
         heads: int = 1,
     ) -> None:
-
         super(ModelGraphClassification, self).__init__()
         self.conv = conv
         self.num_layers = num_layers
@@ -205,7 +204,6 @@ class ModelGraphClassification(torch.nn.Module):
         return None
 
     def _data_eigen_exctractor(self, dataset: List[Graph]) -> pd.DataFrame:
-
         columns_list = list(map(lambda x: "eigen" + str(x), range(self.n_min)))
         data_bamt = pd.DataFrame(columns=columns_list + ["y"])
         for gr in dataset:
@@ -220,7 +218,6 @@ class ModelGraphClassification(torch.nn.Module):
     def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets.HybridBN:
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
-
             data_bamt[col] = data_bamt[col].astype(float)
         data_bamt["y"] = data_bamt["y"].astype(int)
 
@@ -235,13 +232,11 @@ class ModelGraphClassification(torch.nn.Module):
         params["remove_init_edges"] = self.remove_init_edges
 
         if self.init_edges:
-
             params["init_edges"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(  # type: ignore
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 
         if self.white_list:
-
             params["white_list"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(  # type: ignore
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )

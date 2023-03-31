@@ -30,7 +30,6 @@ class BaseNet(torch.nn.Module, ABC):
         heads: int = 1,
         dropout: float = 0,
     ) -> None:
-
         super(BaseNet, self).__init__()
         self.num_layers = num_layers
         self.num_features = num_featurs
@@ -72,7 +71,6 @@ class BaseNet(torch.nn.Module, ABC):
         x, edge_index = data.x, data.edge_index
 
         for i, conv in enumerate(self.convs):
-
             x = conv(x, edge_index)
             if i != self.num_layers - 1:
                 x = x.relu()

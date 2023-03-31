@@ -20,7 +20,6 @@ generate_star_graphs(root, 5)
 @pytest.mark.parametrize("loss_name", ["APP", "LINE", "HOPE_AA", "VERSE_Adj"])
 @pytest.mark.parametrize("adjust_flag", [False, True])
 def test_explain(ssl_flag: bool, conv: str, loss_name: str, adjust_flag: bool) -> None:
-
     name = "stars"
     data = Graph(root=root + name + "/", name=name, adjust_flag=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

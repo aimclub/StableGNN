@@ -26,7 +26,6 @@ class ContextMatrixModel(BaseNet):
         heads: int = 1,
         dropout: float = 0,
     ):
-
         super().__init__(device, num_featurs, hidden_layer, out_layer, num_layers, heads, dropout)
         self.name = name
 

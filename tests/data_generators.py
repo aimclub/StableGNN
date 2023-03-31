@@ -53,7 +53,6 @@ def generate_gc_graphs(root_dir, num_graphs=50):
     name = "ba_gc"
 
     if not os.path.exists(root_dir + str(name)):
-
         types_of_graphs = ["wheel", "circ ladder", "star", "ba"]
 
         for k in range(num_graphs):
