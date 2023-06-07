@@ -1,4 +1,7 @@
-bamt==1.1.25
+bamt@ git+https://github.com/EvilFreelancer/BAMT.git
 optuna==2.10.1
 pgmpy==0.1.20
-pandas==1.4.0
+pandas==1.5.2
+pyitlib==0.2.3
+torch==2.0.1
+torch-geometric==2.3.1
