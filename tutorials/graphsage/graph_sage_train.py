@@ -51,7 +51,7 @@ def train():
     return loss
 
 
-for epoch in range(10000):
+for epoch in range(20000):
     loss = train()
     print(f"Epoch: {epoch}, Loss: {loss}")
 
