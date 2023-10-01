@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+
+  app:
+    restart: "unless-stopped"
+    build:
+      context: .
+    volumes:
+      - ./cache:/root/.cache
+      - ./:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
