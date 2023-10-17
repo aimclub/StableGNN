@@ -1,5 +1,3 @@
-
-
 from stable_gnn.visualization.contracts.size_constructor_contract import SizeConstructorContract
 from stable_gnn.visualization.equations.calc_edge_line_width import calculate_edge_line_width
 from stable_gnn.visualization.equations.calc_font_size import calculate_font_size

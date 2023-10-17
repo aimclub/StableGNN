@@ -14,12 +14,13 @@ class Defaults(ReferenceBase):
     vertex_size: float = 1.0
     vertex_color: str = Colors.red
     vertex_line_width: float = 1.0
+    vertex_strength: float = 1.0
     font_size: float = 1.0
     font_family: str = Fonts.sans_serif
-    push_vertex_strength: float = 1.0
-    push_edge_strength: float = 1.0
-    pull_edge_strength: float = 1.0
-    pull_center_strength: float = 1.0
+    push_vertex_strength_vis: float = 1.0
+    push_edge_strength_vis: float = 1.0
+    pull_edge_strength_vis: float = 1.0
+    pull_center_strength_vis: float = 1.0
     # calculate_edge_line_width params
     edge_line_width_multiplier: float = 1.0
     edge_line_width_divider: float = 120.0
@@ -33,4 +34,14 @@ class Defaults(ReferenceBase):
     calculate_vertex_size_multiplier: float = 1.0
     calculate_vertex_size_divider: float = 10.0
     calculate_vertex_size_modifier: float = 0.1
-
+    # calculate strength
+    push_vertex_strength: float = 0.006
+    push_edge_strength: float = 0.0
+    pull_edge_strength: float = 0.045
+    pull_center_strength: float = 0.01
+    # calculate layout
+    layout_scale_initial: int = 5
+    vertex_coord_max: float = 5.0
+    vertex_coord_min: float = -5.0
+    vertex_coord_multiplier: float = 0.8
+    vertex_coord_modifier: float = 0.1
