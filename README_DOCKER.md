@@ -8,6 +8,12 @@ Requirements:
 
 ## How to run
 
+Copy docker-compose from example:
+
+```shell
+cp docker-compose.dist.yml docker-compose.yml
+```
+
 Build an image:
 
 ```shell

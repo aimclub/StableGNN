@@ -3,6 +3,7 @@ data_validation
 /venv/
 /.idea/
 /.git/
+/docker-compose.yml
 *.ipynb_checkpoints
 __pycache__
 .gitignore
