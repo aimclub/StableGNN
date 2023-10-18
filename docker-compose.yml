@@ -7,8 +7,9 @@ services:
     build:
       context: .
     volumes:
-      - ./cache:/root/.cache
       - ./:/app
+    ports:
+      - "127.0.0.1:8888:8888"
     deploy:
       resources:
         reservations:

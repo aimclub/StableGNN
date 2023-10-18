@@ -1,11 +1,12 @@
 data_validation
 .DS_Store
-venv
-.idea
-.git
+/venv/
+/.idea/
+/.git/
 *.ipynb_checkpoints
 __pycache__
 .gitignore
+/cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
