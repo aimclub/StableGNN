@@ -1,7 +1,9 @@
 import numpy as np
 
+from stable_gnn.visualization.contracts.core_model_contract import CoreModelContract
 from stable_gnn.visualization.contracts.layout_contract import LayoutContract
 from stable_gnn.visualization.config.parameters.defaults import Defaults
+from stable_gnn.visualization.equations.core_physical_model import CorePhysicalModel
 from stable_gnn.visualization.equations.edge_list_to_incidence_matrix import edge_list_to_incidence_matrix
 from stable_gnn.visualization.equations.init_position import init_position
 from stable_gnn.visualization.exceptions.exceptions_classes import ParamsValidationException
@@ -16,20 +18,19 @@ class LayoutConstructor:
 
         centers = [np.array([0, 0])]
 
-        sim = Simulator(
+        core_model_contract: CoreModelContract = CoreModelContract(
             nums=contract.vertex_num,
             forces={
-                Simulator.NODE_ATTRACTION: contract.pull_edge_strength,
-                Simulator.NODE_REPULSION: contract.push_vertex_strength,
-                Simulator.EDGE_REPULSION: contract.push_edge_strength,
-                Simulator.CENTER_GRAVITY: contract.pull_center_strength,
+                Defaults.node_attraction_key: contract.pull_edge_strength,
+                Defaults.node_repulsion_key: contract.push_vertex_strength,
+                Defaults.edge_repulsion_key: contract.push_edge_strength,
+                Defaults.center_of_gravity_key: contract.pull_center_strength,
             },
             centers=centers,
         )
+        model: CorePhysicalModel = CorePhysicalModel(core_model_contract)
 
-        vertex_coord = sim.simulate(vertex_coord,
-                                    edge_list_to_incidence_matrix(contract.vertex_num,
-                                                                  contract.edge_list))
+        vertex_coord = model.simulate(vertex_coord, edge_list_to_incidence_matrix(contract.vertex_num, contract.edge_list))
         vertex_coord = ((vertex_coord - vertex_coord.min(0)) /
                         (vertex_coord.max(0) - vertex_coord.min(0)) *
                         Defaults.vertex_coord_multiplier + Defaults.vertex_coord_modifier)

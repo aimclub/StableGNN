@@ -45,3 +45,16 @@ class Defaults(ReferenceBase):
     vertex_coord_min: float = -5.0
     vertex_coord_multiplier: float = 0.8
     vertex_coord_modifier: float = 0.1
+    # figure
+    figure_size: tuple = (6, 6)
+    x_limits: tuple = (0, 1.0)
+    y_limits: tuple = (0, 1.0)
+    axes_on_off: str = "off"
+    # core physical model
+    node_attraction_key: int = 0
+    node_repulsion_key: int = 1
+    edge_repulsion_key: int = 2
+    center_of_gravity_key: int = 3
+    max_iterations: int = 400
+    epsilon: float = 0.001
+    delta: float = 2.0
