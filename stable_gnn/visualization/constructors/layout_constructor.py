@@ -30,7 +30,7 @@ class LayoutConstructor:
         )
         model: CorePhysicalModel = CorePhysicalModel(core_model_contract)
 
-        vertex_coord = model.simulate(vertex_coord, edge_list_to_incidence_matrix(contract.vertex_num, contract.edge_list))
+        vertex_coord = model.build(vertex_coord, edge_list_to_incidence_matrix(contract.vertex_num, contract.edge_list))
         vertex_coord = ((vertex_coord - vertex_coord.min(0)) /
                         (vertex_coord.max(0) - vertex_coord.min(0)) *
                         Defaults.vertex_coord_multiplier + Defaults.vertex_coord_modifier)

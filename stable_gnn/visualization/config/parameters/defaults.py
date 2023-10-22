@@ -21,6 +21,12 @@ class Defaults(ReferenceBase):
     push_edge_strength_vis: float = 1.0
     pull_edge_strength_vis: float = 1.0
     pull_center_strength_vis: float = 1.0
+    damping_factor: float = 0.9999
+    damping: float = 1
+    radius_increment: float = 0.3
+    force_modifier: float = -0.1
+    force_a_max: float = 0.1
+    axes_num: int = 2
     # calculate_edge_line_width params
     edge_line_width_multiplier: float = 1.0
     edge_line_width_divider: float = 120.0

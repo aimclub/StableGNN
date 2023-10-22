@@ -1,11 +1,11 @@
-import matplotlib
 from dataclasses import dataclass
+
+from stable_gnn.visualization.config.types import TVectorCoordinates
 
 
 @dataclass
 class DrawEdgesContract:
-    axes: matplotlib.axes.Axes
-    vertex_coordinates: list[tuple[float, float]]
+    vertex_coordinates: TVectorCoordinates
     vertex_size: list
     edge_list: list[tuple] | list[list[int]]
     edge_color: list
