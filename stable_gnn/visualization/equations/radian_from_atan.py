@@ -9,9 +9,9 @@ def radian_from_atan(x, y):
     r = math.atan(y / x)
     if x > 0 and y > 0:
         return r
-    elif x > 0 and y < 0:
+    elif x > 0 > y:
         return r + 2 * math.pi
-    elif x < 0 and y > 0:
+    elif x < 0 < y:
         return r + math.pi
     else:
         return r + math.pi

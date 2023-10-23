@@ -1,12 +1,8 @@
 from copy import deepcopy
 
-import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.path import Path
-from matplotlib.patches import Circle, PathPatch
-from matplotlib.collections import PatchCollection
-from scipy.spatial import ConvexHull
+
+from stable_gnn.visualization.base_visualization import BaseVisualization
 
 from stable_gnn.visualization.config.parameters.edge_styles import EdgeStyles
 from stable_gnn.visualization.constructors.layout_constructor import LayoutConstructor
@@ -22,23 +18,19 @@ from stable_gnn.visualization.contracts.layout_contract import LayoutContract
 from stable_gnn.visualization.contracts.size_constructor_contract import SizeConstructorContract
 from stable_gnn.visualization.contracts.strength_constructor_contract import StrengthConstructorContract
 from stable_gnn.visualization.contracts.style_constructor_contract import StyleConstructorContract
-from stable_gnn.visualization.equations.common_tangent_radian import common_tangent_radian
-from stable_gnn.visualization.equations.polar_position import polar_position
-from stable_gnn.visualization.equations.rad_to_deg import rad_to_deg
-from stable_gnn.visualization.equations.radian_from_atan import radian_from_atan
-from stable_gnn.visualization.equations.vector_length import vector_length
 from stable_gnn.visualization.exceptions.exceptions_classes import ParamsValidationException
 from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.equations.calc_arrow_head_width import calc_arrow_head_width
 from stable_gnn.visualization.equations.calc_direction import calc_direction
 
 
-class GraphVisualizer:
+class GraphVisualizer(BaseVisualization):
+    contract = None
 
     def __init__(self, contract: GraphVisualizationContract):
         self.contract = contract
 
-        self._validate()
+        self.validate()
 
     def draw(self):
         fig, axes = plt.subplots(figsize=Defaults.figure_size)
@@ -99,7 +91,7 @@ class GraphVisualizer:
                                                                                     show_arrow=False,
                                                                                     edge_color=edge_color,
                                                                                     edge_line_width=edge_line_width)
-            self.__draw_line_edges(axes=axes, contract=draw_line_edges_contract)
+            self.draw_line_edges(axes=axes, contract=draw_line_edges_contract)
         elif self.contract.edge_style == EdgeStyles.circle:
             draw_edges_contract: DrawEdgesContract = DrawEdgesContract(vertex_coordinates=vertex_coordinates,
                                                                        vertex_size=vertex_size,
@@ -107,7 +99,7 @@ class GraphVisualizer:
                                                                        edge_color=edge_color,
                                                                        edge_fill_color=edge_fill_color,
                                                                        edge_line_width=edge_line_width)
-            self.__draw_circle_edges(axes=axes, contract=draw_edges_contract)
+            self.draw_circle_edges(axes=axes, contract=draw_edges_contract)
         else:
             raise ParamsValidationException
 
@@ -118,7 +110,7 @@ class GraphVisualizer:
                                                                       vertex_size=vertex_size,
                                                                       vertex_color=vertex_color,
                                                                       vertex_line_width=vertex_line_width)
-        self.__draw_vertex(axes=axes, contract=draw_vertex_contract)
+        self.draw_vertex(axes=axes, contract=draw_vertex_contract)
 
         plt.xlim(Defaults.x_limits)
         plt.ylim(Defaults.y_limits)
@@ -128,7 +120,7 @@ class GraphVisualizer:
         return fig
 
     @staticmethod
-    def __draw_line_edges(axes, contract: DrawLineEdgesContract):
+    def draw_line_edges(axes, contract: DrawLineEdgesContract):
         arrow_head_width = calc_arrow_head_width(contract.edge_line_width,
                                                  contract.show_arrow,
                                                  contract.edge_list)
@@ -152,180 +144,7 @@ class GraphVisualizer:
                        linewidth=contract.edge_line_width[edge_index],
                        length_includes_head=True)
 
-    def __draw_circle_edges(self, axes, contract: DrawEdgesContract):
-        num_vertex = len(contract.vertex_coordinates)
-
-        line_paths, arc_paths, vertices = self.__hull_layout(num_vertex,
-                                                             contract.edge_list,
-                                                             contract.vertex_coordinates,
-                                                             contract.vertex_size)
-
-        for edge_index, lines in enumerate(line_paths):
-            path_data = []
-
-            for line in lines:
-                if len(line) == 0:
-                    continue
-
-                start_pos, end_pos = line
-
-                path_data.append((Path.MOVETO, start_pos.tolist()))
-                path_data.append((Path.LINETO, end_pos.tolist()))
-
-            if len(list(zip(*path_data))) == 0:
-                continue
-
-            codes, vertexes = zip(*path_data)
-
-            axes.add_patch(
-                PathPatch(Path(vertexes, codes),
-                          linewidth=contract.edge_line_width[edge_index],
-                          facecolor=contract.edge_fill_color[edge_index],
-                          edgecolor=contract.edge_color[edge_index]))
-
-        for edge_index, arcs in enumerate(arc_paths):
-            for arc in arcs:
-                center, theta1, theta2, radius = arc
-
-                axes.add_patch(
-                    matplotlib.patches.Arc((center[0], center[1]),
-                                           2 * radius,
-                                           2 * radius,
-                                           theta1=theta1,
-                                           theta2=theta2,
-                                           color=contract.edge_color[edge_index],
-                                           linewidth=contract.edge_line_width[edge_index],
-                                           edgecolor=contract.edge_color[edge_index],
-                                           facecolor=contract.edge_fill_color[edge_index]))
-
-    @staticmethod
-    def __draw_vertex(axes, contract: DrawVertexContract):
-        patches = []
-
-        vertex_label = contract.vertex_label
-
-        if contract.vertex_label is None:
-            vertex_label = [""] * contract.vertex_coordinates.shape[0]  # noqa
-
-        for coordinates, label, size, width in zip(contract.vertex_coordinates.tolist(),  # noqa
-                                                   vertex_label,
-                                                   contract.vertex_size,
-                                                   contract.vertex_line_width):
-            circle = Circle(coordinates, size)
-            circle.lineWidth = width
-
-            if label != "":
-                x, y = coordinates[0], coordinates[1]
-                offset = 0, -1.3 * size
-                x += offset[0]
-                y += offset[1]
-                axes.text(x, y, label,
-                          fontsize=contract.font_size,
-                          fontfamily=contract.font_family,
-                          ha='center',
-                          va='top')
-
-            patches.append(circle)
-
-        p = PatchCollection(patches, facecolors=contract.vertex_color, edgecolors="black")
-
-        axes.add_collection(p)
-
-    @staticmethod
-    def __hull_layout(num_vertex,
-                      edge_list,
-                      position,
-                      vertex_size,
-                      radius_increment=Defaults.radius_increment):
-
-        line_paths = [None] * len(edge_list)
-        arc_paths = [None] * len(edge_list)
-
-        polygons_vertices_index = []
-        vertices_radius = np.array(vertex_size)
-        vertices_increased_radius = vertices_radius * radius_increment
-        vertices_radius += vertices_increased_radius
-
-        edge_degree = [len(e) for e in edge_list]
-        edge_indexes = np.argsort(np.array(edge_degree))
-
-        for edge_index in edge_indexes:
-            edge = list(edge_list[edge_index])
-
-            line_path_for_edges = []
-            arc_path_for_edges = []
-
-            if len(edge) == 1:
-                arc_path_for_edges.append([position[edge[0]], 0, 360, vertices_radius[edge[0]]])
-
-                vertices_radius[edge] += vertices_increased_radius[edge]
-
-                line_paths[edge_index] = line_path_for_edges
-                arc_paths[edge_index] = arc_path_for_edges
-
-                continue
-
-            pos_in_edge = position[edge]
-
-            if len(edge) == 2:
-                vertices_index = np.array((0, 1), dtype=np.int64)
-            else:
-                hull = ConvexHull(pos_in_edge)
-                vertices_index = hull.vertices
-
-            number_of_vertices = vertices_index.shape[0]
-
-            vertices_index = np.append(vertices_index, vertices_index[0])  # close the loop
-
-            thetas = []
-
-            for i in range(number_of_vertices):
-                # draw lines
-                i1 = edge[vertices_index[i]]
-                i2 = edge[vertices_index[i + 1]]
-
-                r1 = vertices_radius[i1]
-                r2 = vertices_radius[i2]
-
-                p1 = position[i1]
-                p2 = position[i2]
-
-                dp = p2 - p1
-                dp_len = vector_length(dp)
-
-                beta = radian_from_atan(dp[0], dp[1])
-                alpha = common_tangent_radian(r1, r2, dp_len)
-
-                theta = beta - alpha
-                start_point = polar_position(r1, theta, p1)
-                end_point = polar_position(r2, theta, p2)
-
-                line_path_for_edges.append((start_point, end_point))
-                thetas.append(theta)
-
-            for i in range(number_of_vertices):
-                # draw arcs
-                theta_1 = thetas[i - 1]
-                theta_2 = thetas[i]
-
-                arc_center = position[edge[vertices_index[i]]]
-                radius = vertices_radius[edge[vertices_index[i]]]
-
-                theta_1, theta_2 = rad_to_deg(theta_1), rad_to_deg(theta_2)
-                arc_path_for_edges.append((arc_center, theta_1, theta_2, radius))
-
-            vertices_radius[edge] += vertices_increased_radius[edge]
-
-            polygons_vertices_index.append(vertices_index.copy())
-
-            # line_paths.append(line_path_for_e)
-            # arc_paths.append(arc_path_for_e)
-            line_paths[edge_index] = line_path_for_edges
-            arc_paths[edge_index] = arc_path_for_edges
-
-        return line_paths, arc_paths, polygons_vertices_index
-
-    def _validate(self):
+    def validate(self):
         graph_type_is_correct = isinstance(self.contract.graph, GraphContract)
 
         edge_style_are_valid = self.contract.edge_style in EdgeStyles().values

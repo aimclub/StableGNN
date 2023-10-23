@@ -40,6 +40,10 @@ class Defaults(ReferenceBase):
     calculate_vertex_size_multiplier: float = 1.0
     calculate_vertex_size_divider: float = 10.0
     calculate_vertex_size_modifier: float = 0.1
+    # calc_arrow_head_width
+    arrow_multiplier: float = 0.015
+    # safe_div
+    jitter_scale: float = 0.000001
     # calculate strength
     push_vertex_strength: float = 0.006
     push_edge_strength: float = 0.0
