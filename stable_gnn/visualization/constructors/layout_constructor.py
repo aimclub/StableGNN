@@ -1,8 +1,8 @@
 import numpy as np
 
+from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.contracts.core_model_contract import CoreModelContract
 from stable_gnn.visualization.contracts.layout_contract import LayoutContract
-from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.equations.core_physical_model import CorePhysicalModel
 from stable_gnn.visualization.equations.edge_list_to_incidence_matrix import edge_list_to_incidence_matrix
 from stable_gnn.visualization.equations.init_position import init_position

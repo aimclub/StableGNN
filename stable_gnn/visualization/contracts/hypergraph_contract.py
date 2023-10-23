@@ -5,5 +5,5 @@ from stable_gnn.visualization.contracts.base_graph_contract import BaseGraphCont
 
 @dataclass
 class HypergraphContract(BaseGraphContract):
-    edge_weights: float | list[float] | None = None
     vertex_weight: list[float] | None = None
+    edge_num: int = 0

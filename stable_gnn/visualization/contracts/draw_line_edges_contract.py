@@ -1,5 +1,6 @@
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 from stable_gnn.visualization.contracts.size_constructor_contract import TEdgeList
 

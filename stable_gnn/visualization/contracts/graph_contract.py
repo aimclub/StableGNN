@@ -6,4 +6,3 @@ from stable_gnn.visualization.contracts.base_graph_contract import BaseGraphCont
 @dataclass
 class GraphContract(BaseGraphContract):
     edge_num: int = 0
-    edge_weights: float | list[float] | None = None

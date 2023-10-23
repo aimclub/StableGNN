@@ -45,10 +45,14 @@ class Defaults(ReferenceBase):
     # safe_div
     jitter_scale: float = 0.000001
     # calculate strength
-    push_vertex_strength: float = 0.006
-    push_edge_strength: float = 0.0
-    pull_edge_strength: float = 0.045
-    pull_center_strength: float = 0.01
+    push_vertex_strength_g: float = 0.006
+    push_edge_strength_g: float = 0.0
+    pull_edge_strength_g: float = 0.045
+    pull_center_strength_g: float = 0.01
+    push_vertex_strength_hg: float = 1.0
+    push_edge_strength_hg: float = 1.0
+    pull_edge_strength_hg: float = 1.0
+    pull_center_strength_hg: float = 1.0
     # calculate layout
     layout_scale_initial: int = 5
     vertex_coord_max: float = 5.0
