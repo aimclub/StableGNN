@@ -16,6 +16,8 @@ class HypergraphGenerator:
         self.method = generation_method
         self.probability_k_list = probability_k_list
 
+        self._validate()
+
     def __generate_uniform(self, edge_degree_list: list):
         return [c_log_function(self.vertex_num, k) / (2 ** self.vertex_num - 1) for k in edge_degree_list]
 
