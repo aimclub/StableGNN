@@ -7,7 +7,7 @@ from sklearn.metrics import euclidean_distances
 from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.contracts.core_model_contract import CoreModelContract
 from stable_gnn.visualization.equations.calc_edge_center import calc_edge_center
-from stable_gnn.visualization.equations.safe_div import safe_div
+from stable_gnn.visualization.equations.calc_safe_div import safe_div
 
 
 class CorePhysicalModel:

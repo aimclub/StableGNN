@@ -5,7 +5,7 @@ from stable_gnn.visualization.contracts.core_model_contract import CoreModelCont
 from stable_gnn.visualization.contracts.layout_contract import LayoutContract
 from stable_gnn.visualization.equations.core_physical_model import CorePhysicalModel
 from stable_gnn.visualization.equations.edge_list_to_incidence_matrix import edge_list_to_incidence_matrix
-from stable_gnn.visualization.equations.init_position import init_position
+from stable_gnn.visualization.equations.calc_init_position import init_position
 from stable_gnn.visualization.exceptions.exceptions_classes import ParamsValidationException
 
 

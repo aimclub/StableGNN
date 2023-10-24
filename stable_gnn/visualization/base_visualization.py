@@ -10,11 +10,11 @@ import numpy as np
 
 from stable_gnn.visualization.contracts.draw_circle_edges_contract import DrawEdgesContract
 from stable_gnn.visualization.contracts.draw_vertex_contract import DrawVertexContract
-from stable_gnn.visualization.equations.common_tangent_radian import common_tangent_radian
-from stable_gnn.visualization.equations.polar_position import polar_position
-from stable_gnn.visualization.equations.rad_to_deg import rad_to_deg
+from stable_gnn.visualization.equations.calc_common_tangent_radian import common_tangent_radian
+from stable_gnn.visualization.equations.calc_polar_position import polar_position
+from stable_gnn.visualization.equations.calc_rad_to_deg import rad_to_deg
 from stable_gnn.visualization.equations.radian_from_atan import radian_from_atan
-from stable_gnn.visualization.equations.vector_length import vector_length
+from stable_gnn.visualization.equations.calc_vector_length import vector_length
 from stable_gnn.visualization.config.parameters.defaults import Defaults
 
 
