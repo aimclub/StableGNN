@@ -1,11 +1,11 @@
 from typing import List, Optional, Tuple
 
-import bamt.Networks as Nets
+import bamt.networks as Nets
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from bamt.Preprocessors import Preprocessor
+from bamt.preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch import device
@@ -215,7 +215,7 @@ class ModelGraphClassification(torch.nn.Module):
 
         return data_bamt
 
-    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets.HybridBN:
+    def _bayesian_network_build(self, data_bamt: pd.DataFrame):
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
             data_bamt[col] = data_bamt[col].astype(float)
