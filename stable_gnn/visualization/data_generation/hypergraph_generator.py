@@ -78,11 +78,11 @@ class HypergraphGenerator:
         method_is_valid = self.method in GeneratorMethods().values
 
         if not vertex_num_gt_1 or not edge_num_is_positive or not method_is_valid:
-            raise ParamsValidationException
+            raise ParamsValidationException("Parameters are not valid")
 
     def _validate_custom_generation_method(self):
         prob_k_list_is_not_none = self.probability_k_list is not None
         prob_k_list_len_is_valid = len(self.probability_k_list) == self.vertex_num - 1
 
         if not prob_k_list_is_not_none or not prob_k_list_len_is_valid:
-            raise ParamsValidationException
+            raise ParamsValidationException("Parameters are not valid")

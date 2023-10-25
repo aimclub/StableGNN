@@ -36,4 +36,4 @@ class GraphGenerator:
         numbers_are_proportional = self.edge_num < self.vertex_num * (self.vertex_num - 1) // 2
 
         if not vertex_num_gt_1 or not numbers_are_proportional:
-            raise ParamsValidationException
+            raise ParamsValidationException("Parameters are not valid")

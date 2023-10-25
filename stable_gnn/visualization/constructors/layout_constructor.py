@@ -10,6 +10,9 @@ from stable_gnn.visualization.exceptions.exceptions_classes import ParamsValidat
 
 
 class LayoutConstructor:
+    """
+    Constructor (one action controller) for Graph layout.
+    """
 
     def __call__(self, contract: LayoutContract):
         vertex_coord = init_position(contract.vertex_num, scale=Defaults.layout_scale_initial)
@@ -30,7 +33,14 @@ class LayoutConstructor:
         )
         model: CorePhysicalModel = CorePhysicalModel(core_model_contract)
 
-        vertex_coord = model.build(vertex_coord, edge_list_to_incidence_matrix(contract.vertex_num, contract.edge_list))
+        vertex_coord = model.build(
+            vertex_coord,
+            edge_list_to_incidence_matrix(
+                contract.vertex_num,
+                contract.edge_list
+            )
+        )
+
         vertex_coord = ((vertex_coord - vertex_coord.min(0)) /
                         (vertex_coord.max(0) - vertex_coord.min(0)) *
                         Defaults.vertex_coord_multiplier + Defaults.vertex_coord_modifier)
@@ -43,4 +53,4 @@ class LayoutConstructor:
                     vertex_coord.min() >= Defaults.vertex_coord_min)
 
         if not is_valid:
-            raise ParamsValidationException
+            raise ParamsValidationException("Parameters are not valid")
