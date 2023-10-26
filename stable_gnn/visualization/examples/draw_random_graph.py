@@ -4,16 +4,27 @@ from stable_gnn.visualization.contracts.graph_contract import GraphContract
 from stable_gnn.visualization.contracts.graph_visualization_contract import GraphVisualizationContract
 from stable_gnn.visualization.graph_visualization import GraphVisualizer
 
+from stable_gnn.visualization.data_generation.graph_generator import GraphGenerator
+
+VERTEX_NUM = 1000
+EDGE_NUM = 1200
+
+
+generator = GraphGenerator(vertex_num=VERTEX_NUM, edge_num=EDGE_NUM)
+generated_data = generator()
+
+generated_edge_weights = [1.0 for _ in range(len(generated_data))]
+
 
 graph_contract: GraphContract = GraphContract(
-    vertex_num=10,
+    vertex_num=VERTEX_NUM,
     edge_list=(  # noqa
-        [(0, 7), (2, 7), (4, 9), (3, 7), (1, 8), (5, 7), (2, 3), (4, 5), (5, 6), (4, 8), (6, 9), (4, 7)],
-        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        generated_data,
+        generated_edge_weights
     ),
-    edge_num=12,
+    edge_num=EDGE_NUM,
     edge_weights=tensor(  # noqa
-        [1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]
+        generated_edge_weights * 2
     )
 )
 vis_contract: GraphVisualizationContract = GraphVisualizationContract(graph=graph_contract)
@@ -21,3 +32,5 @@ vis_contract: GraphVisualizationContract = GraphVisualizationContract(graph=grap
 vis: GraphVisualizer = GraphVisualizer(vis_contract)
 fig = vis.draw()
 fig.show()
+
+print("Complete...")
