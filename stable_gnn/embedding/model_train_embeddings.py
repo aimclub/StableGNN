@@ -123,7 +123,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
 
         loss_to_train = {}
         for name in self.loss:
-            if type(self.loss[name]) == list:
+            if isinstance(self.loss[name], list):
                 if len(self.loss[name]) == 3:
                     var = trial.suggest_int(
                         name,
@@ -141,7 +141,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
             else:
                 loss_to_train[name] = self.loss[name]
 
-            if name == "q" and type(self.loss[name]) == list:
+            if name == "q" and isinstance(self.loss[name], list):
                 var_5 = trial.suggest_categorical("p", self.loss["p"])
                 var_4 = trial.suggest_categorical("q", self.loss[name])
                 if var_4 > 1:
