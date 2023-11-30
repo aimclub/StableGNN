@@ -113,8 +113,6 @@ class ModelGraphClassification(torch.nn.Module):
         """
         return F.nll_loss(pred, label)
 
-
-
     @staticmethod
     def convert_dataset(
         data: List[Graph], train_indices: List[int], val_indices: List[int]
@@ -143,8 +141,6 @@ class ModelGraphClassification(torch.nn.Module):
                 test_dataset.append(dat)
 
         return train_dataset, test_dataset, val_dataset, int(n_min)
-
-
 
     @staticmethod
     def self_supervised_loss(deg_pred: Tensor, batch: Batch) -> Tensor:

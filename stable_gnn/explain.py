@@ -14,6 +14,7 @@ from torch.nn import Module
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
+
 class Explain:
     """
     An explainer class for instance-level explanations of Graph Neural Networks. Explanation is Probabilistic Graphical Model in a form of Bayesian network. This Bayesian network estimates the probability that node has the predicted role given a realization of other nodes.
@@ -76,14 +77,12 @@ class Explain:
         features_perturb[target] = perturb_array
         return features_perturb
 
-
-
     def _data_generation(
-        self, target: int=None, num_samples: int = 100, pred_threshold: float = 0.1
+        self, target: int = None, num_samples: int = 100, pred_threshold: float = 0.1
     ) -> Tuple[pd.DataFrame, NDArray]:
-        if target==None:
+        if target == None:
             neighbors = list(range(self.adj_matrix.shape[0]))
-            print('graph classification', neighbors)
+            print("graph classification", neighbors)
         else:
             print("Explaining node: " + str(target))
             n_hops_adj = self._n_hops_adjacency(self.n_hops)
@@ -91,14 +90,13 @@ class Explain:
 
             if target not in neighbors:
                 neighbors = np.append(neighbors, target)
-            print('neighbors', neighbors)
-
+            print("neighbors", neighbors)
 
         features_torch = torch.tensor(self.features.tolist(), dtype=torch.float).squeeze()
         adj_torch = torch.tensor(self.adj_matrix.tolist(), dtype=torch.float).squeeze()
 
         data = Data(x=features_torch, edge_index=adj_torch.nonzero().t().contiguous())
-        if target==None:
+        if target == None:
             loader = DataLoader([data], batch_size=20, shuffle=True)
             for dat in loader:
                 dat = dat.to(self.device)
@@ -108,11 +106,11 @@ class Explain:
                 pred_torch, _ = self.model.forward(batch_x, batch_edge_list, batch)
         else:
             pred_torch = self.model.inference(data.to(self.device))
-        print('pred torch', pred_torch[0].shape)
+        print("pred torch", pred_torch[0].shape)
         soft_pred = np.asarray(
             [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.features.shape[0])]
         )  # TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
-        print('soft torch', soft_pred.shape)
+        print("soft torch", soft_pred.shape)
         samples = []
         pred_samples = []
 
@@ -164,13 +162,13 @@ class Explain:
         return data, neighbors
 
     def _variable_selection(
-        self, target: int=None, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
+        self, target: int = None, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
     ) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
         data, neighbors = self._data_generation(target=target, num_samples=num_samples, pred_threshold=pred_threshold)
         ind_sub_to_ori = dict(
             zip(list(data.columns), neighbors)
         )  # mapping из перечисления 1,...n_neighhbours в индексы самих соседей
-        if target==None:
+        if target == None:
             target = self.data.num_nodes
         data = data.rename(columns={0: "A", 1: "B"})  # Trick to use chi_square test on first two data columns
         ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))  # mapping индексов соседей в простое перечисление
@@ -202,7 +200,7 @@ class Explain:
 
     def structure_learning(
         self,
-        target: int =None,
+        target: int = None,
         top_node: Optional[int] = None,
         num_samples: int = 20,
         pred_threshold: float = 0.1,
@@ -224,7 +222,7 @@ class Explain:
         # единственное место, где кастуем к строкам!
         data.columns = data.columns.astype(str)
         if target == None:
-            target=self.data.num_nodes
+            target = self.data.num_nodes
         target = str(target)
         subnodes = [str(x) for x in subnodes]
         subnodes_no_target = [str(node) for node in subnodes if node != target]

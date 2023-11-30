@@ -274,8 +274,7 @@ class SamplerAPP(BaseSamplerWithNegative):
         len_batch = len(batch)
         mask = torch.tensor([False] * len(self.data.x))
         mask[batch.tolist()] = True
-
-        a, _ = subgraph(batch, self.data.edge_index)
+        a, _ = subgraph(batch, self.data.edge_index.to(self.device))
         row, col = a
         row = row.to(self.device)
         col = col.to(self.device)

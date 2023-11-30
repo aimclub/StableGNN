@@ -12,23 +12,20 @@ from torch.nn import Module
 from stable_gnn.graph import Graph
 
 
-class Extrapolate():
-    def __init__(
-        self,
-        dataset: List[Graph],
-        model: Module
-    ) -> None:
+class Extrapolate:
+    def __init__(self, dataset: List[Graph], model: Module) -> None:
         self.data = dataset
         self.model = model
         super(Extrapolate, self).__init__()
+
     def __call__(
-            self,
-            train_indices: Tensor,
-            val_indices: Tensor,
-            init_edges: bool = False,
-            remove_init_edges: bool = False,
-            white_list: bool = False,
-            score_func: str = "MI",
+        self,
+        train_indices: Tensor,
+        val_indices: Tensor,
+        init_edges: bool = False,
+        remove_init_edges: bool = False,
+        white_list: bool = False,
+        score_func: str = "MI",
     ) -> Tuple[List[Graph], List[Graph], List[Graph]]:
         """
         Adjust dataset so that to increase extrapolation ability
@@ -52,7 +49,9 @@ class Extrapolate():
         else:
             raise Exception("there is no ", self.score_func, "score function. Choose one of: MI, K2")
 
-        train_dataset, test_dataset, val_dataset, n_min = self.model.convert_dataset(self.data, train_indices, val_indices)
+        train_dataset, test_dataset, val_dataset, n_min = self.model.convert_dataset(
+            self.data, train_indices, val_indices
+        )
         self.n_min = n_min
 
         data_bamt = self._data_eigen_exctractor(train_dataset)
@@ -87,7 +86,9 @@ class Extrapolate():
         data_bamt = pd.DataFrame(columns=columns_list + ["y"])
         for gr in dataset:
             adj_matrix = to_dense_adj(gr.edge_index)
-            eig = torch.real(torch.linalg.eig(adj_matrix.reshape(adj_matrix.shape[1], adj_matrix.shape[2]))[0])#.T[0].T
+            eig = torch.real(
+                torch.linalg.eig(adj_matrix.reshape(adj_matrix.shape[1], adj_matrix.shape[2]))[0]
+            )  # .T[0].T
             ordered, indices = torch.sort(eig[: gr.num_nodes], descending=True)
             to_append = pd.Series(ordered[: self.n_min].tolist() + gr.y.tolist(), index=data_bamt.columns)
             data_bamt = data_bamt.append(to_append, ignore_index=True)
@@ -138,7 +139,7 @@ class Extrapolate():
             eigs = torch.linalg.eig(adj.reshape(adj.shape[1], adj.shape[2]))
             eigenvectors = torch.real(eigs[1])
 
-            eig = torch.real(eigs[0])#.T[0].T
+            eig = torch.real(eigs[0])  # .T[0].T
             ordered, indices = torch.sort(eig[: graph.num_nodes], descending=True)
             lef = indices[left_vertices]
             zeroed = torch.tensor(list(set(range(len(eig))) - set(lef.tolist())))

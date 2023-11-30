@@ -35,7 +35,7 @@ class ModelTrainEmbeddings:
 
     def _sampling(self, sampler: BaseSampler, epoch: int, nodes: Tensor) -> None:
         if epoch == 0:
-            self.samples = sampler.sample(nodes)
+            self.samples = sampler.sample(nodes.to(self.device))
 
     def _train(
         self,

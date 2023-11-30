@@ -109,7 +109,7 @@ class ModelNodeClassification(torch.nn.Module):
             x = conv(x, edge_index)
             if i != self.num_layers - 1:
                 x = x.relu()
-        x = self.linear(x)
+        x = self.linear_classifier(x)
         deg_pred = 0
         if self.ssl_flag:
             deg_pred = F.relu(self.linear_degree_predictor(x))

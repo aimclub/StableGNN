@@ -33,7 +33,6 @@ class NegativeSampler:
             other_line += neighbors
         return torch.transpose((torch.tensor([line, other_line])), 0, 1)
 
-
     def negative_sampling(self, batch, num_negative_samples):
         # mask = torch.tensor([False]*len(self.data.x))
         # mask[batch] = True
@@ -48,17 +47,16 @@ class NegativeSampler:
             g[node] = batch
 
         mapping = {}
-        i =0
+        i = 0
         for value in batch:
             if value not in mapping:
                 mapping[value] = i
-                i+=1
-
+                i += 1
 
         for node, neighbors in Adj.items():
-            g[node] = list(set(
-                set(batch) - set(neighbors)
-            )-set([node])) # тут все элементы которые не являются соседними, но при этом входят в батч
+            g[node] = list(
+                set(set(batch) - set(neighbors)) - set([node])
+            )  # тут все элементы которые не являются соседними, но при этом входят в батч
 
         for node, neg_elem in g.items():
             g[node] = self.not_less_than(
@@ -68,6 +66,6 @@ class NegativeSampler:
         g = self.torch_list(g)
         new_neg_samples = []
         for neg_edge in g:
-            neg_edge=neg_edge.tolist()
+            neg_edge = neg_edge.tolist()
             new_neg_samples.append([mapping[neg_edge[0]], mapping[neg_edge[1]]])
         return torch.LongTensor(new_neg_samples)
