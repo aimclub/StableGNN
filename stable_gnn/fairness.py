@@ -32,8 +32,8 @@ class Fair:
         interior_classifier: str = "rf",
         verbose: bool = False,
         multiplier: int = 1,
-        random_state: int = None,
-    ):
+        random_state: int = 32,
+    ) -> Dict[str, Any]:
         """
         Correct fairness and calculate accuracy and fairness values
 
@@ -87,7 +87,7 @@ class Fair:
 
         return ans
 
-    def _ml_model(self, df, random_state, estimator, prefit):
+    def _ml_model(self, df: pd.DataFrame, random_state: int, estimator: BaseEstimator, prefit: bool) -> Dict[str, Any]:
         y = df.drop("target", axis=1)
         x = df["target"]
 
@@ -155,13 +155,13 @@ class Fair:
 
     def _lp_solver(
         self,
-        d,
-        number_iterations=10,
-        classifier=RandomForestClassifier(),
-        verbose=False,
-        multiplier=1,
-        random_state=None,
-    ):
+        d: Dict,
+        number_iterations: int = 10,
+        classifier: BaseEstimator = RandomForestClassifier(),
+        verbose: bool = False,
+        multiplier: int = 1,
+        random_state: int = 32,
+    ) -> Dict[str, Any]:
         one_group = multiplier * d["one_group"]
         zero_group = multiplier * d["zero_group"]
 
@@ -325,7 +325,7 @@ class Fair:
             print("Fitting is finished")
         return ans
 
-    def _predictor(self, solved, d, verbose=False):
+    def _predictor(self, solved: Dict, d: Dict, verbose: bool = False) -> Dict[str, Any]:
         if verbose:
             print("Predicting in process")
         one_predictor_array = solved["one_predictor_array"]
@@ -364,13 +364,14 @@ class Fair:
 
         return ans
 
-    def _cuae(self, y_true, y_pred, sensitive_features) -> Dict[str, Any]:
+    def _cuae(self, y_true: List, y_pred: List, sensitive_features: List) -> Dict[str, Any]:
         """
         Calculate metrics
 
-        y_true - stands for the true label
-        y_pred - a forecast
-        sensitive_features - sensitive attribute
+        :param y_true: (List) True label
+        :param y_pred: (List) Prediction
+        :param sensitive_features: (List) Sensitive attributes
+        :return: (Dict): Dictionary containing metrics for farness calculus
         """
         true = np.array(y_true)
         pred = np.array(y_pred)
@@ -407,7 +408,7 @@ class Fair:
         ans = {"df": df, "diff": total_diff, "ratio": total_ratio, "variation": variation}
         return ans
 
-    def _zeros_ones_to_classes(self, x, length=3):
+    def _zeros_ones_to_classes(self, x: List, length: int = 3):
         n = int(len(x) / length)
         p = []
         for i in range(n):
@@ -415,7 +416,7 @@ class Fair:
             p.append(z.argmax())
         return np.array(p, dtype=int)
 
-    def _answer_creator(self, x, y, grouper):
+    def _answer_creator(self, x: List, y: List, grouper: List):
         x = np.array(x)  # array of 1
         y = np.array(y)  # array of 0
         grouper = np.array(grouper)
