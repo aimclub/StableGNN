@@ -1,15 +1,14 @@
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import linprog
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
 from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 
 class Fair:
@@ -34,7 +33,7 @@ class Fair:
         random_state: int = None,
     ):
         """
-        Main function running fairness correction and calculating accuracy and fairness values
+        Correct fairness and calculate accuracy and fairness values
 
         :param number_iterations: (int) Number of iterations of interior algorithm
         :param prefit: (bool) Flag if passed estimator fitted already or not (default: False)
@@ -91,7 +90,7 @@ class Fair:
         x = df["target"]
 
         y_train, y_test, x_train, x_test = train_test_split(y, x, random_state=random_state)
-        if prefit == False:
+        if prefit is False:
             estimator.fit(y_train, x_train)
         estimator_pred = estimator.predict(y_test)
         accuracy_estimator = accuracy_score(estimator_pred, x_test)
@@ -161,12 +160,8 @@ class Fair:
         multiplier=1,
         random_state=None,
     ):
-        group = multiplier * d["group"]
         one_group = multiplier * d["one_group"]
         zero_group = multiplier * d["zero_group"]
-
-        one_train_probs = d["one_train_probs"]
-        zero_train_probs = d["zero_train_probs"]
 
         bounds = []
         for i in range(3 * one_group + 3 * zero_group):
@@ -193,7 +188,7 @@ class Fair:
         if verbose:
             print("Start fitting")
         for k in range(number_iterations):
-            if random_state == None:
+            if random_state is None:
                 one_sample = d["one_train_probs"].sample(one_group)
                 zero_sample = d["zero_train_probs"].sample(zero_group)
             else:

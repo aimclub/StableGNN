@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
-from stable_gnn.fairness import Fair
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+
+from stable_gnn.fairness import Fair
 
 
 def synthetic_dataset(size=1000, influence=True):
