@@ -365,8 +365,9 @@ class Fair:
         return ans
 
     def _cuae(self, y_true, y_pred, sensitive_features) -> Dict[str, Any]:
-        
         """
+        Calculate metrics
+
         y_true - stands for the true label
         y_pred - a forecast
         sensitive_features - sensitive attribute
@@ -408,11 +409,11 @@ class Fair:
 
     def _zeros_ones_to_classes(self, x, length=3):
         n = int(len(x) / length)
-        l = []
+        p = []
         for i in range(n):
             z = x[i * length : i * length + length]
-            l.append(z.argmax())
-        return np.array(l, dtype=int)
+            p.append(z.argmax())
+        return np.array(p, dtype=int)
 
     def _answer_creator(self, x, y, grouper):
         x = np.array(x)  # array of 1
