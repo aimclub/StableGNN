@@ -1,11 +1,11 @@
 from typing import List, Optional, Tuple
 
-import bamt.networks as Nets
+import bamt.Networks as Nets
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from bamt.preprocessors import Preprocessor
+from bamt.Preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch import device

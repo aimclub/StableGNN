@@ -408,7 +408,7 @@ class Fair:
         ans = {"df": df, "diff": total_diff, "ratio": total_ratio, "variation": variation}
         return ans
 
-    def _zeros_ones_to_classes(self, x: List, length: int = 3):
+    def _zeros_ones_to_classes(self, x: np.array, length: int = 3) -> np.array:
         n = int(len(x) / length)
         p = []
         for i in range(n):
@@ -416,7 +416,7 @@ class Fair:
             p.append(z.argmax())
         return np.array(p, dtype=int)
 
-    def _answer_creator(self, x: List, y: List, grouper: List):
+    def _answer_creator(self, x: List, y: List, grouper: List) -> np.array:
         x = np.array(x)  # array of 1
         y = np.array(y)  # array of 0
         grouper = np.array(grouper)
