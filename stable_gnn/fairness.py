@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import linprog
@@ -362,7 +364,7 @@ class Fair:
 
         return ans
 
-    def _cuae(self, y_true, y_pred, sensitive_features):
+    def _cuae(self, y_true, y_pred, sensitive_features) -> Dict[str, Any]:
         """
         y_true - stands for the true label
         y_pred - a forecast
@@ -406,8 +408,8 @@ class Fair:
     def _zeros_ones_to_classes(self, x, length=3):
         n = int(len(x) / length)
         l = []
-        for i in range(n):
-            z = x[i * length : i * length + length]
+        for o in range(n):
+            z = x[o * length : o * length + length]
             l.append(z.argmax())
         return np.array(l, dtype=int)
 
