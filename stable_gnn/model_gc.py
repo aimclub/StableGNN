@@ -215,7 +215,7 @@ class ModelGraphClassification(torch.nn.Module):
 
         return data_bamt
 
-    def _bayesian_network_build(self, data_bamt: pd.DataFrame):
+    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets.HybridBN:
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
             data_bamt[col] = data_bamt[col].astype(float)
