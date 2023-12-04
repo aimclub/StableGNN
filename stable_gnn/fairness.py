@@ -365,6 +365,7 @@ class Fair:
         return ans
 
     def _cuae(self, y_true, y_pred, sensitive_features) -> Dict[str, Any]:
+        
         """
         y_true - stands for the true label
         y_pred - a forecast
@@ -408,8 +409,8 @@ class Fair:
     def _zeros_ones_to_classes(self, x, length=3):
         n = int(len(x) / length)
         l = []
-        for o in range(n):
-            z = x[o * length : o * length + length]
+        for i in range(n):
+            z = x[i * length : i * length + length]
             l.append(z.argmax())
         return np.array(l, dtype=int)
 
@@ -420,8 +421,8 @@ class Fair:
         ans = []
         x_ind = 0
         y_ind = 0
-        l = len(grouper)
-        for i in range(l):
+        p = len(grouper)
+        for i in range(p):
             if grouper[i] == 0:
                 ans.append(y[y_ind])
                 y_ind += 1
