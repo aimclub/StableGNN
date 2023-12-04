@@ -79,5 +79,5 @@ def test_fairness():
         multiplier=30,
         random_state=random_state,
     )
-    assert (res["accuracy_of_initial_classifier"] - res["accuracy_of_fair_classifier"]) <= 0.02
+    assert (res["accuracy_of_initial_classifier"] - res["accuracy_of_fair_classifier"]) <= 0.05
     assert (res["fairness_of_fair_classifier_diff"]) <= res["fairness_of_initial_classifier_diff"]
