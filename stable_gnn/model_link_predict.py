@@ -1,14 +1,15 @@
 import torch
-from torch import device
 from stable_gnn.graph import Graph
-from stable_gnn.negative_sampling import NegativeSampler
 import random
-from torch_geometric.loader import NeighborSampler
-
+from stable_gnn.embedding import EmbeddingFactory
+from stable_gnn.embedding.sampling.abstract_samplers import BaseSamplerWithNegative
+from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
+from torch_geometric.datasets import Planetoid
+import torch_geometric.transforms as T
 
 class ModelLinkPrediction(torch.nn.Module):
     """
-    Model for Link Prediction task with
+    Model for Link Prediction task with unsupervised embeddings
 
     :param dataset: (Graph): Input Graph
     :param device: (device): Device 'cuda' or 'cpu'
@@ -22,12 +23,12 @@ class ModelLinkPrediction(torch.nn.Module):
     def __init__(
         self,
         dataset: Graph,
-        dataset_name: str,
-        loss: dict,
+            device: torch.device='cuda',
         hidden_layer: int = 64,
         out_layer: int = 32,
         dropout: float = 0.0,
         num_layers: int = 2,
+        loss_name: str = "APP",
         emb_conv_name: str = "SAGE",
     ) -> None:
         super().__init__()
@@ -36,28 +37,20 @@ class ModelLinkPrediction(torch.nn.Module):
         self.out_layer = out_layer
         self.dropout = dropout
         self.size = num_layers
-        self.data = dataset[0]
-        self.dataset_name = dataset_name
+        self.data = dataset
         self.data.edge_index = self.data.edge_index.type(torch.LongTensor)
-        self.loss = loss
         # это для того чтоб тестовые негативные примеры не включали
 
         train_edges, test_edges = self.train_test_edges(self.data)
         self.data.edge_index = torch.LongTensor(train_edges).T
-
-        Sampler = self.loss["Sampler"]
-        self.LossSampler = Sampler(
-            self.datasetname,
-            self.data,
-            device=self.device,
-            mask=torch.BoolTensor([True] * len(self.data.x)),
-            loss_info=self.loss,
-            help_dir="../data_help/",
-        )
-
         self.positive_edges = test_edges
+
         ###вот отюсда доделывать
-        self.neg_samples_test = self.neg_samples(self.positive_edges, self.data)
+        #модифицированный dataset с positive links обрезанными
+
+        self.embeddings = EmbeddingFactory().build_embeddings(
+            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device
+        )
 
     def train_test_edges(self, data):
         all_edges = data.edge_index.T.tolist()
@@ -72,12 +65,31 @@ class ModelLinkPrediction(torch.nn.Module):
         return train_edges, test_edges
 
     def neg_samples(self, positive_edges, data):
-        ns = NegativeSampler(data=data)
-
         num_neg_samples_test = int(len(positive_edges) / len(self.data.x))
         print("first num neg samples test", (num_neg_samples_test))
         num_neg_samples_test = num_neg_samples_test if num_neg_samples_test > 0 else 1
-        neg_edges = ns.negative_sampling(
+        ns = BaseSamplerWithNegative(data=data, device=device, loss_info={'num_negaive_samples': num_neg_samples_test})
+        neg_edges = ns._sample_negative(
             torch.LongTensor(list(range(len(self.data.x)))), num_negative_samples=num_neg_samples_test
         )
         return neg_edges
+
+    def predict(self):
+        emb_norm = torch.nn.functional.normalize(torch.tensor(self.embeddings.detach().cpu()))
+
+        pred_test = []
+        for edge in self.positive_edges:
+            pred_test.append((torch.dot(emb_norm[edge[0]], emb_norm[edge[1]])))
+        # print(torch.sigmoid(torch.dot(emb_norm[edge[0]],emb_norm[edge[1]])))
+        neg_samples = self.neg_samples(self.positive_edges, self.data)
+        for edge in neg_samples:
+            pred_test.append((torch.dot(emb_norm[edge[0]], emb_norm[edge[1]])))
+
+        true_test = [1] * len(self.positive_edges) + [0] * len(neg_samples)
+
+        return roc_auc_score(true_test, pred_test)
+
+if __name__ == "__main__":
+    data = Planetoid(root='/tmp/' + str('name'), name='Citeseer', transform=T.NormalizeFeatures())
+    model = ModelLinkPrediction(data)
+    print(model.predict())
