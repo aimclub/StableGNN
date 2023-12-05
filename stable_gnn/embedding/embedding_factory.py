@@ -15,7 +15,7 @@ class EmbeddingFactory:
     @staticmethod
     def _build_embeddings(loss: Dict[str, Any], data: Graph, conv: str, device: device) -> NDArray:
         optuna_training = OptunaTrainEmbeddings(data=data, conv=conv, device=device, loss_function=loss)
-        best_values = optuna_training.run(number_of_trials=10)
+        best_values = optuna_training.run(number_of_trials=20)
 
         loss_trgt = dict()
         for par in loss:

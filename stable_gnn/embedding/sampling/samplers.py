@@ -21,6 +21,36 @@ from torch_geometric.utils import subgraph
 
 from stable_gnn.embedding.sampling.abstract_samplers import BaseSampler, BaseSamplerWithNegative
 
+class NegativeSampler(BaseSamplerWithNegative):
+    """
+    Sampler for positive and negative edges using random walk based methods
+
+    :param data: (Graph): Input dataset
+    :param device: (device): Either 'cuda' or 'cpu'
+    :param loss_info: (dict): Dict of parameters of unsupervised loss function
+    """
+
+    def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        super().__init__(data, device, loss_info)
+
+    def _neg_sample(self, batch: Tensor) -> Tensor:
+        a, _ = subgraph(batch.tolist(), self.data.edge_index)
+        batch = batch.repeat(self.walks_per_node * self.num_negative_samples)
+        neg_batch = self._sample_negative(batch, num_negative_samples=self.num_negative_samples)
+        return neg_batch
+
+    def negative_sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
+        """
+        Sample positive and negative edges for batch nodes
+
+        :param batch: (Batch): Nodes for positive and negative sampling from them
+        :return: (Tensor, Tensor): positive and negative samples
+        """
+        if not isinstance(batch, torch.Tensor):
+            batch = torch.tensor(batch, dtype=torch.long).to(self.device)
+        return self._neg_sample(batch)
+    def _pos_sample(self, batch: Tensor) -> Tensor:
+        pass
 
 class SamplerRandomWalk(BaseSamplerWithNegative):
     """
