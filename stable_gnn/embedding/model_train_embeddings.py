@@ -76,6 +76,7 @@ class ModelTrainEmbeddings:
         :return: (Tensor): The output embeddings
         """
         hidden_layer = params["hidden_layer"]
+        out_layer = params["out_layer"]
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
@@ -90,7 +91,7 @@ class ModelTrainEmbeddings:
             loss_function=self.loss,
             device=self.device,
             hidden_layer=hidden_layer,
-            out_layer=2,
+            out_layer=out_layer,
             num_layers=size,
             dropout=dropout,
         )
@@ -120,6 +121,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
+        out_layer = trial.suggest_categorical("out_layer", [32, 64, 128])
 
         loss_to_train = {}
         for name in self.loss:
@@ -158,7 +160,7 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
             loss_function=loss_to_train,
             device=self.device,
             hidden_layer=hidden_layer,
-            out_layer=2,
+            out_layer=out_layer,
             num_layers=size,
             dropout=dropout,
         )

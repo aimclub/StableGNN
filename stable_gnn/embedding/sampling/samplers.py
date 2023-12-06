@@ -21,6 +21,7 @@ from torch_geometric.utils import subgraph
 
 from stable_gnn.embedding.sampling.abstract_samplers import BaseSampler, BaseSamplerWithNegative
 
+
 class NegativeSampler(BaseSamplerWithNegative):
     """
     Sampler for positive and negative edges using random walk based methods
@@ -49,8 +50,10 @@ class NegativeSampler(BaseSamplerWithNegative):
         if not isinstance(batch, torch.Tensor):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
         return self._neg_sample(batch)
+
     def _pos_sample(self, batch: Tensor) -> Tensor:
         pass
+
 
 class SamplerRandomWalk(BaseSamplerWithNegative):
     """

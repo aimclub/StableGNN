@@ -99,7 +99,7 @@ class BaseSamplerWithNegative(BaseSampler):
         :param num_negative_samples: (int): number of negative samples for each edge
         :return: (Tensor): Negative samples
         """
-        print('self device',self.device, batch)
+        print("self device", self.device, batch)
         a, _ = subgraph(batch, self.data.edge_index.to(self.device))
         adj = self._adj_list(a)
         g = dict()
