@@ -84,7 +84,6 @@ class GeomGCN(MessagePassing):
             x = (x, x)
         graph_size = max(edge_index[0].max(), edge_index[1].max()) + 1
         deg = degree(edge_index[0], graph_size)
-        print("degree", deg)
         (
             edge_index_s_ur,
             edge_index_s_ul,

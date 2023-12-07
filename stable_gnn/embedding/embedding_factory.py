@@ -13,8 +13,8 @@ class EmbeddingFactory:
     """Producing unsupervised embeddings for a given dataset"""
 
     @staticmethod
-    def _build_embeddings(loss: Dict[str, Any], data: Graph, conv: str, device: device,number_of_trials: int) -> NDArray:
-        optuna_training = OptunaTrainEmbeddings(data=data, conv=conv, device=device, loss_function=loss)
+    def _build_embeddings(loss: Dict[str, Any], data: Graph, conv: str, device: device,number_of_trials: int, tune_out: bool=False) -> NDArray:
+        optuna_training = OptunaTrainEmbeddings(data=data, conv=conv, device=device, loss_function=loss,tune_out=tune_out)
         best_values = optuna_training.run(number_of_trials=number_of_trials)
 
         loss_trgt = dict()
@@ -28,7 +28,7 @@ class EmbeddingFactory:
         if "lmbda" in loss_trgt:
             loss_trgt["lmbda"] = best_values["lmbda"]
 
-        model_training = ModelTrainEmbeddings(data=data, conv=conv, device=device, loss_function=loss_trgt)
+        model_training = ModelTrainEmbeddings(data=data, conv=conv, device=device, loss_function=loss_trgt,tune_out=tune_out)
         out = model_training.run(best_values)
         torch.cuda.empty_cache()
         return out.detach().cpu().numpy()
@@ -77,7 +77,7 @@ class EmbeddingFactory:
         else:
             raise NameError
 
-    def build_embeddings(self, loss_name: str, conv: str, data: Graph, device: device, number_of_trials: int) -> NDArray:
+    def build_embeddings(self, loss_name: str, conv: str, data: Graph, device: device, number_of_trials: int, tune_out: bool=False) -> NDArray:
         """Build embeddings based on passed dataset and settings
 
         :param loss_name: (str): Name of loss function for embedding learning in GeomGCN layer
@@ -85,8 +85,9 @@ class EmbeddingFactory:
         :param data: (Graph): Input Graph
         :param device: (device): Device 'cuda' or 'cpu'
         :param number_of_trials (int): Number of trials for optuna tuning embeddings
+        :param tune_out (bool): Flag if you want tune out layer of embeddings
         :returns: (NDArray) embeddings NumPy array of (N_nodes) x (N_emb_dim)
         """
         loss_params = self._get_emb_settings(loss_name)
-        emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device, number_of_trials=number_of_trials)
+        emb = self._build_embeddings(loss=loss_params, data=data[0], conv=conv, device=device, number_of_trials=number_of_trials, tune_out=tune_out)
         return emb

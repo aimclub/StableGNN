@@ -21,9 +21,10 @@ class ModelTrainEmbeddings:
     :param loss_function: (dict): Dict of parameters of unsupervised loss function
     :param conv: (str): Name of convolution (default:'GCN')
     :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
+    :param tune_out: (bool): Flag if you want tuning out layer or if it 2 for GeomGCN
     """
 
-    def __init__(self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN") -> None:
+    def __init__(self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN", tune_out: bool=False) -> None:
         self.conv = conv
         self.device = device
         self.x = data.x
@@ -31,6 +32,7 @@ class ModelTrainEmbeddings:
         self.data = data.to(device)
         self.train_mask = torch.Tensor([True] * data.num_nodes)
         self.loss = loss_function
+        self.tune_out = tune_out
         super(ModelTrainEmbeddings, self).__init__()
 
     def _sampling(self, sampler: BaseSampler, epoch: int, nodes: Tensor) -> None:
@@ -76,7 +78,10 @@ class ModelTrainEmbeddings:
         :return: (Tensor): The output embeddings
         """
         hidden_layer = params["hidden_layer"]
-        out_layer = params["out_layer"]
+        if self.tune_out:
+            out_layer = params["out_layer"]
+        else:
+            out_layer=2
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
@@ -121,7 +126,10 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
         dropout = trial.suggest_float("dropout", 0.0, 0.5, step=0.1)
         size = trial.suggest_categorical("size of network, number of convs", [1, 2, 3])
         learning_rate = trial.suggest_float("lr", 5e-3, 1e-2)
-        out_layer = trial.suggest_categorical("out_layer", [32, 64, 128])
+        if self.tune_out:
+            out_layer = trial.suggest_categorical("out_layer", [32, 64, 128])
+        else:
+            out_layer = 2
 
         loss_to_train = {}
         for name in self.loss:

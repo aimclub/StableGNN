@@ -46,7 +46,7 @@ class ModelLinkPrediction():
         self.neg_samples_train = self._neg_samples(train_edges, self.data)
 
         self.embeddings = EmbeddingFactory().build_embeddings(
-            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device, number_of_trials=number_of_trials
+            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device, number_of_trials=number_of_trials, tune_out=True
         )
 
     def _train_test_edges(self, data: Graph) -> (List[int], List[int]):
