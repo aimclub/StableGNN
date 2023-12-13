@@ -26,7 +26,6 @@ class ModelLinkPrediction():
 
     def __init__(
         self,
-        dataset: Graph,
         number_of_trials: int,
         device: torch.device = "cuda",
         loss_name: str = "APP",
@@ -34,23 +33,25 @@ class ModelLinkPrediction():
     ) -> None:
         super().__init__()
 
+
+        self.number_of_trials=number_of_trials
+        self.loss_name=loss_name
+        self.emb_conv_name=emb_conv_name
+        self.device = device
+
+
+
+    def train_test_edges(self, dataset: Graph) -> (List[List[int]], List[List[int]],List[List[int]],List[List[int]]):
+        '''
+        Split dataset to train and test and calculate negative samples
+
+        :param dataset: (Graph): Data to split on train, test and negatives
+        :return: (Tuple): Tuple of four lists of train edges, negativу train samples, test and negative test samples edges
+        '''
         self.data = dataset[0]
         self.data.edge_index = self.data.edge_index.type(torch.LongTensor)
-        # это для того чтоб тестовые негативные примеры не включали
 
-        train_edges, test_edges = self._train_test_edges(self.data)
-        self.data.edge_index = torch.LongTensor(train_edges).T
-        self.positive_edges = test_edges
-        self.device = device
-        self.neg_samples_test = self._neg_samples(self.positive_edges, self.data)
-        self.neg_samples_train = self._neg_samples(train_edges, self.data)
-
-        self.embeddings = EmbeddingFactory().build_embeddings(
-            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device, number_of_trials=number_of_trials, tune_out=True
-        )
-
-    def _train_test_edges(self, data: Graph) -> (List[int], List[int]):
-        all_edges = data.edge_index.T.tolist()
+        all_edges = self.data.edge_index.T.tolist()
         train_edges = []
         test_edges = []
         indices_train_edges = random.sample(range(len(all_edges)), int(len(all_edges) * 0.8))
@@ -59,7 +60,11 @@ class ModelLinkPrediction():
                 train_edges.append(edge)
             else:
                 test_edges.append(edge)
-        return train_edges, test_edges
+
+        neg_samples_train =self._neg_samples(train_edges, self.data)
+        neg_samples_test = self._neg_samples(test_edges, self.data)
+        self.data.edge_index = torch.LongTensor(train_edges).T
+        return train_edges, neg_samples_train, test_edges, neg_samples_test
 
     def _neg_samples(self, positive_edges: List[int], data: Graph) -> List[int]:
         num_neg_samples_test = int(len(positive_edges) / len(self.data.x))
@@ -70,44 +75,48 @@ class ModelLinkPrediction():
         )
         return neg_edges
 
-    def train_cl(self) -> BaseEstimator:
+    def train_cl(self, train_edges: List[List[int]], neg_samples_train: List[List[int]]) -> BaseEstimator:
         '''
         Train classifier for link prediction
 
+        :param train_edges: (List): List of existing edges
+        :param neg_samples_train: (List): List of negative samples to train
         :return: (BaseEstimator): Classifier which support fit predict notation
         '''
+        self.embeddings = EmbeddingFactory().build_embeddings(
+            loss_name=self.loss_name, conv=self.emb_conv_name, data=[self.data], device=self.device, number_of_trials=self.number_of_trials,
+            tune_out=True
+        )
+
         emb_norm = torch.nn.functional.normalize(torch.tensor(self.embeddings))
         self.clf = GradientBoostingClassifier(n_estimators=100, learning_rate=0.2, max_depth=5, random_state=0)
         x_pred = []
-        for edge in self.data.edge_index.T:
+        for edge in train_edges:
             x_pred.append(torch.concat((emb_norm[edge[0]], emb_norm[edge[1]])).tolist())
-        for edge in self.neg_samples_train:
+        for edge in neg_samples_train:
             x_pred.append(torch.concat((emb_norm[edge[0]], emb_norm[edge[1]])).tolist())
 
-        true_train = [1] * len(self.data.edge_index.T) + [0] * len(self.neg_samples_train)
+        true_train = [1] * len(train_edges) + [0] * len(neg_samples_train)
         self.clf.fit(x_pred, true_train)
         return self.clf
 
-    def test(self) -> float:
+    def test(self, clf: BaseEstimator, test_edges: List[List[int]], neg_samples_test: List[List[int]] ) -> float:
         '''
         Calculate f1 measure for test edges
-
+        
+        :param: cl (BaseEstimator)
+        :param test_edges: (List): List of existing edges to test on
+        :param neg_samples_test: (List): List of negative samples to test on
         :return: (float): Value of f1 measure
         '''
         emb_norm = torch.nn.functional.normalize(torch.tensor(self.embeddings))
         pred_test = []
-        for edge in self.positive_edges:
+        for edge in test_edges:
             pred_test.append(torch.concat((emb_norm[edge[0]], emb_norm[edge[1]])).tolist())
 
-        for edge in self.neg_samples_test:
+        for edge in neg_samples_test:
             pred_test.append(torch.concat((emb_norm[edge[0]], emb_norm[edge[1]])).tolist())
-        y_pred = self.clf.predict(pred_test)
-        y_true = [1] * len(self.positive_edges) + [0] * len(self.neg_samples_test)
+        y_pred = clf.predict(pred_test)
+        y_true = [1] * len(test_edges) + [0] * len(neg_samples_test)
         return f1_score(y_true, y_pred)
 
-
-if __name__ == "__main__":
-    data = Planetoid(root="/tmp/" + str("name"), name="Citeseer", transform=T.NormalizeFeatures())
-    model = ModelLinkPrediction(data)
-    clf = model.train_cl()
-    print("f1", (model.test()))
