@@ -84,6 +84,7 @@ class ModelGraphClassification(torch.nn.Module):
         :return: (Tensor, Tensor): Predicted probabilities of labels and predicted degrees of graphs
         """
         # 1. Obtain node embeddings
+        x = x.type(torch.FloatTensor).to(self.device)
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
             if i < self.num_layers - 1:
@@ -111,7 +112,7 @@ class ModelGraphClassification(torch.nn.Module):
         :param label: (Tensor): Genuine labels
         :return: (Tensor): Loss
         """
-        return F.nll_loss(pred, label)
+        return F.nll_loss(pred, label)#.type(torch.LongTensor).to(device))
 
     @staticmethod
     def convert_dataset(

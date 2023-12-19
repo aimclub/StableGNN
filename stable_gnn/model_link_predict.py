@@ -78,7 +78,7 @@ class ModelLinkPrediction:
         :param neg_samples_train: (List): List of negative samples to train
         :return: (BaseEstimator): Classifier which support fit predict notation
         """
-        if self.number_of_trials:
+        if self.number_of_trials > 0:
             self.embeddings = EmbeddingFactory().build_embeddings(
                 loss_name=self.loss_name,
                 conv=self.emb_conv_name,
