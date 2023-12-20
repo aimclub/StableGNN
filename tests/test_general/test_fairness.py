@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 
 from stable_gnn.fairness import Fair
 
@@ -71,13 +72,22 @@ def test_fairness():
     y_train, y_test, x_train, x_test = train_test_split(y, x, random_state=random_state)
     cl.fit(y_train, x_train)
     fairness = Fair(dataset, estimator=cl)
-    res = fairness.run(
-        number_iterations=10,
-        prefit=True,
-        interior_classifier="knn",
-        verbose=True,
-        multiplier=30,
-        random_state=random_state,
-    )
-    assert (res["accuracy_of_initial_classifier"] - res["accuracy_of_fair_classifier"]) <= 0.05
-    assert (res["fairness_of_fair_classifier_diff"]) <= res["fairness_of_initial_classifier_diff"]
+    accs_fair = []
+    accs_init = []
+    fairs_fair = []
+    fairs_init = []
+    for _ in range(15):
+        res = fairness.run(
+            number_iterations=10,
+            prefit=True,
+            interior_classifier="knn",
+            verbose=True,
+            multiplier=30,
+            random_state=random_state,
+        )
+        accs_fair.append(res["accuracy_of_fair_classifier"])
+        accs_init.append(res["accuracy_of_initial_classifier"])
+        fairs_fair.append(res["fairness_of_fair_classifier_diff"])
+        fairs_init.append(res["fairness_of_initial_classifier_diff"])
+    assert (np.mean(accs_init) - np.mean(accs_fair)) <= 0.05
+    assert np.mean(fairs_fair) <= np.mean(fairs_init)
