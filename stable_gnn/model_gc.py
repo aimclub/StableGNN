@@ -112,7 +112,7 @@ class ModelGraphClassification(torch.nn.Module):
         :param label: (Tensor): Genuine labels
         :return: (Tensor): Loss
         """
-        return F.nll_loss(pred, label)#.type(torch.LongTensor).to(device))
+        return F.nll_loss(pred, label)  # .type(torch.LongTensor).to(device))
 
     @staticmethod
     def convert_dataset(

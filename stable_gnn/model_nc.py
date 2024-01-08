@@ -1,4 +1,5 @@
 import collections
+import os
 from typing import Tuple
 
 import numpy as np
@@ -12,7 +13,7 @@ from torch_geometric.utils import degree
 from stable_gnn.embedding import EmbeddingFactory
 from stable_gnn.geom_gcn import GeomGCN
 from stable_gnn.graph import Graph
-import os
+
 
 class ModelNodeClassification(torch.nn.Module):
     """
@@ -52,15 +53,14 @@ class ModelNodeClassification(torch.nn.Module):
         if self.ssl_flag:
             self.deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes)
 
-        path = '../tutorials/embeddings_'+str(loss_name)+'_'+str(emb_conv_name)+'.npy'
+        path = "../tutorials/embeddings_" + str(loss_name) + "_" + str(emb_conv_name) + ".npy"
         if os.path.exists(path):
             embeddings = np.load(path)
         else:
-
             embeddings = EmbeddingFactory().build_embeddings(
                 loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device, number_of_trials=50
             )
-            np.save(path,embeddings)
+            np.save(path, embeddings)
 
         if self.num_layers == 1:
             self.convs.append(

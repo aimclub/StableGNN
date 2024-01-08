@@ -6,13 +6,28 @@ import torch
 from bamt.Preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
+from torch.nn import Module
 from torch_geometric.typing import Adj, Tensor
 from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
-from torch.nn import Module
+
 from stable_gnn.graph import Graph
 
 
 class Extrapolate:
+    """
+        An Extrapolate class for both node and graph classification.
+
+        How to build extrapolation:
+
+        ::
+
+            exptrapolation = Extrapolate(dataset=dataset, model=model)
+            (train_dataset, test_dataset, val_dataset,) = Extrapolation(train_indices,val_indices,init_edges,remove_init_edges,white_list,score_func)
+
+        :param dataset: ([Graph]): Dataset of class Graph.
+        :param model: (Module): The model to explain.
+        """
+
     def __init__(self, dataset: List[Graph], model: Module) -> None:
         self.data = dataset
         self.model = model

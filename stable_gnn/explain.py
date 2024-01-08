@@ -120,7 +120,7 @@ class Explain:
                         else:
                             latent = 0
                     else:
-                        latent=0
+                        latent = 0
                     sample.append(latent)
 
                 features_perturb_torch = torch.tensor(features_perturb, dtype=torch.float)
@@ -232,10 +232,10 @@ class Explain:
                 p_values.append(p)
 
             number_candidates = int(top_node * 4)
-            print('number candidates', number_candidates)
-            print('pvalues', p_values)
+            print("number candidates", number_candidates)
+            print("pvalues", p_values)
             candidate_nodes = np.argpartition(p_values, number_candidates)[0:number_candidates]
-            print('candidate_nodes', candidate_nodes)
+            print("candidate_nodes", candidate_nodes)
             #         Round 2
             data, neighbors = self._data_generation(
                 target=None,
@@ -261,16 +261,15 @@ class Explain:
                     dependent_nodes.append(node)
 
             top_p = np.min((top_node, len(self.features) - 1))
-            print('top_p ', top_p)
-            print('pvalues', p_values)
+            print("top_p ", top_p)
+            print("pvalues", p_values)
             ind_top_p = np.argpartition(p_values, top_p)[0:top_p]
             pgm_nodes = list(ind_top_p)
 
             data = data.rename(columns={"A": 0, "B": 1})
             data = data.rename(columns=ind_sub_to_ori)
 
-
-            print('ind_top_p', ind_top_p)
+            print("ind_top_p", ind_top_p)
             return pgm_nodes, data, candidate_nodes
 
         else:
@@ -327,9 +326,9 @@ class Explain:
         :param child: (bool, Optional): If False or None, no-child constraint is applied (default: None)
         :return: (BayesianNetwork): Pgm explanation in Bayesian Net form
         """
-        print('before var selection')
+        print("before var selection")
         subnodes, data, pgm_stats = self._variable_selection(target, top_node, num_samples, pred_threshold)
-        print('after var selection',subnodes)
+        print("after var selection", subnodes)
 
         # единственное место, где кастуем к строкам!
         data.columns = data.columns.astype(str)

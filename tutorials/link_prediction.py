@@ -1,14 +1,14 @@
+import numpy as np
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
 
 from stable_gnn.model_link_predict import ModelLinkPrediction
-import numpy as np
 
 if __name__ == "__main__":
     root = "../tmp/"
     name = "Citeseer"
-    loss_name = 'APP'
-    conv = 'SAGE'
+    loss_name = "APP"
+    conv = "SAGE"
 
     dataset = Planetoid(root=root + str(name), name=name, transform=T.NormalizeFeatures())
     k = []
@@ -22,4 +22,4 @@ if __name__ == "__main__":
         )  # MLPClassifier()#GradientBoostingClassifier(n_estimators=100, learning_rate=0.2, max_depth=5, random_state=0)
 
         k.append(model.test(cl, test_edges, test_negative))
-    print(np.mean(k),np.std(k))
+    print(np.mean(k), np.std(k))

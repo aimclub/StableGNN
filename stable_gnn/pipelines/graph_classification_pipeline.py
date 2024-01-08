@@ -10,6 +10,7 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from torch_geometric.loader import DataLoader
 from torch_geometric.typing import Tensor
+
 from stable_gnn.extrapolate import Extrapolate
 from stable_gnn.graph import Graph
 from stable_gnn.model_gc import ModelGraphClassification as Model_GC

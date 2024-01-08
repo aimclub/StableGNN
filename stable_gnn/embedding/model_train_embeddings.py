@@ -24,7 +24,9 @@ class ModelTrainEmbeddings:
     :param tune_out: (bool): Flag if you want tuning out layer or if it 2 for GeomGCN
     """
 
-    def __init__(self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN", tune_out: bool=False) -> None:
+    def __init__(
+        self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN", tune_out: bool = False
+    ) -> None:
         self.conv = conv
         self.device = device
         self.x = data.x
@@ -81,7 +83,7 @@ class ModelTrainEmbeddings:
         if self.tune_out:
             out_layer = params["out_layer"]
         else:
-            out_layer=2
+            out_layer = 2
         dropout = params["dropout"]
         size = params["size of network, number of convs"]
         learning_rate = params["lr"]
