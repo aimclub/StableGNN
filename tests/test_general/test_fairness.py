@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 
 from stable_gnn.fairness import Fair
 from tests.test_general.bar_pass_data_preparing import prepare_data
+
 
 def synthetic_dataset(size=1000, influence=True):
     """
