@@ -15,18 +15,18 @@ from stable_gnn.graph import Graph
 
 class Extrapolate:
     """
-        An Extrapolate class for both node and graph classification.
+    An Extrapolate class for both node and graph classification.
 
-        How to build extrapolation:
+    How to build extrapolation:
 
-        ::
+    ::
 
-            exptrapolation = Extrapolate(dataset=dataset, model=model)
-            (train_dataset, test_dataset, val_dataset,) = Extrapolation(train_indices,val_indices,init_edges,remove_init_edges,white_list,score_func)
+        exptrapolation = Extrapolate(dataset=dataset, model=model)
+        (train_dataset, test_dataset, val_dataset,) = Extrapolation(train_indices,val_indices,init_edges,remove_init_edges,white_list,score_func)
 
-        :param dataset: ([Graph]): Dataset of class Graph.
-        :param model: (Module): The model to explain.
-        """
+    :param dataset: ([Graph]): Dataset of class Graph.
+    :param model: (Module): The model to explain.
+    """
 
     def __init__(self, dataset: List[Graph], model: Module) -> None:
         self.data = dataset
