@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import torch
 from sklearn.base import BaseEstimator
@@ -38,7 +38,7 @@ class ModelLinkPrediction:
 
     def train_test_edges(
         self, dataset: Graph
-    ) -> Tuple[List[List[int]], List[List[int]], List[List[int]], List[List[int]]]:
+    ) -> Tuple[List[Any], List[int], List[Any], List[int]]:
         """
         Split dataset to train and test and calculate negative samples
 
