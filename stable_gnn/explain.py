@@ -78,7 +78,11 @@ class Explain:
         return features_perturb
 
     def _data_generation(
-        self, target: Optional[int] = None, index_to_perturb: Optional[list] = None, num_samples: int = 100, pred_threshold: float = 0.1
+        self,
+        target: Optional[int] = None,
+        index_to_perturb: Optional[list] = None,
+        num_samples: int = 100,
+        pred_threshold: float = 0.1,
     ) -> Tuple[pd.DataFrame, NDArray]:
         if target is None:
             neighbors = list(range(self.adj_matrix.shape[0]))
@@ -206,7 +210,11 @@ class Explain:
             return data, neighbors
 
     def _variable_selection(
-        self, target: Optional[int] = None, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
+        self,
+        target: Optional[int] = None,
+        top_node: Optional[int] = None,
+        num_samples: int = 100,
+        pred_threshold: float = 0.1,
     ) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
         if target is None:
             data, neighbors = self._data_generation(
