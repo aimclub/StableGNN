@@ -112,7 +112,7 @@ class TrainModelGC(TrainModel):
 
             y_true_list = y_true.cpu().tolist()
             y_pred_list = y_pred.squeeze().tolist()
-            if type(y_pred_list) != list:
+            if not isinstance(y_pred_list, list):
                 y_pred_list = [y_pred_list]
             accs_micro.append(f1_score(y_true_list, y_pred_list, average="micro"))
             accs_macro.append(f1_score(y_true_list, y_pred_list, average="macro"))
