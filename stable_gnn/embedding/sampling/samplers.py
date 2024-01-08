@@ -36,7 +36,7 @@ class NegativeSampler(BaseSamplerWithNegative):
 
     def _neg_sample(self, batch: Tensor) -> Tensor:
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
-        batch = batch.repeat(self.walks_per_node * self.num_negative_samples)
+        batch = batch.repeat(self.num_negative_samples)
         neg_batch = self._sample_negative(batch, num_negative_samples=self.num_negative_samples)
         return neg_batch
 

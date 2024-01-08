@@ -78,7 +78,7 @@ class Explain:
         return features_perturb
 
     def _data_generation(
-        self, target: int = None, index_to_perturb: list = None, num_samples: int = 100, pred_threshold: float = 0.1
+        self, target: Optional[int] = None, index_to_perturb: Optional[list] = None, num_samples: int = 100, pred_threshold: float = 0.1
     ) -> Tuple[pd.DataFrame, NDArray]:
         if target is None:
             neighbors = list(range(self.adj_matrix.shape[0]))
@@ -206,7 +206,7 @@ class Explain:
             return data, neighbors
 
     def _variable_selection(
-        self, target: int = None, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
+        self, target: Optional[int] = None, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
     ) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
         if target is None:
             data, neighbors = self._data_generation(
@@ -299,7 +299,7 @@ class Explain:
             if top_node is None:
                 pgm_nodes = dependent_neighbors
             else:
-                top_p: int = np.min((top_node, len(neighbors) - 1))
+                top_p = np.min((top_node, len(neighbors) - 1))
                 ind_top_p = np.argpartition(p_values, top_p)[0:top_p]
                 pgm_nodes = [str(int(ind_sub_to_ori[node])) for node in ind_top_p]
 
@@ -310,7 +310,7 @@ class Explain:
 
     def structure_learning(
         self,
-        target: int = None,
+        target: Optional[int] = None,
         top_node: Optional[int] = None,
         num_samples: int = 20,
         pred_threshold: float = 0.1,

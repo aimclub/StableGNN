@@ -162,7 +162,7 @@ class ModelGraphClassification(torch.nn.Module):
 
         return data_bamt
 
-    def _bayesian_network_build(self, data_bamt: pd.DataFrame):
+    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets:
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
             data_bamt[col] = data_bamt[col].astype(float)
@@ -180,13 +180,11 @@ class ModelGraphClassification(torch.nn.Module):
 
         if self.init_edges:
             params["init_edges"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(
-                # type: ignore
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 
         if self.white_list:
             params["white_list"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(
-                # type: ignore
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 

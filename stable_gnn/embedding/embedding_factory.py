@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import torch
 from numpy.typing import NDArray
@@ -84,7 +84,7 @@ class EmbeddingFactory:
             raise NameError
 
     def build_embeddings(
-        self, loss_name: str, conv: str, data: Graph, device: device, number_of_trials: int, tune_out: bool = False
+        self, loss_name: str, conv: str, data: List[Graph], device: device, number_of_trials: int, tune_out: bool = False
     ) -> NDArray:
         """Build embeddings based on passed dataset and settings
 
