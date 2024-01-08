@@ -6,6 +6,8 @@ from stable_gnn.fairness import Fair
 
 
 def print_results(res):
+    """This function prints results of fairness improvement algorithm."""
+
     accuracy_absolute_loss = res["accuracy_of_initial_classifier"] - res["accuracy_of_fair_classifier"]
     accuracy_percentage_loss = accuracy_absolute_loss / res["accuracy_of_initial_classifier"] * 100
     fairness_absolute_improvement = res["fairness_of_initial_classifier_diff"] - res["fairness_of_fair_classifier_diff"]
@@ -32,6 +34,8 @@ increased on {fairness_percentage_improvement:0.4f}%. "
 
 
 def run(name, init_cl):
+    """Run experiment."""
+
     initial_classifier = init_cl
     if name == "LOAN":
         loan = pd.read_csv("loan_cleaned.csv")
