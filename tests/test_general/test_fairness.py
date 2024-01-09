@@ -65,9 +65,7 @@ def test_fairness():
     dataset = prepare_data()
     cl = LGBMClassifier(verbose=-1)
     fairness = Fair(dataset, estimator=cl)
-    res = fairness.run(number_iterations=20,
-                       interior_classifier='knn',
-                       multiplier=50)
+    res = fairness.run(number_iterations=20, interior_classifier="knn", multiplier=50)
 
     assert res["accuracy_of_initial_classifier"] - res["accuracy_of_fair_classifier"] <= 0.5
     assert res["fairness_of_fair_classifier_diff"] <= res["fairness_of_initial_classifier_diff"]

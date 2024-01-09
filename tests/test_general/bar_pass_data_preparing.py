@@ -21,9 +21,28 @@ def grouper_gpa(x):
 def prepare_data(name="bar_pass_prediction"):
     if name == "bar_pass_prediction":
         d = pd.read_csv("bar_pass_prediction.csv")
-        for x in ["ID", "race1", "race2", "sex", "bar", "dnn_bar_pass_prediction", "pass_bar", "indxgrp2",
-                  "gender", "grad", "Dropout", "fulltime", "lsat", "zfygpa", "ugpa", "zgpa", "other", "asian",
-                  "black", "hisp"]:
+        for x in [
+            "ID",
+            "race1",
+            "race2",
+            "sex",
+            "bar",
+            "dnn_bar_pass_prediction",
+            "pass_bar",
+            "indxgrp2",
+            "gender",
+            "grad",
+            "Dropout",
+            "fulltime",
+            "lsat",
+            "zfygpa",
+            "ugpa",
+            "zgpa",
+            "other",
+            "asian",
+            "black",
+            "hisp"
+        ]:
             del d[x]
 
         d["gpa"] = d["gpa"].apply(grouper_gpa)
