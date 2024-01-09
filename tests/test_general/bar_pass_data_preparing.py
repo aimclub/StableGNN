@@ -41,7 +41,7 @@ def prepare_data(name="bar_pass_prediction"):
             "other",
             "asian",
             "black",
-            "hisp"
+            "hisp",
         ]:
             del d[x]
 
