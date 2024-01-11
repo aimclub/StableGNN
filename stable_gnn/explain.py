@@ -12,6 +12,7 @@ from pgmpy.models import BayesianNetwork
 from scipy.special import softmax
 from torch.nn import Module
 from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 
 
 class Explain:
@@ -77,114 +78,247 @@ class Explain:
         return features_perturb
 
     def _data_generation(
-        self, target: int, num_samples: int = 100, pred_threshold: float = 0.1
+        self,
+        target: Optional[int] = None,
+        index_to_perturb: Optional[list] = None,
+        num_samples: int = 100,
+        pred_threshold: float = 0.1,
     ) -> Tuple[pd.DataFrame, NDArray]:
-        print("Explaining node: " + str(target))
-        n_hops_adj = self._n_hops_adjacency(self.n_hops)
-        target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(n_hops_adj, target)
+        if target is None:
+            neighbors = list(range(self.adj_matrix.shape[0]))
+        else:
+            print("Explaining node: " + str(target))
+            n_hops_adj = self._n_hops_adjacency(self.n_hops)
+            target_new, sub_adj_matrix, sub_features, neighbors = self._extract_n_hops_neighbors(n_hops_adj, target)
 
-        if target not in neighbors:
-            neighbors = np.append(neighbors, target)
+            if target not in neighbors:
+                neighbors = np.append(neighbors, target)
+            print("neighbors", neighbors)
 
         features_torch = torch.tensor(self.features.tolist(), dtype=torch.float).squeeze()
         adj_torch = torch.tensor(self.adj_matrix.tolist(), dtype=torch.float).squeeze()
 
         data = Data(x=features_torch, edge_index=adj_torch.nonzero().t().contiguous())
+        if target is None:
+            loader = DataLoader([data], batch_size=256, shuffle=True)
+            for dat in loader:
+                dat = dat.to(self.device)
+                batch_edge_list = dat.edge_index
+                batch_x = dat.x
+                batch = dat.batch
+                pred_torch, _ = self.model.forward(batch_x, batch_edge_list, batch)
 
-        pred_torch = self.model.inference(data.to(self.device))
+                soft_pred = np.asarray(softmax(np.asarray(pred_torch.cpu().data)))
+            pred_label = np.argmax(soft_pred)
+            num_nodes = self.features.shape[0]
+            samples = []
+            for iteration in range(num_samples):
+                features_perturb = self.features.copy()
+                sample = []
+                for node in range(num_nodes):
+                    if node in index_to_perturb:
+                        seed = np.random.randint(100)
+                        if seed < 50:
+                            latent = 1
+                            features_perturb = self._perturb_features_on_node(features_perturb, node, use_random=latent)
+                        else:
+                            latent = 0
+                    else:
+                        latent = 0
+                    sample.append(latent)
 
-        soft_pred = np.asarray(
-            [softmax(np.asarray(pred_torch[0].cpu()[node_].data)) for node_ in range(self.features.shape[0])]
-        )  # TODO кажется это двойная работа по софтмаксу и ниже еще такая строчка есть
+                features_perturb_torch = torch.tensor(features_perturb, dtype=torch.float)
 
-        samples = []
-        pred_samples = []
+                pred_perturb_torch, _ = self.model.forward(
+                    features_perturb_torch.to(self.device), batch_edge_list, batch
+                )
 
-        for iteration in range(num_samples):
-            features_perturb = self.features.copy()
-            sample = []
-            for node in neighbors:
-                random.seed(150)
-                seed = np.random.randint(2)
-                if seed == 1:
-                    latent = 1
-                    features_perturb = self._perturb_features_on_node(features_perturb, node, use_random=seed)
+                soft_pred_perturb = np.asarray(softmax(np.asarray(pred_perturb_torch.cpu().data)))
+                pred_change = np.max(soft_pred) - soft_pred_perturb[0][pred_label]
+
+                sample.append(pred_change)
+                samples.append(sample)
+
+            samples = np.asarray(samples)
+            samples = np.abs(samples)
+
+            top = int(num_samples / 8)
+            top_idx = np.argsort(samples[:, num_nodes])[-top:]
+            for i in range(num_samples):
+                if i in top_idx:
+                    samples[i, num_nodes] = 1
                 else:
-                    latent = 0
-                sample.append(latent)
+                    samples[i, num_nodes] = 0
+            data = pd.DataFrame(samples)
+            return data, list(range(num_nodes))
 
-            features_perturb_torch = torch.tensor(features_perturb.tolist(), dtype=torch.float).squeeze()
-            a_torch = torch.tensor([self.adj_matrix.tolist()], dtype=torch.float).squeeze()
-            data_perturb = Data(x=features_perturb_torch, edge_index=a_torch.nonzero().t().contiguous())
-
-            pred_perturb_torch = self.model.inference(data_perturb.to(self.device))
-
-            soft_pred_perturb = np.asarray(
-                [
-                    softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data))
-                    for node_ in range(self.features.shape[0])
-                ]
+        else:
+            pred_torch, _ = self.model.inference(data.to(self.device))
+            soft_pred = np.asarray(
+                [softmax(np.asarray(pred_torch.cpu()[node_].data)) for node_ in range(self.features.shape[0])]
             )
 
-            sample_bool = []
-            for node in neighbors:
-                if (soft_pred_perturb[node, np.argmax(soft_pred[node])] + pred_threshold) < np.max(soft_pred[node]):
-                    sample_bool.append(1)
-                else:
-                    sample_bool.append(0)
+            samples = []
+            pred_samples = []
 
-            samples.append(sample)
-            pred_samples.append(sample_bool)
+            for iteration in range(num_samples):
+                features_perturb = self.features.copy()
+                sample = []
+                for node in neighbors:
+                    random.seed(150)
+                    seed = np.random.randint(2)
+                    if seed == 1:
+                        latent = 1
+                        features_perturb = self._perturb_features_on_node(features_perturb, node, use_random=seed)
+                    else:
+                        latent = 0
 
-        samples_arr = np.asarray(samples)
-        pred_samples_arr = np.asarray(pred_samples)
-        combine_samples = samples_arr - samples
-        for s in range(samples_arr.shape[0]):
-            combine_samples[s] = np.asarray(
-                [samples_arr[s, i] * 10 + pred_samples_arr[s, i] + 1 for i in range(samples_arr.shape[1])]
-            )
+                    sample.append(latent)
 
-        data = pd.DataFrame(combine_samples)
-        return data, neighbors
+                features_perturb_torch = torch.tensor(features_perturb.tolist(), dtype=torch.float).squeeze()
+                a_torch = torch.tensor([self.adj_matrix.tolist()], dtype=torch.float).squeeze()
+                data_perturb = Data(x=features_perturb_torch, edge_index=a_torch.nonzero().t().contiguous())
+
+                pred_perturb_torch = self.model.inference(data_perturb.to(self.device))
+
+                soft_pred_perturb = np.asarray(
+                    [
+                        softmax(np.asarray(pred_perturb_torch[0].cpu()[node_].data))
+                        for node_ in range(self.features.shape[0])
+                    ]
+                )
+
+                sample_bool = []
+                for node in neighbors:
+                    if (soft_pred_perturb[node, np.argmax(soft_pred[node])] + pred_threshold) < np.max(soft_pred[node]):
+                        sample_bool.append(1)
+                    else:
+                        sample_bool.append(0)
+
+                samples.append(sample)
+                pred_samples.append(sample_bool)
+
+            samples_arr = np.asarray(samples)
+            pred_samples_arr = np.asarray(pred_samples)
+            combine_samples = samples_arr - samples
+            for s in range(samples_arr.shape[0]):
+                combine_samples[s] = np.asarray(
+                    [samples_arr[s, i] * 10 + pred_samples_arr[s, i] + 1 for i in range(samples_arr.shape[1])]
+                )
+
+            data = pd.DataFrame(combine_samples)
+            return data, neighbors
 
     def _variable_selection(
-        self, target: int, top_node: Optional[int] = None, num_samples: int = 100, pred_threshold: float = 0.1
+        self,
+        target: Optional[int] = None,
+        top_node: Optional[int] = None,
+        num_samples: int = 100,
+        pred_threshold: float = 0.1,
     ) -> Tuple[List[int], pd.DataFrame, Dict[int, float]]:
-        data, neighbors = self._data_generation(target=target, num_samples=num_samples, pred_threshold=pred_threshold)
-        ind_sub_to_ori = dict(
-            zip(list(data.columns), neighbors)
-        )  # mapping из перечисления 1,...n_neighhbours в индексы самих соседей
-        data = data.rename(columns={0: "A", 1: "B"})  # Trick to use chi_square test on first two data columns
-        ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))  # mapping индексов соседей в простое перечисление
+        if target is None:
+            data, neighbors = self._data_generation(
+                target=target,
+                num_samples=int(num_samples / 2),
+                index_to_perturb=list(range(len(self.features))),
+                pred_threshold=pred_threshold,
+            )
+            ind_sub_to_ori = dict(
+                zip(list(data.columns), neighbors)
+            )  # mapping из перечисления 1,...n_neighhbours в индексы самих соседей
+            data = data.rename(columns={0: "A", 1: "B"})
+            ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))  # mapping индексов соседей в простое перечисление
 
-        p_values = []
-        dependent_neighbors = []
-        dependent_neighbors_p_values = []
+            target = len(self.features)
+            if top_node is None:
+                top_node = int(target / 20)
 
-        for node in neighbors:
-            if node != target:
+            p_values = []
+            target = len(self.features) - 1  # The entry for the graph classification data is at "num_nodes"
+            for node in range(len(self.features)):
+                chi2, p, _ = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[target], [], data, boolean=False)
+                p_values.append(p)
+
+            number_candidates = int(top_node * 4)
+            print("number candidates", number_candidates)
+            print("pvalues", p_values)
+            candidate_nodes = np.argpartition(p_values, number_candidates)[0:number_candidates]
+            print("candidate_nodes", candidate_nodes)
+            #         Round 2
+            data, neighbors = self._data_generation(
+                target=None,
+                num_samples=num_samples,
+                index_to_perturb=candidate_nodes,
+                pred_threshold=pred_threshold,
+            )
+
+            ind_sub_to_ori = dict(
+                zip(list(data.columns), neighbors)
+            )  # mapping из перечисления 1,...n_neighhbours в индексы самих соседей
+            data = data.rename(columns={0: "A", 1: "B"})
+            ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))  # mapping индексов соседей в простое перечисление
+
+            p_values = []
+            dependent_nodes = []
+
+            target = len(self.features) - 1
+            for node in range(len(self.features)):
                 chi2, p, _ = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[target], [], data, boolean=False)
                 p_values.append(p)
                 if p < 0.05:
-                    dependent_neighbors.append(node)
-                    dependent_neighbors_p_values.append(p)
-        pgm_stats = dict(zip(neighbors, p_values))
+                    dependent_nodes.append(node)
 
-        if top_node is None:
-            pgm_nodes = dependent_neighbors
-        else:
-            top_p: int = np.min((top_node, len(neighbors) - 1))
+            top_p = np.min((top_node, len(self.features) - 1))
+            print("top_p ", top_p)
+            print("pvalues", p_values)
             ind_top_p = np.argpartition(p_values, top_p)[0:top_p]
-            pgm_nodes = [str(int(ind_sub_to_ori[node])) for node in ind_top_p]
+            pgm_nodes = list(ind_top_p)
 
-        data = data.rename(columns={"A": 0, "B": 1})
-        data = data.rename(columns=ind_sub_to_ori)
+            data = data.rename(columns={"A": 0, "B": 1})
+            data = data.rename(columns=ind_sub_to_ori)
 
-        return pgm_nodes, data, pgm_stats
+            print("ind_top_p", ind_top_p)
+            return pgm_nodes, data, candidate_nodes
+
+        else:
+            data, neighbors = self._data_generation(
+                target=target, num_samples=num_samples, pred_threshold=pred_threshold
+            )
+            ind_sub_to_ori = dict(
+                zip(list(data.columns), neighbors)
+            )  # mapping из перечисления 1,...n_neighhbours в индексы самих соседей
+
+            data = data.rename(columns={0: "A", 1: "B"})  # Trick to use chi_square test on first two data columns
+            ind_ori_to_sub = dict(zip(neighbors, list(data.columns)))  # mapping индексов соседей в простое перечисление
+
+            p_values = []
+            dependent_neighbors = []
+            dependent_neighbors_p_values = []
+
+            for node in neighbors:
+                if node != target:
+                    chi2, p, _ = chi_square(ind_ori_to_sub[node], ind_ori_to_sub[target], [], data, boolean=False)
+                    p_values.append(p)
+                    if p < 0.05:
+                        dependent_neighbors.append(node)
+                        dependent_neighbors_p_values.append(p)
+            pgm_stats = dict(zip(neighbors, p_values))
+
+            if top_node is None:
+                pgm_nodes = dependent_neighbors
+            else:
+                top_p = np.min((top_node, len(neighbors) - 1))
+                ind_top_p = np.argpartition(p_values, top_p)[0:top_p]
+                pgm_nodes = [str(int(ind_sub_to_ori[node])) for node in ind_top_p]
+
+            data = data.rename(columns={"A": 0, "B": 1})
+            data = data.rename(columns=ind_sub_to_ori)
+
+            return pgm_nodes, data, pgm_stats
 
     def structure_learning(
         self,
-        target: int,
+        target: Optional[int] = None,
         top_node: Optional[int] = None,
         num_samples: int = 20,
         pred_threshold: float = 0.1,
@@ -200,16 +334,20 @@ class Explain:
         :param child: (bool, Optional): If False or None, no-child constraint is applied (default: None)
         :return: (BayesianNetwork): Pgm explanation in Bayesian Net form
         """
+        print("before var selection")
         subnodes, data, pgm_stats = self._variable_selection(target, top_node, num_samples, pred_threshold)
+        print("after var selection", subnodes)
 
         # единственное место, где кастуем к строкам!
         data.columns = data.columns.astype(str)
+        if target is None:
+            target = len(self.features)
         target = str(target)
         subnodes = [str(x) for x in subnodes]
         subnodes_no_target = [str(node) for node in subnodes if node != target]
 
-        mk_blanket = self._search_m_k(data, target, subnodes_no_target.copy())
         if child is None:
+            mk_blanket = self._search_m_k(data, target, subnodes_no_target.copy())
             est = HillClimbSearch(data[subnodes_no_target])
             pgm_no_target = est.estimate(scoring_method=BicScore(data))
             print("estimation", pgm_no_target.nodes(), pgm_no_target.edges())

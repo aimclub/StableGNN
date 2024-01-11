@@ -1,4 +1,5 @@
 import collections
+import os
 from typing import Tuple
 
 import numpy as np
@@ -52,9 +53,14 @@ class ModelNodeClassification(torch.nn.Module):
         if self.ssl_flag:
             self.deg = degree(self.data[0].edge_index[0], self.data[0].num_nodes)
 
-        embeddings = EmbeddingFactory().build_embeddings(
-            loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device
-        )
+        path = "../tutorials/embeddings_" + str(loss_name) + "_" + str(emb_conv_name) + ".npy"
+        if os.path.exists(path):
+            embeddings = np.load(path)
+        else:
+            embeddings = EmbeddingFactory().build_embeddings(
+                loss_name=loss_name, conv=emb_conv_name, data=dataset, device=device, number_of_trials=50
+            )
+            np.save(path, embeddings)
 
         if self.num_layers == 1:
             self.convs.append(
@@ -110,6 +116,7 @@ class ModelNodeClassification(torch.nn.Module):
             if i != self.num_layers - 1:
                 x = x.relu()
         x = self.linear(x)
+        x = self.linear_classifier(x)
         deg_pred = 0
         if self.ssl_flag:
             deg_pred = F.relu(self.linear_degree_predictor(x))
