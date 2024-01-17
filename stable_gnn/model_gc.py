@@ -1,11 +1,11 @@
 from typing import List, Optional, Tuple
 
-import bamt.Networks as Nets
+import bamt.networks as Nets
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from bamt.Preprocessors import Preprocessor
+from bamt.preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch import device
@@ -84,6 +84,7 @@ class ModelGraphClassification(torch.nn.Module):
         :return: (Tensor, Tensor): Predicted probabilities of labels and predicted degrees of graphs
         """
         # 1. Obtain node embeddings
+        x = x.type(torch.FloatTensor).to(self.device)
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
             if i < self.num_layers - 1:
@@ -111,60 +112,7 @@ class ModelGraphClassification(torch.nn.Module):
         :param label: (Tensor): Genuine labels
         :return: (Tensor): Loss
         """
-        return F.nll_loss(pred, label)
-
-    def extrapolate(
-        self,
-        train_indices: Tensor,
-        val_indices: Tensor,
-        init_edges: bool = False,
-        remove_init_edges: bool = False,
-        white_list: bool = False,
-        score_func: str = "MI",
-    ) -> Tuple[List[Graph], List[Graph], List[Graph]]:
-        """
-        Adjust dataset so that to increase extrapolation ability
-
-        :param train_indices: ([int]): List of train indices
-        :param val_indices: ([int]): List of validation indices
-        :param init_edges: (bool): If True, there would be a list of init edges as start for Learning structure of Bayesian Net(default:'False')
-        :param remove_init_edges: If True, it is possible that edges from init_list would be removed during the structure learning of Bayesian Net(default:'False')
-        :param white_list: If True, edges inBayesian Net would be only from this white list (default:'False')
-        :param score_func: (str): Name of score function to optimize, either 'MI' or 'K2' (default:'MI')
-        :return: ([Graph], [Graph], [Graph]): Lists of train, test and validation graphs
-        """
-        self.init_edges = init_edges
-        self.remove_init_edges = remove_init_edges
-        self.white_list = white_list
-        self.score_func = score_func
-        if score_func == "K2":
-            self.score = K2Score
-        elif score_func == "MI":
-            self.score = None
-        else:
-            raise Exception("there is no ", self.score_func, "score function. Choose one of: MI, K2")
-
-        train_dataset, test_dataset, val_dataset, n_min = self.convert_dataset(self.data, train_indices, val_indices)
-        self.n_min = n_min
-
-        data_bamt = self._data_eigen_exctractor(train_dataset)
-        bn = self._bayesian_network_build(data_bamt)
-        lis = list(
-            map(lambda x: self._func(x), bn.edges)
-        )  # мы берем только те веришны, которые исходят из y или входят в у
-        left_vertices = sorted([x for x in lis if x is not None])
-        left_edges = list(filter(lambda x: x[0] == "y" or x[1] == "y", bn.edges))
-        left_edges = sorted(left_edges, key=lambda x: int(x[0][5:] if x[1] == "y" else int(x[1][5:])))
-        ll = list(map(lambda x: bn.weights[tuple(x)], left_edges))
-        len_of_remaining_nodes = len(
-            ll
-        )  # TODO подумать: мб тут было бы логичнее взять N = число переменных из которых строилась bn
-        weights_preprocessed = list(map(lambda x: x * len_of_remaining_nodes / sum(ll), ll))
-        train_dataset = self._convolve(train_dataset, weights_preprocessed, left_vertices)
-        val_dataset = self._convolve(val_dataset, weights_preprocessed, left_vertices)
-        test_dataset = self._convolve(test_dataset, weights_preprocessed, left_vertices)
-
-        return train_dataset, test_dataset, val_dataset
+        return F.nll_loss(pred, label)  # .type(torch.LongTensor).to(device))
 
     @staticmethod
     def convert_dataset(
@@ -195,7 +143,6 @@ class ModelGraphClassification(torch.nn.Module):
 
         return train_dataset, test_dataset, val_dataset, int(n_min)
 
-    @staticmethod
     def _func(x: List[str]) -> Optional[int]:
         if x[1] == "y" and len(x[0]) > 1:
             return int(x[0][5:])
@@ -215,7 +162,7 @@ class ModelGraphClassification(torch.nn.Module):
 
         return data_bamt
 
-    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets.HybridBN:
+    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets:
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
             data_bamt[col] = data_bamt[col].astype(float)
@@ -232,12 +179,12 @@ class ModelGraphClassification(torch.nn.Module):
         params["remove_init_edges"] = self.remove_init_edges
 
         if self.init_edges:
-            params["init_edges"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(  # type: ignore
+            params["init_edges"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 
         if self.white_list:
-            params["white_list"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(  # type: ignore
+            params["white_list"] = list(map(lambda x: ("eigen" + str(x), "y"), list(range(self.n_min)))) + list(
                 map(lambda x: ("y", "eigen" + str(x)), list(range(self.n_min)))
             )
 
