@@ -96,7 +96,7 @@ class BaseSamplerWithNegative(BaseSampler):
         Sample negative edges for batch of nodes
 
         :param batch: (Batch): Nodes for negative sampling
-        :param num_negative_samples: (int): number of negative samples for each edge
+        :param num_negative_samples: (int): Number of negative samples for each edge
         :return: (Tensor): Negative samples
         """
         a, _ = subgraph(batch, self.data.edge_index.to(self.device))
