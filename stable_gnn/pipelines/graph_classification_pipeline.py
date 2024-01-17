@@ -11,6 +11,7 @@ from torch.optim import Optimizer
 from torch_geometric.loader import DataLoader
 from torch_geometric.typing import Tensor
 
+from stable_gnn.extrapolate import Extrapolate
 from stable_gnn.graph import Graph
 from stable_gnn.model_gc import ModelGraphClassification as Model_GC
 from stable_gnn.pipelines.abstract_pipeline import TrainModel
@@ -111,7 +112,7 @@ class TrainModelGC(TrainModel):
 
             y_true_list = y_true.cpu().tolist()
             y_pred_list = y_pred.squeeze().tolist()
-            if type(y_pred_list) != list:
+            if not isinstance(y_pred_list, list):
                 y_pred_list = [y_pred_list]
             accs_micro.append(f1_score(y_true_list, y_pred_list, average="micro"))
             accs_macro.append(f1_score(y_true_list, y_pred_list, average="macro"))
@@ -145,6 +146,7 @@ class TrainModelGC(TrainModel):
         model.to(self.device)
 
         if self.extrapolate_flag:
+            Extrapolation = Extrapolate(model=model, dataset=self.data)
             init_edges = False
             remove_init_edges = False
             white_list = False
@@ -153,7 +155,7 @@ class TrainModelGC(TrainModel):
                 self.train_dataset,
                 self.test_dataset,
                 self.val_dataset,
-            ) = model.extrapolate(
+            ) = Extrapolation(
                 self.train_indices,
                 self.val_indices,
                 init_edges,
@@ -218,6 +220,7 @@ class TrainModelOptunaGC(TrainModelGC):
         )
 
         if self.extrapolate_flag:
+            Extrapolation = Extrapolate(model=model, dataset=self.data)
             init_edges = False
             remove_init_edges = False
             white_list = False
@@ -226,7 +229,7 @@ class TrainModelOptunaGC(TrainModelGC):
                 self.train_dataset,
                 self.test_dataset,
                 self.val_dataset,
-            ) = model.extrapolate(
+            ) = Extrapolation(
                 self.train_indices,
                 self.val_indices,
                 init_edges,
