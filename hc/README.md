@@ -46,7 +46,7 @@ print("Кластеры:", labels)
 ```python
 from hypergraph_clustering.clustering.auto_clustering import AutoClusterHypergraphClustering
 
-clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=5, scoring="silhouette")
+clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=4, scoring="silhouette")
 labels = clustering.fit(adjacency_matrix)
 
 print("Кластеры:", labels)
