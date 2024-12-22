@@ -41,37 +41,85 @@ class BaseNet(torch.nn.Module, ABC):
         self.convs = torch.nn.ModuleList()
         self.reset_parameters()
 
+        # New additions for node and edge types
+        self.node_type_embeddings = None  # Placeholder for node type embeddings
+        self.edge_type_weights = None  # Placeholder for edge type weights
+
     def reset_parameters(self) -> None:
         """Reset parameters"""
         for conv in self.convs:
             conv.reset_parameters()
 
-    def forward(self, x: Tensor, adjs: EdgeIndex) -> Tensor:
-        """Find representations of the node
+    def set_node_types(self, node_types: Tensor, embedding_dim: int) -> None:
+        """Set embeddings for node types
+
+        :param node_types: (Tensor): Tensor of node types
+        :param embedding_dim: (int): Dimensionality of embeddings for node types
+        """
+        num_node_types = int(node_types.max().item() + 1)
+        self.node_type_embeddings = torch.nn.Embedding(num_node_types, embedding_dim).to(self.device)
+
+    def set_edge_types(self, edge_types: Tensor) -> None:
+        """Set weights for edge types
+
+        :param edge_types: (Tensor): Tensor of edge types
+        """
+        num_edge_types = int(edge_types.max().item() + 1)
+        self.edge_type_weights = torch.nn.Parameter(torch.ones(num_edge_types, device=self.device))
+
+    def forward(self, x: Tensor, adjs: EdgeIndex, node_types: Tensor = None, edge_types: Tensor = None) -> Tensor:
+        """Find representations of the node with support for different types of nodes and edges.
 
         :param x: (Tensor): Features of nodes
         :param adjs: (EdgeIndex): Edge indices of computational graph for each layer
+        :param node_types: (Tensor): Types of nodes (optional)
+        :param edge_types: (Tensor): Types of edges (optional)
         :return: (Tensor): Representations of nodes
         """
         for i, (edge_index, _, size) in enumerate(adjs):
             x_target = x[: size[1]]  # Target nodes are always placed first.
-            x = self.convs[i]((x, x_target), edge_index)
+
+            # Apply node type embeddings if available
+            if node_types is not None and self.node_type_embeddings is not None:
+                node_type_emb = self.node_type_embeddings(node_types[: size[1]])
+                x_target = x_target + node_type_emb
+
+            # Apply edge type weights if available
+            edge_weight = None
+            if edge_types is not None and self.edge_type_weights is not None:
+                edge_weight = self.edge_type_weights[edge_types]
+
+            x = self.convs[i]((x, x_target), edge_index, edge_weight=edge_weight)
+
             if i != self.num_layers - 1:
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
         return x
 
-    def inference(self, data: Graph, dp: float = 0) -> Tensor:
+    def inference(self, data: Graph, dp: float = 0, node_types: Tensor = None, edge_types: Tensor = None) -> Tensor:
         """Count representations of the node
 
         :param data: (Graph): Input data
         :param dp: (float): Dropout (default:0.0)
+        :param node_types: (Tensor): Types of nodes (optional)
+        :param edge_types: (Tensor): Types of edges (optional)
         :return: (Tensor): Representations of nodes
         """
         x, edge_index = data.x, data.edge_index
 
         for i, conv in enumerate(self.convs):
-            x = conv(x, edge_index)
+            # Apply node type embeddings if available
+            if node_types is not None and self.node_type_embeddings is not None:
+                node_type_emb = self.node_type_embeddings(node_types)
+                x = x + node_type_emb
+
+            # Apply edge type weights if available
+            edge_weight = None
+            if edge_types is not None and self.edge_type_weights is not None:
+                edge_weight = self.edge_type_weights[edge_types]
+
+            x = conv(x, edge_index, edge_weight=edge_weight)
+
             if i != self.num_layers - 1:
                 x = x.relu()
                 x = F.dropout(x, p=dp, training=self.training)

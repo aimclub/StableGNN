@@ -1,6 +1,7 @@
 data_validation
 .DS_Store
 /venv/
+/local_check/
 /.idea/
 /.git/
 /docker-compose.yml
