@@ -147,5 +147,5 @@ class FineTuneClient(BaseFineTuneClient):
             shutil.copytree(model_dir, save_path, dirs_exist_ok=True)
             return True
         except Exception as e:
-            print(f"Ошибка при сохранении тонко настроенной модели: {e}")
+            print(f"Fine tuned model save error: {e}")
             return False
