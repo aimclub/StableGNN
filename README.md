@@ -63,6 +63,8 @@ StableGNN состоит из четырех основных частей:
 * ModelNodeClassification: предсказание меток вершин (задача классификации вершин) в дисассортативных графах с возможностью добавления самостоятельного обучения
 * ModelGraphClassification: пердсказание меток графов (задача классификации графов) с высокой экстраполирующей способностью и с возможностью добавления самостоятельного обучения
 * Explain: объяснение предсказания меток вершин
+* GraphBuilder: генерация графов с использованием языковых моделей Large Language Models (LLM)
+* HypergraphBuilder: генерация гиперграфов с использованием языковых моделей Large Language Models (LLM)
 
 Graph состоит из следующих элементов: 
 * num_nodes - число вершин в вашем графе
@@ -151,6 +153,109 @@ pgm_explanation = explainer.structure_learning(34)
 assert len(pgm_explanation.nodes) >= 2
 assert len(pgm_explanation.edges) >= 1
 print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
+```
+
+**Graph Generator** — это инструмент для автоматической генерации графов и гиперграфов из текстовых данных с использованием современных больших языковых моделей (LLM). Проект позволяет анализировать текст, выделять ключевые сущности и их взаимосвязи, представляя их в виде структурированных графовых данных. Это может быть полезно для различных областей, включая анализ текста, обработку естественного языка, исследование социальных сетей и многое другое.
+
+Основные компоненты проекта:
+
+- **LLMClient**: Клиент для взаимодействия с языковой моделью через API Ollama.
+- **FineTuneClient**: Клиент для тонкой настройки моделей с использованием библиотеки Transformers.
+- **DataProcessor**: Инструменты для предварительной обработки текстовых данных.
+- **Тесты**: Набор модульных тестов для обеспечения корректной работы всех компонентов.
+
+Перед установкой убедитесь, что у вас установлены следующие компоненты:
+
+- **Python**: Версия 3.10 или выше.
+- **pip**: Менеджер пакетов для Python.
+- Аппаратные требования:
+
+    - GPU NVIDIA H100: Для выполнения инференса и тонкой настройки моделей требуется доступ к GPU NVIDIA H100, обеспечивающему высокую производительность и эффективность обработки.
+    - CUDA: Убедитесь, что на вашем устройстве установлены совместимые версии CUDA и драйверов NVIDIA для работы с GPU H100.
+
+#### Генерация графа из текста
+
+```python
+from graph_generator.core.llm_client import LLMClient
+from graph_generator.core.data_processor import DataProcessor
+
+# Инициализация клиента
+data_processor = DataProcessor()
+llm_client = LLMClient(model="mistral:7b", data_processor=data_processor)
+
+# Входной текст
+text = "Алексей встретился с Иваном в парке. Они поехали на концерт, а потом встретили Анну."
+
+# Генерация графа
+graph_description = llm_client.generate_graph_description(text)
+print(graph_description)
+```
+
+**Ожидаемый вывод:**
+
+```json
+{
+    "Алексей": ["Иван", "Анна"],
+    "Иван": ["Алексей", "Анна"],
+    "Анна": ["Иван", "Алексей"]
+}
+```
+
+#### Генерация гиперграфа из текста
+
+```python
+from graph_generator.core.llm_client import LLMClient
+from graph_generator.core.data_processor import DataProcessor
+
+# Инициализация клиента
+data_processor = DataProcessor()
+llm_client = LLMClient(model="mistral:7b", data_processor=data_processor)
+
+# Входной текст
+text = "Алексей, Иван и Анна поехали на концерт, а после этого все встретились в кафе."
+
+# Генерация гиперграфа
+hypergraph_description = llm_client.generate_hypergraph_description(text)
+print(hypergraph_description)
+```
+
+**Ожидаемый вывод:**
+
+```json
+{
+    "hyperedge_1": ["Алексей", "Иван", "Анна"]
+}
+```
+
+### Пример 1: Кластеризация гиперграфа с заданным количеством кластеров
+```python
+from hypergraph_clustering.utils.graph_conversion import hypergraph_to_incidence_matrix, incidence_to_adjacency
+from hypergraph_clustering.clustering.agglomerative import AgglomerativeHypergraphClustering
+
+# Пример гиперграфа
+hyperedges = [[0, 1, 2], [1, 2, 3], [3, 4]]
+
+# Преобразуем гиперграф в матрицы
+incidence_matrix = hypergraph_to_incidence_matrix(hyperedges)
+adjacency_matrix = incidence_to_adjacency(incidence_matrix)
+
+# Кластеризация
+clustering = AgglomerativeHypergraphClustering(n_clusters=2)
+labels = clustering.fit(adjacency_matrix)
+
+print("Кластеры:", labels)
+```
+
+### Пример 2: Автоматический выбор количества кластеров
+```python
+from hypergraph_clustering.clustering.auto_clustering import AutoClusterHypergraphClustering
+
+clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=5, scoring="silhouette")
+labels = clustering.fit(adjacency_matrix)
+
+print("Кластеры:", labels)
+print("Лучшее количество кластеров:", clustering.best_n_clusters)
+print("Оценка:", clustering.best_score)
 ```
 
 ## Обзор Архитектуры 

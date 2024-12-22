@@ -63,6 +63,8 @@ It consists of three modules:
 * Graph: reading input data and learning graph structure
 * Model: predicting over nodes for disassortative graphs with high extrapolating ability 
 * Explain: explanation of models results
+* GraphBuilder: generating graphs using Large Language Models (LLMs)
+* HypergraphBuilder: generate hypergraphs using Large Language Models (LLM)
 
 Graph consists of 
 * y - list of labels of all nodes in Graphs; dimension is (1,num_nodes)
@@ -70,8 +72,6 @@ Graph consists of
 * x - attributes of dimension (num_nodes,d)
 * d - dimension of attributes
 * edge_index - edge list: (2,m) where m is the number of edges
-
-
 
 
 ## Quick Tour for New Users
@@ -154,6 +154,110 @@ assert len(pgm_explanation.nodes) >= 2
 assert len(pgm_explanation.edges) >= 1
 print("explanations is", pgm_explanation.nodes, pgm_explanation.edges)
 ```
+
+**Graph Generator** is a tool for automatic generation of graphs and hypergraphs from text data using modern large language models (LLM). The project allows you to analyze text, highlight key entities and their relationships, presenting them as structured graph data. This can be useful for a variety of fields including text analysis, natural language processing, social network research, and more besides.
+
+The main components of the project are:
+
+- **LLMClient**: A client for interacting with the language model via the Ollama API.
+- **FineTuneClient**: Client for fine tuning models using the Transformers library.
+- **DataProcessor**: Tools for pre-processing textual data.
+- **Tests**: A set of unit tests to ensure that all components work correctly.
+
+Before installing, make sure you have the following components installed:
+
+- **Python**: Version 3.10 or higher.
+- **pip**: Package manager for Python.
+- Hardware requirements:
+
+    - NVIDIA H100 GPU: Performing inference and fine-tuning models requires access to an NVIDIA H100 GPU for high performance and efficient processing.
+    - CUDA: Make sure you have compatible versions of CUDA and NVIDIA drivers installed on your device to work with the H100 GPU.
+
+#### Generating a graph from text
+
+``python
+from graph_generator.core.llm_client import LLMClient
+from graph_generator.core.data_processor import DataProcessor
+
+# Client initialization
+data_processor = DataProcessor()
+llm_client = LLMClient(model=“mistral:7b”, data_processor=data_processor)
+
+# Input text
+text = “Alexei met Ivan in the park. They went to a concert and then met Anna.”
+
+# Graph generation
+graph_description = llm_client.generate_graph_description(text)
+print(graph_description)
+```
+
+**Expected output:**
+
+``` ``json
+{
+    { “Alexei”: [“Ivan”, “Anna”,]
+    “Ivan": [“Alexei”, “Anna”],
+    { “Anna”: [“Ivan”, “Alexei”]
+}
+```
+
+#### Generating a hypergraph from text
+
+`` ``python
+from graph_generator.core.llm_client import LLMClient
+from graph_generator.core.data_processor import DataProcessor
+
+# Client initialization
+data_processor = DataProcessor()
+llm_client = LLMClient(model=“mistral:7b”, data_processor=data_processor)
+
+# Input text
+text = “Alexei, Ivan and Anna went to a concert, and afterwards they all met at a cafe.”
+
+# Hypergraph generation
+hypergraph_description = llm_client.generate_hypergraph_description(text)
+print(hypergraph_description)
+```
+
+**Expected output:**
+
+`` ```json
+{
+    }, “hyperedge_1”: [ “Alexei”, “Ivan”, “Anna”.]
+}
+```
+
+### Example 1: Hypergraph clustering with manual cluster number definition
+```python
+from hypergraph_clustering.utils.graph_conversion import hypergraph_to_incidence_matrix, incidence_to_adjacency
+from hypergraph_clustering.clustering.agglomerative import AgglomerativeHypergraphClustering
+
+# Пример гиперграфа
+hyperedges = [[0, 1, 2], [1, 2, 3], [3, 4]]
+
+# Преобразуем гиперграф в матрицы
+incidence_matrix = hypergraph_to_incidence_matrix(hyperedges)
+adjacency_matrix = incidence_to_adjacency(incidence_matrix)
+
+# Кластеризация
+clustering = AgglomerativeHypergraphClustering(n_clusters=2)
+labels = clustering.fit(adjacency_matrix)
+
+print("Clusters:", labels)
+```
+
+### Example 2: Automatic clustering number definition
+```python
+from hypergraph_clustering.clustering.auto_clustering import AutoClusterHypergraphClustering
+
+clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=5, scoring="silhouette")
+labels = clustering.fit(adjacency_matrix)
+
+print("Clusters:", labels)
+print("Best cluster number:", clustering.best_n_clusters)
+print("Scoring:", clustering.best_score)
+```
+
 
 ## Architecture Overview
 StableGNN is the framework of Graph Neural Network solutions that provide increase of stability to noise data and increase the accuracy for out-of-distribution data. It consists of three parts:
