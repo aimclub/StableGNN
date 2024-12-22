@@ -271,6 +271,22 @@ StableGNN is the framework of Graph Neural Network solutions that provide increa
 </p>
 
 
+## Algorithm modificatrion
+
+<p align="center">
+  <img src="./docs/modify_algo_eng.png" width="800px">
+</p>
+
+The modified algorithm for autonomous learning of explainable graph neural networks Graph Learning Network (GLN) has been extended with two new modules - graph generation and agglomerative clustering. These modules have significantly extended the capabilities of the algorithm by adding support for working with synthetic data and improving the interpretation of graph analysis results. They are seamlessly integrated into the algorithm structure, providing new tools for data preprocessing and analyzing complex graph structures.
+
+The graph generation module is designed to generate test data in the form of GH-graphs that include dissimilar vertices, links and support fuzzy weights. This module allows you to specify graph parameters such as number of nodes, types of links and degree of sparsity, and generate graphs from textual descriptions using Ollama. The generation of synthetic data facilitates the testing of the algorithm and allows the simulation of scenarios that are difficult to reproduce on real data. The module is located in the stable_gnn/generation folder and serves as the main tool for preparing data for testing and training.
+
+The agglomerative clustering module adds the ability to analyze graph structures by extracting clusters of nodes and subgraphs. This tool is adapted to work with GH graphs, taking into account their specific features such as data heterogeneity and fuzzy weights. It helps to identify hidden patterns in the structure of graphs, improving the interpretability of the model and generating new features for training. The module is located in the stable_gnn/clustering folder and is integrated into the training and data analysis process.
+
+In addition, changes were made to existing algorithm files. In abstract_model.py, support for heterogeneous data has been added to accommodate the diversity of nodes and links in GH-graphs. In convs_factory.py, convolution operations have been refined so that they can handle graphs with fuzzy weights. In model_link_predict.py and model_nc.py files, the processing of fuzzy weights has been implemented and GH-graph-specific metrics have been introduced. Also, a new file gh_graph_utils.py was added, which contains functions for calculating key characteristics of graphs, such as eccentricity, radius and centrality, as well as for preparing data for clustering.
+
+These modifications have significantly extended the capabilities of the GLN algorithm, improving its ability to handle heterogeneous and complex graph structures. The new modules and refinements provide more flexible data handling, improve the accuracy of analysis, and enhance the interpretation of results, making the algorithm a powerful tool for graph analysis and explainability tasks.
+
 ## Contribution
 To contribute this library, the current [code and documentation convention](wiki/Development.md) should be followed.
 Project run linters and tests on each pull request, to install linters and testing-packages locally, run 
