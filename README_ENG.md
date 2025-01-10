@@ -76,8 +76,8 @@ Graph consists of
 
 ## Quick Tour for New Users
 First of all you need to save your raw data into folder 
-```
-data_validation/dataset_name/raw
+```bash
+mkdir -p data_validation/dataset_name/raw
 ```
 The data folder must contain two or three files if your task is Node Classification and N*2 files if your task is Graph Classification: 
 

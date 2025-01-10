@@ -12,6 +12,7 @@
 Библиотека использует возможности `scikit-learn` и `scipy` для вычислений.
 
 ---
+Убедитесь, что вы находитесь в директории в `.../StableGNN/hc/`
 
 ## Установка
 1. Установите зависимости и проект:
@@ -45,8 +46,19 @@ print("Кластеры:", labels)
 ### Пример 2: Автоматический выбор количества кластеров
 ```python
 from hypergraph_clustering.clustering.auto_clustering import AutoClusterHypergraphClustering
+import numpy as np
 
-clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=5, scoring="silhouette")
+# Пример графа
+adjacency_matrix = np.array([
+    [0, 1, 1, 0],
+    [1, 0, 1, 0],
+    [1, 1, 0, 1],
+    [0, 0, 1, 0]
+])
+
+
+lm = len(adjacency_matrix) - 1
+clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=lm, scoring="silhouette")
 labels = clustering.fit(adjacency_matrix)
 
 print("Кластеры:", labels)

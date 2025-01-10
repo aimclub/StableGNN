@@ -1,4 +1,9 @@
 from setuptools import setup, find_packages
+from typing import Dict
+
+version: Dict[str, str] = {}
+with open("requirements.txt", "r") as f:
+    requirements = [x for x in f.read().splitlines() if "#" not in x]
 
 setup(
     name="hypergraph_clustering",
@@ -6,10 +11,5 @@ setup(
     description="Модуль для агломеративной кластеризации гиперграфов",
     author="nosignalx2k",
     packages=find_packages(),
-    install_requires=[
-        "numpy",
-        "scikit-learn",
-        "networkx",
-        "matplotlib"
-    ],
+    install_requires=requirements,
 )
