@@ -56,7 +56,6 @@ adjacency_matrix = np.array([
     [0, 0, 1, 0]
 ])
 
-
 lm = len(adjacency_matrix) - 1
 clustering = AutoClusterHypergraphClustering(linkage="average", max_clusters=lm, scoring="silhouette")
 labels = clustering.fit(adjacency_matrix)
