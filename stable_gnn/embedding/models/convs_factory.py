@@ -1,4 +1,5 @@
 import torch
+from torch import Tensor
 from torch_geometric.nn import GATConv, GCNConv, SAGEConv, MessagePassing
 
 class ConvolutionsFactory:
@@ -108,11 +109,11 @@ class CustomConv(MessagePassing):
         self.lin = torch.nn.Linear(in_channels, out_channels)
         self.fuzzy_activation = torch.nn.Sigmoid()
 
-    def forward(self, x: Tensor, edge_index: EdgeIndex, edge_weight: Tensor = None) -> Tensor:
+    def forward(self, x: Tensor, edge_index: Tensor, edge_weight: Tensor = None) -> Tensor:
         """Forward pass of CustomConv
 
         :param x: (Tensor): Node features
-        :param edge_index: (EdgeIndex): Edge indices
+        :param edge_index: (Tensor): Edge indices
         :param edge_weight: (Tensor): Edge weights (optional)
         :return: (Tensor): Updated node features
         """

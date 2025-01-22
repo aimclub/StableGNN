@@ -1,9 +1,9 @@
 from typing import List, Optional, Tuple
 
-import bamt.Networks as Nets
+from bamt.networks.hybrid_bn import HybridBN
 import pandas as pd
 import torch
-from bamt.Preprocessors import Preprocessor
+from bamt.preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch.nn import Module
@@ -106,17 +106,18 @@ class Extrapolate:
             )  # .T[0].T
             ordered, indices = torch.sort(eig[: gr.num_nodes], descending=True)
             to_append = pd.Series(ordered[: self.n_min].tolist() + gr.y.tolist(), index=data_bamt.columns)
-            data_bamt = data_bamt.append(to_append, ignore_index=True)
+            data_bamt = pd.concat([data_bamt, to_append.to_frame().T], ignore_index=True)
+
 
         return data_bamt
 
-    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> Nets.HybridBN:
+    def _bayesian_network_build(self, data_bamt: pd.DataFrame) -> HybridBN:
         # поиск весов для bamt
         for col in data_bamt.columns[: len(data_bamt.columns)]:
             data_bamt[col] = data_bamt[col].astype(float)
         data_bamt["y"] = data_bamt["y"].astype(int)
 
-        bn = Nets.HybridBN(has_logit=True)
+        bn = HybridBN(has_logit=True)
         discretizer = preprocessing.KBinsDiscretizer(n_bins=10, encode="ordinal", strategy="quantile")
         p = Preprocessor([("discretizer", discretizer)])
         discretized_data, est = p.apply(data_bamt)

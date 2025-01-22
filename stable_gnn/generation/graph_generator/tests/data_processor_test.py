@@ -1,5 +1,5 @@
 import pytest
-from graph_generator.core.data_processor import DataProcessor
+from stable_gnn.generation.graph_generator.core.data_processor import DataProcessor
 
 @pytest.fixture
 def data_processor():

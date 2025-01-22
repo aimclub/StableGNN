@@ -9,8 +9,8 @@ from transformers import (
     TrainingArguments,
 )
 from datasets import load_dataset, Dataset
-from graph_generator.core.base_fine_tune_client import BaseFineTuneClient
-from graph_generator.core.data_processor import DataProcessor
+from stable_gnn.generation.graph_generator.core.base_fine_tune_client import BaseFineTuneClient
+from stable_gnn.generation.graph_generator.core.data_processor import DataProcessor
 
 
 class FineTuneClient(BaseFineTuneClient):
@@ -147,5 +147,5 @@ class FineTuneClient(BaseFineTuneClient):
             shutil.copytree(model_dir, save_path, dirs_exist_ok=True)
             return True
         except Exception as e:
-            print(f"Fine tuned model save error: {e}")
+            print(f"Ошибка при сохранении тонко настроенной модели: {e}")
             return False

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from graph_generator.core.fine_tune_client import FineTuneClient
-from graph_generator.core.data_processor import DataProcessor
+from stable_gnn.generation.core.fine_tune_client import FineTuneClient
+from stable_gnn.generation.graph_generator.core.data_processor import DataProcessor
 from datasets import Dataset
 import json
 import os

@@ -1,6 +1,7 @@
 data_validation
 .DS_Store
 /venv/
+/localgost/
 /local_check/
 /.idea/
 /.git/

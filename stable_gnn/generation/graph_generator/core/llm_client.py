@@ -2,7 +2,7 @@ import ollama
 import json
 import time
 import logging
-from graph_generator.core.data_processor import DataProcessor
+from stable_gnn.generation.graph_generator.core.data_processor import DataProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,20 @@ class LLMClient:
                         {"role": "user", "content": text}
                     ]
                 )
-                content = response.get('message', {}).get('content', '{}')
+                
+                # Логирование ответа
+                logger.info(f"Ответ от Ollama: {response}")
+                
+                # Проверка, что ответ не пустой
+                if not response or 'message' not in response or 'content' not in response['message']:
+                    raise ValueError("Ответ от Ollama пустой или не содержит нужных данных.")
+                
+                content = response['message']['content']
+                
+                # Проверка на пустой контент
+                if not content.strip():
+                    raise ValueError("Ответ от Ollama пустой (отсутствует контент).")
+                
                 graph_description = json.loads(content)
                 
                 # Проверка, что ответ — словарь

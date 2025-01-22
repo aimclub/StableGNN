@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
 import networkx as nx
-from graph_generator.core.hypergraph_builder import HypergraphBuilder
+from stable_gnn.generation.graph_generator.core.hypergraph_builder import HypergraphBuilder
 
 @pytest.fixture
 def llm_client_mock():

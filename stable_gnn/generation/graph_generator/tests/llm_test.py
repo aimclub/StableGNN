@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import json
-from graph_generator.core.llm_client import LLMClient
+from stable_gnn.generation.graph_generator.core.llm_client import LLMClient
 
 @pytest.fixture
 def llm_client():

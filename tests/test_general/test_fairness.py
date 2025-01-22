@@ -5,7 +5,6 @@ from lightgbm import LGBMClassifier
 from stable_gnn.fairness import Fair
 from tests.test_general.bar_pass_data_preparing import prepare_data
 
-
 def synthetic_dataset(size=1000, influence=True):
     """
     param: size (int) Number of observations
@@ -41,7 +40,6 @@ def synthetic_dataset(size=1000, influence=True):
 
     return synthetic_df
 
-
 def simple_splitter(arr):
     arr_unchanged = arr.copy()
     arr = np.sort(np.array(arr))
@@ -59,7 +57,6 @@ def simple_splitter(arr):
             result.append(2)
 
     return np.array(result)
-
 
 def test_fairness():
     dataset = prepare_data()

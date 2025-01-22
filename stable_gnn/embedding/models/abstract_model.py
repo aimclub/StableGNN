@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 import torch.nn.functional as F
 from torch import device
+import torch_geometric
 from torch_geometric.loader.neighbor_sampler import EdgeIndex
 from torch_geometric.typing import Tensor
 
@@ -10,7 +11,7 @@ from stable_gnn.graph import Graph
 
 
 class BaseNet(torch.nn.Module, ABC):
-    """The model for learning latent embeddings in unsupervised manner for Geom-GCN layer
+    """The model for learning latent embeddings in an unsupervised manner for Geom-GCN layer
 
     :param device: (device): Either 'cuda' or 'cpu'
     :param hidden_layer: (int): The size of hidden layer (default:64)
@@ -68,33 +69,34 @@ class BaseNet(torch.nn.Module, ABC):
         self.edge_type_weights = torch.nn.Parameter(torch.ones(num_edge_types, device=self.device))
 
     def forward(self, x: Tensor, adjs: EdgeIndex, node_types: Tensor = None, edge_types: Tensor = None) -> Tensor:
-        """Find representations of the node with support for different types of nodes and edges.
-
-        :param x: (Tensor): Features of nodes
-        :param adjs: (EdgeIndex): Edge indices of computational graph for each layer
-        :param node_types: (Tensor): Types of nodes (optional)
-        :param edge_types: (Tensor): Types of edges (optional)
-        :return: (Tensor): Representations of nodes
-        """
         for i, (edge_index, _, size) in enumerate(adjs):
-            x_target = x[: size[1]]  # Target nodes are always placed first.
+            # Проверка на пустые данные
+            if x.size(0) == 0 or edge_index.size(1) == 0:
+                print(f"Skipping layer {i} due to empty input.")
+                continue
 
-            # Apply node type embeddings if available
+            x_target = x[: size[1]]  # Целевые узлы
+
+            # Применение эмбеддингов типов узлов
             if node_types is not None and self.node_type_embeddings is not None:
                 node_type_emb = self.node_type_embeddings(node_types[: size[1]])
                 x_target = x_target + node_type_emb
 
-            # Apply edge type weights if available
-            edge_weight = None
-            if edge_types is not None and self.edge_type_weights is not None:
-                edge_weight = self.edge_type_weights[edge_types]
+            # Применение слоя
+            edge_weight = self.edge_type_weights[edge_types] if edge_types is not None and self.edge_type_weights is not None else None
+            if isinstance(self.convs[i], torch_geometric.nn.GATConv):
+                x = self.convs[i]((x, x_target), edge_index)  # GATConv игнорирует edge_weight
+            elif isinstance(self.convs[i], torch_geometric.nn.SAGEConv):
+                x = self.convs[i]((x, x_target), edge_index)  # SAGEConv также игнорирует edge_weight
+            else:
+                x = self.convs[i]((x, x_target), edge_index, edge_weight=edge_weight)
 
-            x = self.convs[i]((x, x_target), edge_index, edge_weight=edge_weight)
-
+            # Активация и dropout
             if i != self.num_layers - 1:
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
         return x
+
 
     def inference(self, data: Graph, dp: float = 0, node_types: Tensor = None, edge_types: Tensor = None) -> Tensor:
         """Count representations of the node
@@ -118,7 +120,11 @@ class BaseNet(torch.nn.Module, ABC):
             if edge_types is not None and self.edge_type_weights is not None:
                 edge_weight = self.edge_type_weights[edge_types]
 
-            x = conv(x, edge_index, edge_weight=edge_weight)
+            # Check layer type for edge_weight support
+            if isinstance(conv, (torch_geometric.nn.SAGEConv, torch_geometric.nn.GATConv)):
+                x = conv(x, edge_index)  # Skip edge_weight for unsupported layers
+            else:
+                x = conv(x, edge_index, edge_weight=edge_weight)
 
             if i != self.num_layers - 1:
                 x = x.relu()
