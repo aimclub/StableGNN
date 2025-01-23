@@ -26,9 +26,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov
           pip install torch torchvision torchaudio
-          pip install torch-scatter torch-sparse
-          pip install torch-geometric
           pip install .
+      - name: Install dependencies (build torch-scatter)
+        run: |
+          pip install torch-scatter torch-sparse --no-build-isolation
+          pip install torch-geometric
       - name: Test with pytest
         run: |
           cd tests
