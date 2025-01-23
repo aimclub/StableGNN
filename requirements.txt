@@ -1,4 +1,12 @@
-bamt==1.1.44
-optuna==2.10.1
-pgmpy==0.1.20
-pandas==1.5.2
+bamt==1.2.72
+optuna==4.2.0
+pgmpy==0.1.26
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.2.0
+matplotlib==3.6.2
+seaborn==0.13.2
+ollama
+datasets
+transformers
+lightgbm
