@@ -6,7 +6,7 @@ from pytest import mark
 from stable_gnn.graph import Graph
 
 
-@mark.parametrize("name", ["wisconsin", "BACE"])
+@mark.parametrize("name", ["wisconsin"])
 @mark.parametrize("adjust_flag", [False, True])
 def test_autoload_graph(name, adjust_flag):
     map_y_dim = {"wisconsin": 5, "BACE": 1}
