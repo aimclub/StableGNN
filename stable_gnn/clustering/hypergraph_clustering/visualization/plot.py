@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
+
 def plot_hypergraph(hyperedges, node_colors=None, title="Hypergraph Visualization"):
     """
     Визуализирует гиперграф.
@@ -29,6 +30,7 @@ def plot_hypergraph(hyperedges, node_colors=None, title="Hypergraph Visualizatio
     nx.draw(G, pos, with_labels=True, node_color=colors, edge_color="gray", node_size=500, font_size=10)
     plt.title(title)
     plt.show()
+
 
 def plot_clusters(adjacency_matrix, labels, title="Cluster Visualization"):
     """

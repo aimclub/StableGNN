@@ -1,6 +1,8 @@
-import networkx as nx
-import matplotlib.pyplot as plt
 from typing import Dict, List
+
+import matplotlib.pyplot as plt
+import networkx as nx
+
 
 class GraphBuilder:
     def __init__(self, llm_client):
@@ -23,7 +25,7 @@ class GraphBuilder:
             G.add_node(node)
             for edge in edges:
                 G.add_edge(node, edge)
-        
+
         return G
 
     def build_hypergraph(self, text: str) -> Dict[str, List[str]]:
@@ -40,7 +42,7 @@ class GraphBuilder:
 
         return hypergraph
 
-    def visualize_graph(self, graph: nx.Graph, node_color='lightblue', edge_color='gray', node_size=500, font_size=12):
+    def visualize_graph(self, graph: nx.Graph, node_color="lightblue", edge_color="gray", node_size=500, font_size=12):
         """
         Визуализация графа с настраиваемыми параметрами.
         :param graph: Объект графа.
@@ -50,38 +52,47 @@ class GraphBuilder:
         :param font_size: Размер шрифта для подписей.
         """
         plt.figure(figsize=(8, 6))
-        nx.draw(graph, with_labels=True, node_color=node_color, edge_color=edge_color, 
-                node_size=node_size, font_size=font_size, font_weight='bold', alpha=0.7)
+        nx.draw(
+            graph,
+            with_labels=True,
+            node_color=node_color,
+            edge_color=edge_color,
+            node_size=node_size,
+            font_size=font_size,
+            font_weight="bold",
+            alpha=0.7,
+        )
         plt.title("Граф")
         plt.show()
 
-    def save_graph(self, graph: nx.Graph, filename: str, format='gml'):
+    def save_graph(self, graph: nx.Graph, filename: str, format="gml"):
         """
         Сохранение графа в файл в формате GML или GraphML.
         :param graph: Объект графа.
         :param filename: Имя файла для сохранения.
         :param format: Формат файла ('gml' или 'graphml').
         """
-        if format == 'gml':
+        if format == "gml":
             nx.write_gml(graph, filename)
-        elif format == 'graphml':
+        elif format == "graphml":
             nx.write_graphml(graph, filename)
         else:
             raise ValueError("Поддерживаемые форматы: 'gml', 'graphml'")
 
-    def load_graph(self, filename: str, format='gml') -> nx.Graph:
+    def load_graph(self, filename: str, format="gml") -> nx.Graph:
         """
         Загрузка графа из файла.
         :param filename: Имя файла для загрузки.
         :param format: Формат файла ('gml' или 'graphml').
         :return: Загруженный объект графа.
         """
-        if format == 'gml':
+        if format == "gml":
             return nx.read_gml(filename)
-        elif format == 'graphml':
+        elif format == "graphml":
             return nx.read_graphml(filename)
         else:
             raise ValueError("Поддерживаемые форматы: 'gml', 'graphml'")
+
 
 # Пример использования:
 if __name__ == "__main__":
@@ -89,7 +100,7 @@ if __name__ == "__main__":
 
     # Создание клиента для взаимодействия с ollama
     llm_client = LLMClient(model="qwen:32b")
-    
+
     # Создание объекта GraphBuilder
     builder = GraphBuilder(llm_client)
 
@@ -97,18 +108,18 @@ if __name__ == "__main__":
     text = """
     Иван и Аня пошли в парк, а Петр присоединился к ним позже. В парке они встретили друзей. Все вместе они пошли в кафе.
     """
-    
+
     # Строим граф
     graph = builder.build_graph(text)
-    
+
     # Визуализируем граф
     builder.visualize_graph(graph)
-    
+
     # Сохранение графа в формат GML
-    builder.save_graph(graph, 'graph.gml', format='gml')
-    
+    builder.save_graph(graph, "graph.gml", format="gml")
+
     # Загрузка графа из файла
-    loaded_graph = builder.load_graph('graph.gml', format='gml')
+    loaded_graph = builder.load_graph("graph.gml", format="gml")
 
     # Визуализируем загруженный граф
     builder.visualize_graph(loaded_graph)

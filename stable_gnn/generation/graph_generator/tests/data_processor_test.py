@@ -1,10 +1,13 @@
 import pytest
+
 from stable_gnn.generation.graph_generator.core.data_processor import DataProcessor
+
 
 @pytest.fixture
 def data_processor():
     """Фикстура для инициализации DataProcessor."""
     return DataProcessor()
+
 
 def test_clean_text(data_processor):
     """Тестирование метода clean_text."""
@@ -12,11 +15,13 @@ def test_clean_text(data_processor):
     expected_output = "привет мир это тестовый текст"
     assert data_processor.clean_text(input_text) == expected_output
 
+
 def test_extract_entities(data_processor):
     """Тестирование метода extract_entities."""
     input_text = "Иван и Аня пошли в парк, а Петр присоединился к ним позже."
     expected_entities = ["Иван", "Аня", "Петр"]
     assert data_processor.extract_entities(input_text) == expected_entities
+
 
 def test_summarize_text(data_processor):
     """Тестирование метода summarize_text."""
@@ -28,11 +33,13 @@ def test_summarize_text(data_processor):
     expected_summary_long = "a" * 100 + "..."
     assert data_processor.summarize_text(long_text) == expected_summary_long
 
+
 def test_tokenize_text(data_processor):
     """Тестирование метода tokenize_text."""
     input_text = "это тестовый текст для токенизации"
     expected_tokens = ["это", "тестовый", "текст", "для", "токенизации"]
     assert data_processor.tokenize_text(input_text) == expected_tokens
+
 
 def test_remove_stopwords(data_processor):
     """Тестирование метода remove_stopwords."""

@@ -13,24 +13,24 @@ from stable_gnn.graph import Graph
 
 class BaseSampler(ABC):
     """
-    Base class for sampling of positive and negative edges for unsupervised loss function
+    Base class for sampling of positive and negative edges for unsupervised loss function.
 
-    :param data: (Graph): Input dataset
-    :param device: (device): Either 'cuda' or 'cpu'
-    :param loss_info: (dict): Dict of parameters of unsupervised loss function
+    :param data: (Graph): Input dataset.
+    :param device: (device): Either 'cuda' or 'cpu'.
+    :param loss_info: (dict): Dict of parameters of unsupervised loss function.
     """
 
     def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        """Initialize a BaseSampler instance."""
         self.device = device
         self.data = data.to(self.device)
         self.loss = loss_info
         super(BaseSampler, self).__init__()
 
     def _edge_index_to_adj_train(self, batch: Tensor) -> Tensor:
+        """Convert the edge index to an adjacency matrix for training."""
         x_new = torch.sort(batch).values
-
         x_new = x_new.tolist()
-
         adj_matrix = torch.zeros((len(x_new), len(x_new)), dtype=torch.long)
         edge_index_0 = self.data.edge_index[0].tolist()
         edge_index_1 = self.data.edge_index[1].tolist()
@@ -38,42 +38,37 @@ class BaseSampler(ABC):
             if i in x_new:
                 if edge_index_1[j] in x_new:
                     adj_matrix[i][edge_index_1[j]] = 1
-
         return adj_matrix
 
     @abstractmethod
     def _pos_sample(self, batch: Tensor) -> Tensor:
+        """Abstract method for sampling positive edges."""
         raise NotImplementedError
 
     @abstractmethod
-    def sample(self, batch: Tensor) -> Tensor:
-        """Sample edges. Must be implemented
-
-        :param batch: (Batch): Nodes for sampling positive edges for them
-        """
+    def sample(self, batch: Tensor) -> Tuple[Tensor, Tensor]:
+        """Sample edges. Must be implemented."""
         raise NotImplementedError("Define sample function")
 
 
 class BaseSamplerWithNegative(BaseSampler):
-    """Sampler for negative edges
-
-    :param data: (Graph): Input Graph data
-    :param device: (device): Either 'cuda' or 'cpu'
-    """
+    """Sampler for negative edges."""
 
     def __init__(self, data: Graph, device: device, loss_info: Dict) -> None:
+        """Initialize a BaseSamplerWithNegative instance."""
         super().__init__(data, device, loss_info)
         self.num_negative_samples = self.loss["num_negative_samples"]
 
     @staticmethod
-    def _not_less_than(num_negative_samples: int, all_negative_samples: List[int]) -> List[int]:  # type: ignore
+    def _not_less_than(num_negative_samples: int, all_negative_samples: List[int]) -> List[int]:
         if len(all_negative_samples) <= num_negative_samples:
             return all_negative_samples
         if len(all_negative_samples) > num_negative_samples:
             return random.choices(all_negative_samples, k=num_negative_samples)
 
     @staticmethod
-    def _adj_list(edge_index: Tensor) -> Dict[int, List[int]]:  # считаем список рёбер из edge_index
+    def _adj_list(edge_index: Tensor) -> Dict[int, List[int]]:
+        """Construct an adjacency list from the edge index."""
         adj_list: Dict[int, List[int]] = dict()
         for x in list(zip(edge_index[0].tolist(), edge_index[1].tolist())):
             if x[0] in adj_list:
@@ -84,20 +79,21 @@ class BaseSamplerWithNegative(BaseSampler):
 
     @staticmethod
     def _torch_list(adj_list: Dict[int, List[int]]) -> Tensor:
+        """Convert an adjacency list to a tensor."""
         line = list()
         other_line = list()
         for node, neighbors in adj_list.items():
             line += [node] * len(neighbors)
             other_line += neighbors
-        return torch.transpose((torch.tensor([line, other_line])), 0, 1)
+        return torch.transpose(torch.tensor([line, other_line]), 0, 1)
 
     def _sample_negative(self, batch: Tensor, num_negative_samples: int) -> Tensor:
         """
-        Sample negative edges for batch of nodes
+        Sample negative edges for a batch of nodes.
 
-        :param batch: (Batch): Nodes for negative sampling
-        :param num_negative_samples: (int): Number of negative samples for each edge
-        :return: (Tensor): Negative samples
+        :param batch: (Batch): Nodes for negative sampling.
+        :param num_negative_samples: (int): Number of negative samples for each edge.
+        :return: (Tensor): Negative samples.
         """
         a, _ = subgraph(batch, self.data.edge_index.to(self.device))
         adj = self._adj_list(a)
@@ -105,33 +101,30 @@ class BaseSamplerWithNegative(BaseSampler):
         batch = batch.tolist()
         for node in batch:
             g[node] = batch
-
         for node, neighbors in adj.items():
-            g[node] = list(
-                set(batch) - set(neighbors) - {node}
-            )  # тут все элементы которые не являются соседними, но при этом входят в батч
+            g[node] = list(set(batch) - set(neighbors) - {node})
         for node, neg_elem in g.items():
-            g[node] = self._not_less_than(
-                num_negative_samples, g[node]
-            )  # если просят конкретное число негативных примеров, надо либо обрезать либо дублировать
+            g[node] = self._not_less_than(num_negative_samples, g[node])
         return self._torch_list(g)
 
     def sample(self, batch: Batch) -> Tuple[Tensor, Tensor]:
         """
-        Sample positive and negative edges for batch nodes
+        Sample positive and negative edges for batch nodes.
 
-        :param batch: (Batch): Nodes for positive and negative sampling from them
-        :return: (Tensor, Tensor): positive and negative samples
+        :param batch: (Batch): Nodes for positive and negative sampling from them.
+        :return: (Tensor, Tensor): Positive and negative samples.
         """
         if not isinstance(batch, torch.Tensor):
             batch = torch.tensor(batch, dtype=torch.long).to(self.device)
         return self._pos_sample(batch), self._neg_sample(batch)
 
     def _neg_sample(self, batch: Tensor) -> Tensor:
+        """Perform negative sampling for a batch of nodes."""
         a, _ = subgraph(batch.tolist(), self.data.edge_index)
         neg_batch = self._sample_negative(batch, num_negative_samples=self.num_negative_samples)
         return neg_batch
 
     @abstractmethod
     def _pos_sample(self, batch: Tensor) -> Tensor:
+        """Abstract method for sampling positive edges."""
         raise NotImplementedError

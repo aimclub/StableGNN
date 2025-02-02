@@ -4,9 +4,7 @@ from stable_gnn.visualization.utils.fill_strength import fill_strength
 
 
 class HypergraphStrengthConstructor:
-    """
-    Constructor (one action controller) for Hypergraph strengths.
-    """
+    """Constructor (one action controller) for Hypergraph strengths."""
 
     def __call__(self, contract: StrengthConstructorContract) -> tuple:
         _push_vertex_strength = Defaults.push_vertex_strength_hg

@@ -1,16 +1,14 @@
-import os
-import pytest
 import json
-import numpy as np
+import os
+
+import pytest
 from hypergraph_clustering.clustering.auto_clustering import AutoClusterHypergraphClustering
 from hypergraph_clustering.utils.graph_conversion import hypergraph_to_incidence_matrix, incidence_to_adjacency
 
 DATA_DIR = "data"
 
-@pytest.mark.parametrize("filename", [
-    "social_network.json",
-    "transport_network.json"
-])
+
+@pytest.mark.parametrize("filename", ["social_network.json", "transport_network.json"])
 def test_auto_clustering(filename):
     with open(os.path.join(DATA_DIR, filename), "r") as f:
         hypergraph = json.load(f)

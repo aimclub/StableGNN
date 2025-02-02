@@ -1,14 +1,14 @@
 from typing import List, Optional, Tuple
 
-from bamt.networks.hybrid_bn import HybridBN
 import pandas as pd
 import torch
+from bamt.networks.hybrid_bn import HybridBN
 from bamt.preprocessors import Preprocessor
 from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch.nn import Module
-from torch_geometric.typing import Adj, Tensor
-from torch_geometric.utils import degree, dense_to_sparse, to_dense_adj
+from torch_geometric.typing import Tensor
+from torch_geometric.utils import dense_to_sparse, to_dense_adj
 
 from stable_gnn.graph import Graph
 
@@ -107,7 +107,6 @@ class Extrapolate:
             ordered, indices = torch.sort(eig[: gr.num_nodes], descending=True)
             to_append = pd.Series(ordered[: self.n_min].tolist() + gr.y.tolist(), index=data_bamt.columns)
             data_bamt = pd.concat([data_bamt, to_append.to_frame().T], ignore_index=True)
-
 
         return data_bamt
 

@@ -1,6 +1,7 @@
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 import numpy as np
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
+
 
 class AutoClusterHypergraphClustering:
     def __init__(self, linkage="ward", max_clusters=10, scoring="silhouette"):
@@ -26,19 +27,13 @@ class AutoClusterHypergraphClustering:
         :return: np.ndarray, метки кластеров.
         """
         max_distance = np.max(adjacency_matrix) + 1  # Максимальное расстояние
-        distance_matrix = np.where(
-            adjacency_matrix > 0,
-            1 / adjacency_matrix,
-            max_distance
-        )
+        distance_matrix = np.where(adjacency_matrix > 0, 1 / adjacency_matrix, max_distance)
         np.fill_diagonal(distance_matrix, 0)
 
         scores = []
         for n_clusters in range(2, self.max_clusters + 1):
             model = AgglomerativeClustering(
-                n_clusters=n_clusters,
-                metric="precomputed" if self.linkage != "ward" else None,
-                linkage=self.linkage
+                n_clusters=n_clusters, metric="precomputed" if self.linkage != "ward" else None, linkage=self.linkage
             )
             labels = model.fit_predict(distance_matrix if self.linkage != "ward" else adjacency_matrix)
 
@@ -59,7 +54,7 @@ class AutoClusterHypergraphClustering:
         self.model = AgglomerativeClustering(
             n_clusters=self.best_n_clusters,
             metric="precomputed" if self.linkage != "ward" else None,
-            linkage=self.linkage
+            linkage=self.linkage,
         )
         self.labels_ = self.model.fit_predict(distance_matrix if self.linkage != "ward" else adjacency_matrix)
         return self.labels_

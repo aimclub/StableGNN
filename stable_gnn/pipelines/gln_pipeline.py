@@ -1,12 +1,10 @@
-import numpy as np
 import networkx as nx
 import torch
 
-from stable_gnn.generation.graph_generator.core.llm_client import LLMClient
-from stable_gnn.generation.graph_generator.core.graph_builder import GraphBuilder
-from stable_gnn.embedding.models.model_factory import ModelFactory
 from stable_gnn.analytics.gh_graph_metrics import GHGraphMetrics
-from stable_gnn.clustering.hypergraph_clustering.clustering.agglomerative import AgglomerativeHypergraphClustering
+from stable_gnn.embedding.models.model_factory import ModelFactory
+from stable_gnn.generation.graph_generator.core.graph_builder import GraphBuilder
+from stable_gnn.generation.graph_generator.core.llm_client import LLMClient
 
 
 def run_gln_pipeline(graph_text: str, num_clusters: int = 2):
@@ -48,10 +46,9 @@ def run_gln_pipeline(graph_text: str, num_clusters: int = 2):
 
     # Преобразуем граф в edge_index и передаем количество узлов
     node_mapping = {node: idx for idx, node in enumerate(graph.nodes)}
-    edge_index = torch.tensor(
-        [(node_mapping[u], node_mapping[v]) for u, v in graph.edges],
-        dtype=torch.long
-    ).t().contiguous()
+    edge_index = (
+        torch.tensor([(node_mapping[u], node_mapping[v]) for u, v in graph.edges], dtype=torch.long).t().contiguous()
+    )
 
     centrality = metrics.calculate_centrality(edge_index, num_nodes=len(graph.nodes))
     print(f"Calculated centrality: {centrality}")

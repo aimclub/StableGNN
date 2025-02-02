@@ -1,7 +1,7 @@
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-from scipy.spatial.distance import squareform, pdist
 import numpy as np
+from scipy.spatial.distance import squareform
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
 
 
 class AgglomerativeHypergraphClustering:
@@ -40,7 +40,7 @@ class AgglomerativeHypergraphClustering:
         distance_matrix = np.where(
             adjacency_matrix > 0,
             1 / adjacency_matrix,  # Инвертируем веса для положительных значений
-            max_distance  # Устанавливаем большое значение для недостижимых узлов
+            max_distance,  # Устанавливаем большое значение для недостижимых узлов
         )
         np.fill_diagonal(distance_matrix, 0)  # Убираем петли
         return distance_matrix
@@ -74,24 +74,16 @@ class AgglomerativeHypergraphClustering:
 
         if self.linkage == "ward":
             # Для ward используем матрицу признаков (смежности)
-            self.model = AgglomerativeClustering(
-                n_clusters=self.n_clusters,
-                linkage=self.linkage
-            )
+            self.model = AgglomerativeClustering(n_clusters=self.n_clusters, linkage=self.linkage)
             labels = self.model.fit_predict(adjacency_matrix)
         else:
             # Для остальных методов используем метрику "precomputed"
             condensed_distance_matrix = squareform(distance_matrix)
-            self.model = AgglomerativeClustering(
-                n_clusters=self.n_clusters,
-                metric="precomputed",
-                linkage=self.linkage
-            )
+            self.model = AgglomerativeClustering(n_clusters=self.n_clusters, metric="precomputed", linkage=self.linkage)
             labels = self.model.fit_predict(squareform(condensed_distance_matrix))
 
         self.labels_ = labels
         return labels
-
 
     def evaluate(self, adjacency_matrix):
         """
@@ -129,6 +121,7 @@ class AgglomerativeHypergraphClustering:
         :param adjacency_matrix: np.ndarray, матрица смежности.
         """
         import matplotlib.pyplot as plt
+
         embeddings = self.spectral_embedding(adjacency_matrix)
         plt.scatter(embeddings[:, 0], embeddings[:, 1], c=self.labels_, cmap="viridis", s=50)
         plt.title("Clusters Visualization")

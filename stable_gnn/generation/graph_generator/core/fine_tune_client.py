@@ -1,14 +1,9 @@
 import json
 import os
-from typing import Dict, Any
-import shutil
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    Trainer,
-    TrainingArguments,
-)
-from datasets import load_dataset, Dataset
+
+from datasets import Dataset, load_dataset
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+
 from stable_gnn.generation.graph_generator.core.base_fine_tune_client import BaseFineTuneClient
 from stable_gnn.generation.graph_generator.core.data_processor import DataProcessor
 
@@ -23,7 +18,7 @@ class FineTuneClient(BaseFineTuneClient):
     ):
         """
         Инициализация клиента для тонкой настройки модели с использованием Transformers.
-        
+
         :param model_name: Название предобученной модели из Hugging Face.
         :param tokenizer_name: Название токенизатора. Если None, будет использовано имя модели.
         :param output_dir: Путь для сохранения тонко настроенной модели.
@@ -44,7 +39,7 @@ class FineTuneClient(BaseFineTuneClient):
     def prepare_training_data(self, raw_data: str) -> Dataset:
         """
         Подготовка и очистка данных для обучения.
-        
+
         :param raw_data: Сырые данные для обучения.
         :return: Объект Dataset для обучения.
         """
@@ -62,9 +57,7 @@ class FineTuneClient(BaseFineTuneClient):
         return dataset
 
     def tokenize_function(self, examples):
-        """
-        Токенизация примеров.
-        """
+        """Токенизация примеров."""
         return self.tokenizer(
             examples["text"],
             truncation=True,
@@ -75,7 +68,7 @@ class FineTuneClient(BaseFineTuneClient):
     def upload_training_data(self, training_data: Dataset) -> None:
         """
         Подготовка и сохранение данных для тонкой настройки.
-        
+
         :param training_data: Объект Dataset для обучения.
         """
         # Токенизация данных
@@ -87,7 +80,7 @@ class FineTuneClient(BaseFineTuneClient):
     def start_fine_tuning(self, job_name: str = "fine_tune_job") -> None:
         """
         Запуск процесса тонкой настройки модели.
-        
+
         :param job_name: Имя задания для тонкой настройки.
         """
         # Загрузка токенизированных данных
@@ -124,7 +117,7 @@ class FineTuneClient(BaseFineTuneClient):
         """
         Проверка статуса задания тонкой настройки.
         В данном случае, поскольку процесс обучения локальный, статус всегда 'completed'.
-        
+
         :return: Статус задания.
         """
         return "completed"
@@ -132,7 +125,7 @@ class FineTuneClient(BaseFineTuneClient):
     def download_fine_tuned_model(self, save_path: str) -> bool:
         """
         Копирование тонко настроенной модели в указанное место.
-        
+
         :param save_path: Путь для сохранения модели.
         :return: True, если сохранение прошло успешно, иначе False.
         """

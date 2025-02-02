@@ -1,4 +1,5 @@
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
+
 
 def evaluate_clustering(adjacency_matrix, labels):
     """

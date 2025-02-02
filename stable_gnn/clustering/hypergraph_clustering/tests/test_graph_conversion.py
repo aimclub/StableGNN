@@ -1,15 +1,14 @@
-import pytest
 import json
 import os
+
+import pytest
 from hypergraph_clustering.utils.graph_conversion import hypergraph_to_incidence_matrix, incidence_to_adjacency
 
 # Путь к JSON-файлам
 DATA_DIR = "data"
 
-@pytest.mark.parametrize("filename", [
-    "biological_network.json",
-    "electric_network.json"
-])
+
+@pytest.mark.parametrize("filename", ["biological_network.json", "electric_network.json"])
 def test_hypergraph_to_incidence_matrix(filename):
     # Загружаем гиперграф из JSON
     with open(os.path.join(DATA_DIR, filename), "r") as f:
@@ -23,10 +22,8 @@ def test_hypergraph_to_incidence_matrix(filename):
     assert incidence_matrix.shape[1] == len(hypergraph["hyperedges"])
     assert incidence_matrix.sum() == sum(len(edge) for edge in hypergraph["hyperedges"])
 
-@pytest.mark.parametrize("filename", [
-    "biological_network.json",
-    "electric_network.json"
-])
+
+@pytest.mark.parametrize("filename", ["biological_network.json", "electric_network.json"])
 def test_incidence_to_adjacency(filename):
     # Загружаем гиперграф из JSON
     with open(os.path.join(DATA_DIR, filename), "r") as f:

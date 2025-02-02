@@ -4,7 +4,7 @@ import numpy as np
 import optuna
 import torch
 from optuna import Trial
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import f1_score
 from torch.cuda import device
 from torch.nn import Module
 from torch.optim import Optimizer

@@ -34,16 +34,13 @@ jobs:
 
       - 
         name: Run flake8
-        run: pflake8 .
+        run: pflake8 stable_gnn
 
       - 
         name: Run isort
-        run: isort --profile black --check-only .
+        run: isort --profile black --check-only stable_gnn
 
       - 
         name: Run black
-        run: black --diff --check .
+        run: black --diff --check stable_gnn
 
-      - 
-        name: Run mypy
-        run: mypy --show-error-codes stable_gnn

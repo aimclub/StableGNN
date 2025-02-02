@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="hypergraph_clustering",
@@ -6,10 +6,5 @@ setup(
     description="Модуль для агломеративной кластеризации гиперграфов",
     author="nosignalx2k",
     packages=find_packages(),
-    install_requires=[
-        "numpy",
-        "scikit-learn",
-        "networkx",
-        "matplotlib"
-    ],
+    install_requires=["numpy", "scikit-learn", "networkx", "matplotlib"],
 )

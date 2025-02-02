@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 import numpy as np
-
 from sklearn.metrics import euclidean_distances
 
 from stable_gnn.visualization.config.parameters.defaults import Defaults
@@ -42,12 +41,7 @@ class CorePhysicalModel:
     def __get_nums(self):
         return [self.contract.nums] if isinstance(self.contract.nums, int) else self.contract.nums
 
-    def build(self,
-              init_position,
-              H,
-              max_iter=Defaults.max_iterations,
-              epsilon=Defaults.epsilon,
-              delta=Defaults.delta):
+    def build(self, init_position, H, max_iter=Defaults.max_iterations, epsilon=Defaults.epsilon, delta=Defaults.delta):
 
         position = init_position.copy()
         velocity = np.zeros_like(position)
@@ -73,8 +67,9 @@ class CorePhysicalModel:
         force = np.zeros_like(position)
 
         if self.node_attraction is not None:
-            force_modifier = (self.__node_attraction(position, edge_center, vertex_to_edge_distance) *
-                              self.node_attraction)
+            force_modifier = (
+                self.__node_attraction(position, edge_center, vertex_to_edge_distance) * self.node_attraction
+            )
             force += force_modifier
 
         if self.node_repulsion is not None:
@@ -83,8 +78,8 @@ class CorePhysicalModel:
                 force_modifier *= self.node_repulsion[0]
             else:
                 masks = np.zeros((position.shape[0], 1))
-                masks[:self.nums[0]] = self.node_repulsion[0]
-                masks[self.nums[0]:] = self.node_repulsion[1]
+                masks[: self.nums[0]] = self.node_repulsion[0]
+                masks[self.nums[0] :] = self.node_repulsion[1]
                 force_modifier *= masks
             force += force_modifier
 
@@ -94,8 +89,8 @@ class CorePhysicalModel:
 
         if self.center_gravity is not None:
             masks = [np.zeros((position.shape[0], 1)), np.zeros((position.shape[0], 1))]
-            masks[0][:self.nums[0]] = 1
-            masks[1][self.nums[0]:] = 1
+            masks[0][: self.nums[0]] = 1
+            masks[1][self.nums[0] :] = 1
             for center, gravity, mask in zip(self.centers, self.center_gravity, masks):
                 v2c_dist = euclidean_distances(position, center.reshape(1, -1)).reshape(-1, 1)
                 force_modifier = self.__center_gravity(position, center, v2c_dist) * gravity * mask
@@ -135,7 +130,7 @@ class CorePhysicalModel:
 
         distance[r, c] = np.inf
 
-        force_scale = k / (distance ** 2)
+        force_scale = k / (distance**2)
         force_direction = position[:, np.newaxis, :] - position[np.newaxis, :, :]
         force_direction_length = np.linalg.norm(force_direction, axis=2)
         force_direction_length[r, c] = np.inf
@@ -155,7 +150,7 @@ class CorePhysicalModel:
 
         distance[r, c] = np.inf
 
-        force_scale = k / (distance ** 2)
+        force_scale = k / (distance**2)
         force_direction = edge_center[:, np.newaxis, :] - edge_center[np.newaxis, :, :]
         force_direction_length = np.linalg.norm(force_direction, axis=2)
         force_direction_length[r, c] = np.inf

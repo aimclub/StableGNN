@@ -1,17 +1,15 @@
-import pytest
 import json
 import os
-import numpy as np
-from hypergraph_clustering.utils.graph_conversion import hypergraph_to_incidence_matrix, incidence_to_adjacency
+
+import pytest
 from hypergraph_clustering.clustering.agglomerative import AgglomerativeHypergraphClustering
 from hypergraph_clustering.metrics.evaluation import evaluate_clustering
+from hypergraph_clustering.utils.graph_conversion import hypergraph_to_incidence_matrix, incidence_to_adjacency
 
 DATA_DIR = "data"
 
-@pytest.mark.parametrize("filename", [
-    "social_network.json",
-    "transport_network.json"
-])
+
+@pytest.mark.parametrize("filename", ["social_network.json", "transport_network.json"])
 def test_evaluation_metrics(filename):
     with open(os.path.join(DATA_DIR, filename), "r") as f:
         hypergraph = json.load(f)

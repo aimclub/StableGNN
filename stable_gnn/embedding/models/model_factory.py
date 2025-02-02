@@ -12,9 +12,10 @@ from stable_gnn.embedding.unsupervized_loss_models.random_walk import RandomWalk
 
 
 class ModelFactory:
-    """Factory responsible for flexible model cration based on user input"""
+    """Factory responsible for flexible model creation based on user input."""
 
     def __init__(self) -> None:
+        """Initialize the ModelFactory instance."""
         self.conv_factory = ConvolutionsFactory()
 
     def build_model(
@@ -29,20 +30,24 @@ class ModelFactory:
         dropout: float,
         heads: int = 0,
     ) -> BaseNet:
-        """Build model based on input
+        """Build model based on input.
 
-        :param device: (device): Either 'cuda' or 'cpu'
-        :param hidden_layer: (int): The size of hidden layer (default:64)
-        :param out_layer: (int): The size of output layer (default:128)
-        :param dropout: (float): Dropout (default:0.0)
-        :param num_layers: (int): Number of layers in the model (default:2)
-        :param heads: (int): Number of heads in GAT conv (default:1)
-        :param conv: (str): Either 'GCN', 'GAT' or 'SAGE' convolution
-        :returns: Model
+        :param device: (device): Either 'cuda' or 'cpu'.
+        :param hidden_layer: (int): The size of hidden layer (default: 64).
+        :param out_layer: (int): The size of output layer (default: 128).
+        :param dropout: (float): Dropout (default: 0.0).
+        :param num_layers: (int): Number of layers in the model (default: 2).
+        :param heads: (int): Number of heads in GAT conv (default: 1).
+        :param conv: (str): Either 'GCN', 'GAT' or 'SAGE' convolution.
+        :returns: Model.
         """
         if loss_function["loss var"] == "Random Walks":
             model = RandomWalkBasedModel(
-                device=device, num_layers=num_layers, num_featurs=num_features, dropout=dropout, out_layer=out_layer
+                device=device,
+                num_layers=num_layers,
+                num_featurs=num_features,
+                dropout=dropout,
+                out_layer=out_layer,
             )
         elif loss_function["loss var"] == "Context Matrix":
             model = ContextMatrixModel(
@@ -64,11 +69,19 @@ class ModelFactory:
             )
         elif loss_function["loss var"] == "Laplacian EigenMaps":
             model = LalplacianEigenMapsModel(
-                device=device, num_layers=num_layers, num_featurs=num_features, dropout=dropout, out_layer=out_layer
+                device=device,
+                num_layers=num_layers,
+                num_featurs=num_features,
+                dropout=dropout,
+                out_layer=out_layer,
             )
         elif loss_function["loss var"] == "Force2Vec":
             model = Force2VecModel(
-                device=device, num_layers=num_layers, num_featurs=num_features, dropout=dropout, out_layer=out_layer
+                device=device,
+                num_layers=num_layers,
+                num_featurs=num_features,
+                dropout=dropout,
+                out_layer=out_layer,
             )
         else:
             raise ValueError(f"Loss is not supported: {loss_function['loss var']}")

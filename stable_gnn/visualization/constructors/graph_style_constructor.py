@@ -3,9 +3,7 @@ from stable_gnn.visualization.utils.fill_color import fill_color
 
 
 class GraphStyleConstructor:
-    """
-    Constructor (one action controller) for Graph style.
-    """
+    """Constructor (one action controller) for Graph style."""
 
     def __call__(self, contract: GraphStyleConstructorContract) -> tuple:
         vertex_color_color = contract.vertex_color

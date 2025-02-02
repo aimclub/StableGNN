@@ -2,7 +2,6 @@ from typing import Any, Dict, Tuple
 
 import optuna
 import torch
-from matplotlib import pyplot as plt
 from optuna import Trial
 from sklearn.metrics import accuracy_score, f1_score
 from torch import device

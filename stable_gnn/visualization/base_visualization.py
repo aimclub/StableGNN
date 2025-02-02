@@ -1,41 +1,35 @@
 from abc import ABC, abstractmethod
 
 import matplotlib
-from matplotlib.path import Path
-from matplotlib.patches import Circle, PathPatch
+import numpy as np
 from matplotlib.collections import PatchCollection
+from matplotlib.patches import Circle, PathPatch
+from matplotlib.path import Path
 from scipy.spatial import ConvexHull
 
-import numpy as np
-
+from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.contracts.draw_circle_edges_contract import DrawEdgesContract
 from stable_gnn.visualization.contracts.draw_vertex_contract import DrawVertexContract
 from stable_gnn.visualization.equations.calc_common_tangent_radian import common_tangent_radian
 from stable_gnn.visualization.equations.calc_polar_position import polar_position
 from stable_gnn.visualization.equations.calc_rad_to_deg import rad_to_deg
-from stable_gnn.visualization.equations.radian_from_atan import radian_from_atan
 from stable_gnn.visualization.equations.calc_vector_length import vector_length
-from stable_gnn.visualization.config.parameters.defaults import Defaults
+from stable_gnn.visualization.equations.radian_from_atan import radian_from_atan
 
 
 class BaseVisualization(ABC):
-    """
-    Base visualization class with common functions.
-    """
+    """Base visualization class with common functions."""
+
     contract = None
 
     @abstractmethod
     def draw(self):
-        """
-        Draw method to redefine.
-        """
+        """Draw method to redefine."""
         raise NotImplementedError
 
     @abstractmethod
     def validate(self):
-        """
-        Base validator to redefine.
-        """
+        """Base validator to redefine."""
         raise NotImplementedError
 
     @staticmethod
@@ -59,10 +53,9 @@ class BaseVisualization(ABC):
             vertex_label = [""] * contract.vertex_coordinates.shape[0]  # noqa
 
         # Create vertexes
-        for coordinates, label, size, width in zip(contract.vertex_coordinates.tolist(),  # noqa
-                                                   vertex_label,
-                                                   contract.vertex_size,
-                                                   contract.vertex_line_width):
+        for coordinates, label, size, width in zip(
+            contract.vertex_coordinates.tolist(), vertex_label, contract.vertex_size, contract.vertex_line_width  # noqa
+        ):
             circle = Circle(coordinates, size)
             circle.lineWidth = width
 
@@ -73,11 +66,9 @@ class BaseVisualization(ABC):
                 x += offset[0]
                 y += offset[1]
                 # Apply to plot exes
-                axes.text(x, y, label,
-                          fontsize=contract.font_size,
-                          fontfamily=contract.font_family,
-                          ha='center',
-                          va='top')
+                axes.text(
+                    x, y, label, fontsize=contract.font_size, fontfamily=contract.font_family, ha="center", va="top"
+                )
 
             patches.append(circle)
 
@@ -99,10 +90,9 @@ class BaseVisualization(ABC):
         """
         num_vertex = len(contract.vertex_coordinates)
 
-        line_paths, arc_paths, vertices = self.hull_layout(num_vertex,
-                                                           contract.edge_list,
-                                                           contract.vertex_coordinates,
-                                                           contract.vertex_size)
+        line_paths, arc_paths, vertices = self.hull_layout(
+            num_vertex, contract.edge_list, contract.vertex_coordinates, contract.vertex_size
+        )
 
         # For every edge line
         for edge_index, lines in enumerate(line_paths):
@@ -124,10 +114,13 @@ class BaseVisualization(ABC):
 
             # Apply to plot
             axes.add_patch(
-                PathPatch(Path(vertexes, codes),
-                          linewidth=contract.edge_line_width[edge_index],
-                          facecolor=contract.edge_fill_color[edge_index],
-                          edgecolor=contract.edge_color[edge_index]))
+                PathPatch(
+                    Path(vertexes, codes),
+                    linewidth=contract.edge_line_width[edge_index],
+                    facecolor=contract.edge_fill_color[edge_index],
+                    edgecolor=contract.edge_color[edge_index],
+                )
+            )
 
         # For every arc
         for edge_index, arcs in enumerate(arc_paths):
@@ -136,22 +129,21 @@ class BaseVisualization(ABC):
 
                 # Apply to plot
                 axes.add_patch(
-                    matplotlib.patches.Arc((center[0], center[1]),
-                                           2 * radius,
-                                           2 * radius,
-                                           theta1=theta1,
-                                           theta2=theta2,
-                                           color=contract.edge_color[edge_index],
-                                           linewidth=contract.edge_line_width[edge_index],
-                                           edgecolor=contract.edge_color[edge_index],
-                                           facecolor=contract.edge_fill_color[edge_index]))
+                    matplotlib.patches.Arc(
+                        (center[0], center[1]),
+                        2 * radius,
+                        2 * radius,
+                        theta1=theta1,
+                        theta2=theta2,
+                        color=contract.edge_color[edge_index],
+                        linewidth=contract.edge_line_width[edge_index],
+                        edgecolor=contract.edge_color[edge_index],
+                        facecolor=contract.edge_fill_color[edge_index],
+                    )
+                )
 
     @staticmethod
-    def hull_layout(num_vertex,  # noqa
-                    edge_list,
-                    position,
-                    vertex_size,
-                    radius_increment=Defaults.radius_increment):
+    def hull_layout(num_vertex, edge_list, position, vertex_size, radius_increment=Defaults.radius_increment):  # noqa
 
         # Make paths
         line_paths = [None] * len(edge_list)
