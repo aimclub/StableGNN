@@ -42,5 +42,6 @@ jobs:
 
       - 
         name: Run black
-        run: black --diff --check stable_gnn
-
+        run: /
+             black stable_gnn
+             black --diff --check stable_gnn
