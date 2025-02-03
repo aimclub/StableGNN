@@ -34,14 +34,24 @@ jobs:
         sphinx-apidoc --separate --force --no-headings --module-first -o . ../stable_gnn
         sphinx-build -M html . _build
 
+    - name: List uploaded artifacts
+      run: ls -R ./docs/_build/html  # Диагностика
+
     - name: Setup Pages
       uses: actions/configure-pages@v3
 
     - name: Upload artifact (manual fix)
       uses: actions/upload-artifact@v4
       with:
-        name: github-pages  # <-- ВАЖНО: deploy-pages ищет этот артефакт
-        path: './docs/_build/html'
+        name: github-pages
+        path: ./docs/_build/html  # <-- Убедитесь, что этот путь корректен!
+
+    - name: Debug uploaded artifacts
+      run: |
+        echo "Checking uploaded artifacts..."
+        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+             -H "Accept: application/vnd.github.v3+json" \
+             https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts
 
     - name: Deploy to GitHub Pages
       id: deployment
