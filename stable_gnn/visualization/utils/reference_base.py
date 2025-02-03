@@ -1,9 +1,6 @@
-
-
 class ReferenceBase:
-    """
-    Base dataclass for references (enums, info classes).
-    """
+    """Base dataclass for references (enums, info classes)."""
+
     @property
     def values(self):
         properties = []

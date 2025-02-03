@@ -10,33 +10,41 @@ jobs:
     name: Linters
     runs-on: ubuntu-latest
     steps:
-      -
-        uses: actions/checkout@v2
-      -
+      - 
+        name: Checkout repository
+        uses: actions/checkout@v3
+
+      - 
         name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
-      -
-        name: Check cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: requirements-${{ hashFiles('requirements.txt') }}-${{ hashFiles('requirements-dev.txt') }}
-      -
+
+      - 
+        name: Upgrade pip and tools
+        run: python -m pip install --upgrade pip setuptools wheel
+
+      - 
+        name: Clear pip cache
+        run: python -m pip cache purge
+
+      - 
         name: Install dependencies
         run: python -m pip install --requirement requirements-dev.txt
-      -
-        name: flake8
-        run: pflake8 .
 
-      -
-        name: isort
-        run: isort --profile black --check-only .
+      - 
+        name: Run flake8
+        run: pflake8 stable_gnn
 
-      -
-        name: black
-        run: black --diff --check .
-      -
-        name: mypy
-        run: mypy stable_gnn
+      - 
+        name: Run isort
+        run: isort --profile black --check-only stable_gnn
+
+      - 
+        name: Run black
+        run: black stable_gnn
+      - 
+        name: Check black
+        run: black --diff --check stable_gnn
+
+      

@@ -36,9 +36,7 @@ class ModelLinkPrediction:
         self.emb_conv_name = emb_conv_name
         self.device = device
 
-    def train_test_edges(
-        self, dataset: Graph
-    ) -> Tuple[List[Any], List[int], List[Any], List[int]]:
+    def train_test_edges(self, dataset: Graph) -> Tuple[List[Any], List[int], List[Any], List[int]]:
         """
         Split dataset to train and test and calculate negative samples
 

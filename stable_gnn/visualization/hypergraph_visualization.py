@@ -2,8 +2,8 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 
-from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.base_visualization import BaseVisualization
+from stable_gnn.visualization.config.parameters.defaults import Defaults
 from stable_gnn.visualization.config.parameters.edge_styles import EdgeStyles
 from stable_gnn.visualization.constructors.graph_style_constructor import GraphStyleConstructor
 from stable_gnn.visualization.constructors.hypergraph_strength_constructor import HypergraphStrengthConstructor
@@ -25,6 +25,7 @@ class HypergraphVisualizer(BaseVisualization):
     Draw the hypergraph structure.
     Common methods defined in Base class.
     """
+
     contract = None
 
     def __init__(self, contract: HypergraphVisualizationContract):
@@ -57,9 +58,7 @@ class HypergraphVisualizer(BaseVisualization):
         self.validate()
 
     def draw(self):
-        """
-        Draw hypergraph interface based on Contract.
-        """
+        """Draw hypergraph interface based on Contract."""
         # Define base matplotlib Plot with axes (mutable object)
         fig, axes = plt.subplots(figsize=Defaults.figure_size)
 
@@ -72,39 +71,33 @@ class HypergraphVisualizer(BaseVisualization):
             edges_num=self.contract.graph.edge_num,
             vertex_color=self.contract.vertex_color,
             edge_color=self.contract.edge_color,
-            edge_fill_color=self.contract.edge_fill_color
+            edge_fill_color=self.contract.edge_fill_color,
         )
 
         # Construct styles
         default_style_constructor: GraphStyleConstructor = GraphStyleConstructor()
-        (
-            vertex_color,
-            edge_color,
-            edge_fill_color
-        ) = default_style_constructor(default_style_contract)
+        (vertex_color, edge_color, edge_fill_color) = default_style_constructor(default_style_contract)
 
         # # Define size contract
-        default_size_contract: SizeConstructorContract = SizeConstructorContract(vertex_num=vertex_num,
-                                                                                 edge_list=edge_list,
-                                                                                 vertex_size=self.contract.vertex_size,
-                                                                                 vertex_line_width=self.contract.vertex_line_width,
-                                                                                 edge_line_width=self.contract.edge_line_width,
-                                                                                 font_size=self.contract.font_size)
+        default_size_contract: SizeConstructorContract = SizeConstructorContract(
+            vertex_num=vertex_num,
+            edge_list=edge_list,
+            vertex_size=self.contract.vertex_size,
+            vertex_line_width=self.contract.vertex_line_width,
+            edge_line_width=self.contract.edge_line_width,
+            font_size=self.contract.font_size,
+        )
         # Construct element sizes
         default_size_constructor: SizeConstructor = SizeConstructor()
-        (
-            vertex_size,
-            vertex_line_width,
-            edge_line_width,
-            font_size
-        ) = default_size_constructor(default_size_contract)
+        (vertex_size, vertex_line_width, edge_line_width, font_size) = default_size_constructor(default_size_contract)
 
         # Define strength contract
         default_strength_contract: StrengthConstructorContract = StrengthConstructorContract(
             self.contract.push_vertex_strength,
             self.contract.push_edge_strength,
             self.contract.pull_edge_strength,
-            self.contract.pull_center_strength)
+            self.contract.pull_center_strength,
+        )
 
         # Construct strengths
         default_strength_constructor: HypergraphStrengthConstructor = HypergraphStrengthConstructor()
@@ -116,35 +109,41 @@ class HypergraphVisualizer(BaseVisualization):
         ) = default_strength_constructor(default_strength_contract)
 
         # Define layout contract
-        layout_contract: LayoutContract = LayoutContract(vertex_num=vertex_num,
-                                                         edge_list=edge_list,
-                                                         push_vertex_strength=push_vertex_strength,
-                                                         push_edge_strength=push_edge_strength,
-                                                         pull_edge_strength=pull_edge_strength,
-                                                         pull_center_strength=pull_center_strength)
+        layout_contract: LayoutContract = LayoutContract(
+            vertex_num=vertex_num,
+            edge_list=edge_list,
+            push_vertex_strength=push_vertex_strength,
+            push_edge_strength=push_edge_strength,
+            pull_edge_strength=pull_edge_strength,
+            pull_center_strength=pull_center_strength,
+        )
 
         # Construct layout
         layout_constructor: LayoutConstructor = LayoutConstructor()
         vertex_coordinates = layout_constructor(layout_contract)
 
         # Draw hypergraph edges
-        draw_circle_edges_contract: DrawEdgesContract = DrawEdgesContract(vertex_coordinates=vertex_coordinates,
-                                                                          vertex_size=vertex_size,
-                                                                          edge_list=edge_list,
-                                                                          edge_color=edge_color,
-                                                                          edge_fill_color=edge_fill_color,
-                                                                          edge_line_width=edge_line_width)
+        draw_circle_edges_contract: DrawEdgesContract = DrawEdgesContract(
+            vertex_coordinates=vertex_coordinates,
+            vertex_size=vertex_size,
+            edge_list=edge_list,
+            edge_color=edge_color,
+            edge_fill_color=edge_fill_color,
+            edge_line_width=edge_line_width,
+        )
 
         self.draw_circle_edges(axes=axes, contract=draw_circle_edges_contract)
 
         # Define vertex contract
-        draw_vertex_contract: DrawVertexContract = DrawVertexContract(vertex_coordinates=vertex_coordinates,
-                                                                      vertex_label=self.contract.vertex_label,
-                                                                      font_size=font_size,
-                                                                      font_family=self.contract.font_family,
-                                                                      vertex_size=vertex_size,
-                                                                      vertex_color=vertex_color,
-                                                                      vertex_line_width=vertex_line_width)
+        draw_vertex_contract: DrawVertexContract = DrawVertexContract(
+            vertex_coordinates=vertex_coordinates,
+            vertex_label=self.contract.vertex_label,
+            font_size=font_size,
+            font_family=self.contract.font_family,
+            vertex_size=vertex_size,
+            vertex_color=vertex_color,
+            vertex_line_width=vertex_line_width,
+        )
         # Draw vertexes on plot
         self.draw_vertex(axes=axes, contract=draw_vertex_contract)
 

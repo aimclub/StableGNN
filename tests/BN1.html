@@ -1,0 +1,129 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-network@latest/styles/vis-network.css" type="text/css" />
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vis-network@latest/dist/vis-network.min.js"> </script>
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 100%;
+            height: 800px;
+            background-color: #ffffff;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"color": "#2ca02c", "font": {"size": 36}, "id": "eigen0", "label": "eigen0", "level": 0, "shape": "dot", "size": 45, "title": "eigen0 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen1", "label": "eigen1", "level": 0, "shape": "dot", "size": 45, "title": "eigen1 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen2", "label": "eigen2", "level": 0, "shape": "dot", "size": 45, "title": "eigen2 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen3", "label": "eigen3", "level": 0, "shape": "dot", "size": 45, "title": "eigen3 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen4", "label": "eigen4", "level": 0, "shape": "dot", "size": 45, "title": "eigen4 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen5", "label": "eigen5", "level": 0, "shape": "dot", "size": 45, "title": "eigen5 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen6", "label": "eigen6", "level": 0, "shape": "dot", "size": 45, "title": "eigen6 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen7", "label": "eigen7", "level": 0, "shape": "dot", "size": 45, "title": "eigen7 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen8", "label": "eigen8", "level": 0, "shape": "dot", "size": 45, "title": "eigen8 (Gaussian (LinearRegression))"}, {"color": "#2ca02c", "font": {"size": 36}, "id": "eigen9", "label": "eigen9", "level": 0, "shape": "dot", "size": 45, "title": "eigen9 (Gaussian (LinearRegression))"}, {"color": "#d62728", "font": {"size": 36}, "id": "y", "label": "y", "level": 1, "shape": "dot", "size": 45, "title": "y (Logit (LogisticRegression))"}]);
+        edges = new vis.DataSet([{"arrows": "to", "from": "eigen0", "to": "y"}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "layout": {
+        "hierarchical": {
+            "blockShifting": true,
+            "edgeMinimization": true,
+            "enabled": true,
+            "levelSeparation": 150,
+            "parentCentralization": true,
+            "sortMethod": "hubsize",
+            "treeSpacing": 200
+        },
+        "improvedLayout": true,
+        "randomSeed": 0
+    },
+    "physics": {
+        "enabled": true,
+        "hierarchicalRepulsion": {
+            "centralGravity": 0.5,
+            "damping": 0.09,
+            "nodeDistance": 300,
+            "springConstant": 0.01,
+            "springLength": 100
+        },
+        "solver": "hierarchicalRepulsion",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+        
+        
+
+        
+
+        network = new vis.Network(container, data, options);
+	 
+        
+
+
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>

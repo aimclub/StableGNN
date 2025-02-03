@@ -8,12 +8,10 @@ graph_contract: HypergraphContract = HypergraphContract(
     vertex_num=10,
     edge_list=(  # noqa
         [(3, 4, 5, 9), (0, 4, 7), (4, 6), (0, 1, 2, 4), (3, 6), (0, 3, 9), (2, 5), (4, 7)],
-        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
     ),
     edge_num=8,
-    edge_weights=tensor(  # noqa
-        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    ),
+    edge_weights=tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),  # noqa
 )
 vis_contract: HypergraphVisualizationContract = HypergraphVisualizationContract(graph=graph_contract)
 

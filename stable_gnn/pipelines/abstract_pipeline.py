@@ -25,7 +25,7 @@ class TrainModel(ABC):
         ssl_flag: bool = False,
     ) -> None:
         self.device = device
-        self.ssl_flag = ssl_flag
+        self.ssl_flag = False
 
     @abstractmethod
     def train(

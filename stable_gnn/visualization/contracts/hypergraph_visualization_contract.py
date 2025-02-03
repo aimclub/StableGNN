@@ -9,4 +9,3 @@ from stable_gnn.visualization.contracts.hypergraph_contract import HypergraphCon
 class HypergraphVisualizationContract(BaseVisualizationContract):
     graph: HypergraphContract = None
     edge_style: str = EdgeStyles.circle
-

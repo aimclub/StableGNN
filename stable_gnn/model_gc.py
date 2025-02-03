@@ -6,7 +6,6 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 from bamt.preprocessors import Preprocessor
-from pgmpy.estimators import K2Score
 from sklearn import preprocessing
 from torch import device
 from torch.nn import Linear

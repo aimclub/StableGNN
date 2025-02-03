@@ -15,18 +15,24 @@ from stable_gnn.graph import Graph
 
 
 class ModelTrainEmbeddings:
-    """Model for training Net, which building embeddings for Geom-GCN layer
-
-    :param data: (Graph): Input Graph
-    :param loss_function: (dict): Dict of parameters of unsupervised loss function
-    :param conv: (str): Name of convolution (default:'GCN')
-    :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
-    :param tune_out: (bool): Flag if you want tuning out layer or if it 2 for GeomGCN
-    """
+    """Model for training a Net which builds embeddings for the Geom-GCN layer."""
 
     def __init__(
-        self, data: Graph, loss_function: Dict, device: device, conv: str = "GCN", tune_out: bool = False
+        self,
+        data: Graph,
+        loss_function: Dict,
+        device: device,
+        conv: str = "GCN",
+        tune_out: bool = False,
     ) -> None:
+        """Initialize the ModelTrainEmbeddings instance.
+
+        :param data: (Graph): Input Graph.
+        :param loss_function: (dict): Parameters of the unsupervised loss function.
+        :param device: (device): Either 'cuda' or 'cpu'.
+        :param conv: (str): Name of convolution (default: 'GCN').
+        :param tune_out: (bool): Flag indicating if tuning should omit a layer.
+        """
         self.conv = conv
         self.device = device
         self.x = data.x
@@ -73,11 +79,11 @@ class ModelTrainEmbeddings:
         return total_loss / len(train_loader), out
 
     def run(self, params: Dict) -> Tensor:
-        """
-        Learn embeddings
+        """Learn embeddings.
 
-        :param params: dict[str,float,int,float]: Parameters for learning: size of hidden layer, dropout, number of layers for the model, learning rate
-        :return: (Tensor): The output embeddings
+        :param params: dict[str, float or int]: Parameters for learning, including hidden layer
+                       size, dropout, number of layers, and learning rate.
+        :return: (Tensor): The output embeddings.
         """
         hidden_layer = params["hidden_layer"]
         if self.tune_out:
@@ -90,7 +96,6 @@ class ModelTrainEmbeddings:
         train_loader = NeighborSampler(self.data.edge_index, batch_size=self.data.num_nodes, sizes=[-1] * size)
 
         sampler = self.loss["sampler"]
-
         loss_sampler = sampler(data=self.data, device=self.device, loss_info=self.loss)
         model = ModelFactory().build_model(
             num_features=self.data.x.shape[1],
@@ -103,7 +108,6 @@ class ModelTrainEmbeddings:
             dropout=dropout,
         )
         model.to(self.device)
-
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
         for epoch in range(99):
@@ -114,13 +118,7 @@ class ModelTrainEmbeddings:
 
 
 class OptunaTrainEmbeddings(ModelTrainEmbeddings):
-    """
-    Model for training Net, wcich building embeddings for Geom-GCN layer
-
-    :param loss_function: (dict): Dict of parameters of unsupervised loss function
-    :param conv: (str): Name of convolution (default:'GCN')
-    :param device: (device): Either 'cuda' or 'cpu' (default:'cuda')
-    """
+    """Model for training a Net which builds embeddings for the Geom-GCN layer using Optuna tuning."""
 
     def _objective(self, trial: Trial) -> Tensor:
         # Integer parameter
@@ -197,10 +195,11 @@ class OptunaTrainEmbeddings(ModelTrainEmbeddings):
         return loss
 
     def run(self, number_of_trials: int) -> Dict[Any, Any]:  # type: ignore
-        """Tuning parameters for learning embeddings
+        """Tune parameters for learning embeddings.
 
-        :param number_of_trials: (int): Number of trials for optuna
-        :return: (dict[str,float,int,float]): Learned parameters: size of hidden layer, dropout, number of layers for the model, learning rate
+        :param number_of_trials: (int): Number of trials for Optuna tuning.
+        :return: (dict): Learned parameters including hidden layer size, dropout,
+                 number of layers, and learning rate.
         """
         study = optuna.create_study(direction="minimize")
         study.optimize(self._objective, n_trials=number_of_trials)

@@ -1,0 +1,11 @@
+[flake8]
+max-line-length = 200
+ignore = D100,D101,D102,D103,E203,D205,E302,E303,E305,W291,D105,D401,D204,W292,W293,W391,F811,E121,D400,F401,D107,E501,RST301,W504,E126,RST201, W503
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    *.ipynb_checkpoints,
+    build,
+    dist
